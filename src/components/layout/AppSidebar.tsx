@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -55,15 +54,21 @@ interface AppSidebarProps {
 
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
 
   const NavButton = ({ item }: { item: NavItem }) => {
     const isActive = currentPath === item.href;
     const Icon = item.icon;
 
+    const handleClick = () => {
+      navigate(item.href);
+    };
+
     const button = (
       <Button
         variant="ghost"
+        onClick={handleClick}
         className={cn(
           'w-full justify-start gap-3 h-11 px-3 relative transition-all duration-200',
           isActive
