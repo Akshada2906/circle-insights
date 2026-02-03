@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { StakeholderTable } from '@/components/dashboard/StakeholderTable';
 import { AccountFinancialsTracker } from '@/components/dashboard/AccountFinancialsTracker';
@@ -42,7 +43,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <MainLayout>
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <DashboardHeader
           accountName="TechCorp Global"
@@ -80,7 +81,7 @@ const Index = () => {
           <p>Organization Management – AI Penetration Dashboard v1.0</p>
         </footer>
       </div>
-    </div>
+    </MainLayout>
   );
 };
 
