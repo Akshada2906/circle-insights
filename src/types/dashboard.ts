@@ -4,6 +4,8 @@ export interface Stakeholder {
   id: string;
   name: string;
   designation: string;
+  department?: string; // Department field
+  project_name?: string; // Project name field
   connections: string[];
   relationship_score: number;
   value_chain_category: 'Resources' | 'Technology' | 'Engineering' | 'Business';

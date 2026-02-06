@@ -1,16 +1,6 @@
-import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { AccountFinancialsTracker } from '@/components/dashboard/AccountFinancialsTracker';
-import { mockFinancials } from '@/data/mockData';
-import { AccountFinancials } from '@/types/dashboard';
 
 const Financials = () => {
-  const [financials, setFinancials] = useState<AccountFinancials[]>(mockFinancials);
-
-  const handleFinancialsUpdate = (updated: AccountFinancials) => {
-    setFinancials((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
-  };
-
   return (
     <MainLayout>
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -20,10 +10,11 @@ const Financials = () => {
             Track targets, forecasts, and financial performance across accounts
           </p>
         </div>
-        <AccountFinancialsTracker
-          financials={financials}
-          onUpdate={handleFinancialsUpdate}
-        />
+
+        <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed rounded-lg bg-muted/30">
+          <h3 className="text-xl font-semibold text-muted-foreground">Financial Data Integration Coming Soon</h3>
+          <p className="text-sm text-muted-foreground mt-2">This module is correctly being connected to real-time data sources.</p>
+        </div>
       </div>
     </MainLayout>
   );

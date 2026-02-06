@@ -1,16 +1,6 @@
-import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ValueChainMetric } from '@/components/dashboard/ValueChainMetric';
-import { mockValueChain } from '@/data/mockData';
-import { ValueChainStage } from '@/types/dashboard';
 
 const ValueChain = () => {
-  const [valueChain, setValueChain] = useState<ValueChainStage[]>(mockValueChain);
-
-  const handleValueChainUpdate = (updated: ValueChainStage) => {
-    setValueChain((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
-  };
-
   return (
     <MainLayout>
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -20,7 +10,11 @@ const ValueChain = () => {
             Track progress across Resources, Technology, Engineering, and Business stages
           </p>
         </div>
-        <ValueChainMetric stages={valueChain} onUpdate={handleValueChainUpdate} />
+
+        <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed rounded-lg bg-muted/30">
+          <h3 className="text-xl font-semibold text-muted-foreground">Value Chain Integration Coming Soon</h3>
+          <p className="text-sm text-muted-foreground mt-2">This module is currently being connected to real-time data sources.</p>
+        </div>
       </div>
     </MainLayout>
   );

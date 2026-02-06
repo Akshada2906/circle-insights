@@ -3,7 +3,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { StakeholderProvider } from "@/contexts/StakeholderContext";
+import { AccountProvider } from "@/contexts/AccountContext";
 import Index from "./pages/Index";
+import Accounts from "./pages/Accounts";
+import AccountDetails from "./pages/AccountDetails";
+import AccountFormPage from "./pages/AccountFormPage";
 import Stakeholders from "./pages/Stakeholders";
 import Financials from "./pages/Financials";
 import Circles from "./pages/Circles";
@@ -18,18 +23,26 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/stakeholders" element={<Stakeholders />} />
-          <Route path="/financials" element={<Financials />} />
-          <Route path="/circles" element={<Circles />} />
-          <Route path="/value-chain" element={<ValueChain />} />
-          <Route path="/opportunities" element={<Opportunities />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AccountProvider>
+        <StakeholderProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/accounts" element={<Accounts />} />
+              <Route path="/accounts/new" element={<AccountFormPage />} />
+              <Route path="/accounts/:id" element={<AccountDetails />} />
+              <Route path="/accounts/:id/edit" element={<AccountFormPage />} />
+              <Route path="/stakeholders" element={<Stakeholders />} />
+              <Route path="/financials" element={<Financials />} />
+              <Route path="/circles" element={<Circles />} />
+              <Route path="/value-chain" element={<ValueChain />} />
+              <Route path="/opportunities" element={<Opportunities />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </StakeholderProvider>
+      </AccountProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
