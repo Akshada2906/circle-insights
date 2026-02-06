@@ -1,85 +1,68 @@
-import { useState } from 'react';
+import { useAccounts } from '@/contexts/AccountContext';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
-import { StakeholderTable } from '@/components/dashboard/StakeholderTable';
-import { AccountFinancialsTracker } from '@/components/dashboard/AccountFinancialsTracker';
-import { CirclePanel } from '@/components/dashboard/CirclePanel';
-import { ValueChainMetric } from '@/components/dashboard/ValueChainMetric';
-import { OpportunitiesSection } from '@/components/dashboard/OpportunitiesSection';
-import {
-  mockStakeholders,
-  mockFinancials,
-  mockCircles,
-  mockValueChain,
-  mockOpportunity,
-} from '@/data/mockData';
-import { Stakeholder, AccountFinancials, Circle, ValueChainStage, Opportunity } from '@/types/dashboard';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Users, Building2, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
-  const [stakeholders, setStakeholders] = useState<Stakeholder[]>(mockStakeholders);
-  const [financials, setFinancials] = useState<AccountFinancials[]>(mockFinancials);
-  const [circles, setCircles] = useState<Circle[]>(mockCircles);
-  const [valueChain, setValueChain] = useState<ValueChainStage[]>(mockValueChain);
-  const [opportunity, setOpportunity] = useState<Opportunity>(mockOpportunity);
+  const { accounts } = useAccounts();
+  const navigate = useNavigate();
 
-  const handleStakeholderUpdate = (updated: Stakeholder) => {
-    setStakeholders((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-  };
-
-  const handleFinancialsUpdate = (updated: AccountFinancials) => {
-    setFinancials((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
-  };
-
-  const handleCircleUpdate = (updated: Circle) => {
-    setCircles((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
-  };
-
-  const handleValueChainUpdate = (updated: ValueChainStage) => {
-    setValueChain((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
-  };
-
-  const handleOpportunityUpdate = (updated: Opportunity) => {
-    setOpportunity(updated);
-  };
+  const totalAccounts = accounts.length;
+  const totalStakeholders = accounts.reduce((acc, account) => acc + (account.strategic_profiles?.length || 0), 0);
 
   return (
     <MainLayout>
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <DashboardHeader
-          accountName="TechCorp Global"
-          lastUpdated="Feb 3, 2026 • 2:45 PM"
-        />
-
-        <div className="grid gap-6">
-          {/* Row 1: Stakeholder Table */}
-          <StakeholderTable
-            stakeholders={stakeholders}
-            onUpdate={handleStakeholderUpdate}
-          />
-
-          {/* Row 2: Financials and Circle Penetration */}
-          <div className="grid lg:grid-cols-2 gap-6">
-            <AccountFinancialsTracker
-              financials={financials}
-              onUpdate={handleFinancialsUpdate}
-            />
-            <CirclePanel circles={circles} onUpdate={handleCircleUpdate} />
-          </div>
-
-          {/* Row 3: Value Chain */}
-          <ValueChainMetric stages={valueChain} onUpdate={handleValueChainUpdate} />
-
-          {/* Row 4: Opportunities */}
-          <OpportunitiesSection
-            opportunity={opportunity}
-            onUpdate={handleOpportunityUpdate}
-          />
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Overview of your strategic landscape</p>
         </div>
 
-        {/* Footer */}
-        <footer className="mt-8 text-center text-xs text-muted-foreground">
-          <p>Organization Management – AI Penetration Dashboard v1.0</p>
-        </footer>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Accounts Summary */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Accounts</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalAccounts}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Active strategic accounts
+              </p>
+              <Button variant="link" className="px-0 mt-4 text-primary" onClick={() => navigate('/accounts')}>
+                View Accounts <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Stakeholders Summary */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Stakeholder Profiles</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalStakeholders}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Documented strategic profiles
+              </p>
+              <Button variant="link" className="px-0 mt-4 text-primary" onClick={() => navigate('/stakeholders')}>
+                View Stakeholders <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Placeholder for future metrics */}
+          <Card className="border-dashed bg-muted/30">
+            <CardContent className="flex flex-col items-center justify-center py-6 text-center h-full">
+              <p className="text-muted-foreground font-medium">More analytics coming soon</p>
+              <p className="text-xs text-muted-foreground mt-1">Financials, Circles, and Value Chain metrics</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </MainLayout>
   );

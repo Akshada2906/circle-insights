@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Stakeholder } from '@/types/dashboard';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Star, Users, Edit2, Check, X } from 'lucide-react';
+import { Star, Users, Edit2, Check, X, Award } from 'lucide-react';
 
 interface StakeholderTableProps {
   stakeholders: Stakeholder[];
@@ -66,6 +66,8 @@ export function StakeholderTable({ stakeholders, onUpdate }: StakeholderTablePro
           <thead>
             <tr className="border-b border-border">
               <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">Name / Designation</th>
+              <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">Department</th>
+              <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">Project Name</th>
               <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">Connections</th>
               <th className="text-center py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">Score</th>
               <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">Value Chain</th>
@@ -98,6 +100,14 @@ export function StakeholderTable({ stakeholders, onUpdate }: StakeholderTablePro
                       <p className="text-sm text-muted-foreground">{stakeholder.designation}</p>
                     </div>
                   )}
+                </td>
+                <td className="py-4 px-4">
+                  <Badge variant="outline" className="text-xs">
+                    {stakeholder.department || 'N/A'}
+                  </Badge>
+                </td>
+                <td className="py-4 px-4">
+                  <p className="text-sm text-foreground">{stakeholder.project_name || 'N/A'}</p>
                 </td>
                 <td className="py-4 px-4">
                   <div className="flex flex-wrap gap-1">
@@ -133,16 +143,21 @@ export function StakeholderTable({ stakeholders, onUpdate }: StakeholderTablePro
                   </Badge>
                 </td>
                 <td className="py-4 px-4 text-center">
-                  <Switch
-                    checked={editingId === stakeholder.id ? editValues.is_champion : stakeholder.is_champion}
-                    onCheckedChange={(checked) => {
-                      if (editingId === stakeholder.id) {
-                        setEditValues({ ...editValues, is_champion: checked });
-                      } else {
-                        onUpdate({ ...stakeholder, is_champion: checked });
-                      }
-                    }}
-                  />
+                  <div className="flex items-center justify-center gap-2">
+                    {stakeholder.is_champion && (
+                      <Award className="w-4 h-4 text-yellow-600" />
+                    )}
+                    <Switch
+                      checked={editingId === stakeholder.id ? editValues.is_champion : stakeholder.is_champion}
+                      onCheckedChange={(checked) => {
+                        if (editingId === stakeholder.id) {
+                          setEditValues({ ...editValues, is_champion: checked });
+                        } else {
+                          onUpdate({ ...stakeholder, is_champion: checked });
+                        }
+                      }}
+                    />
+                  </div>
                 </td>
                 <td className="py-4 px-4 text-center">
                   {editingId === stakeholder.id ? (
@@ -171,3 +186,4 @@ export function StakeholderTable({ stakeholders, onUpdate }: StakeholderTablePro
     </div>
   );
 }
+
