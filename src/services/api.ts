@@ -63,6 +63,16 @@ export const api = {
     },
 
     // Stakeholder Details
+    getAllStakeholders: async (): Promise<StakeholderDetailsResponse[]> => {
+        const response = await fetch(`/api/v1/stakeholder-details/`);
+        return handleResponse<StakeholderDetailsResponse[]>(response);
+    },
+
+    getStakeholderById: async (id: string): Promise<StakeholderDetailsResponse> => {
+        const response = await fetch(`/api/v1/stakeholder-details/${id}`);
+        return handleResponse<StakeholderDetailsResponse>(response);
+    },
+
     getStakeholderDetailsByAccount: async (accountId: string): Promise<StakeholderDetailsResponse[]> => {
         const response = await fetch(`/api/v1/stakeholder-details/account/${accountId}`);
         return handleResponse<StakeholderDetailsResponse[]>(response);

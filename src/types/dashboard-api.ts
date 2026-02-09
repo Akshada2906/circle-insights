@@ -1,8 +1,7 @@
 export interface AccountDashboardResponse {
     account_id: string;
     account_name: string;
-    account_leader?: string;
-    industry?: string;
+    // Removed: account_leader, industry
     domain?: string;
     company_revenue?: number;
     know_customer_value_chain?: boolean;
@@ -15,11 +14,7 @@ export interface AccountDashboardResponse {
     last_year_business_done?: number;
 
     // New Fields
-    target_2026?: number;
-    current_revenue?: number;
-    forecast_revenue?: number;
-    shortfall?: number;
-    account_health_score?: number;
+    // Removed: target_2026, current_revenue, forecast_revenue, shortfall, account_health_score
 
     target_projection_2026_accounts?: number;
     target_projection_2026_delivery?: number;
@@ -47,8 +42,7 @@ export interface AccountDashboardResponse {
 
 export interface AccountDashboardCreate {
     account_name: string;
-    account_leader?: string;
-    industry?: string;
+    // Removed: account_leader, industry
     domain?: string;
     company_revenue?: number;
     know_customer_value_chain?: boolean;
@@ -61,11 +55,7 @@ export interface AccountDashboardCreate {
     last_year_business_done?: number;
 
     // New Fields
-    target_2026?: number;
-    current_revenue?: number;
-    forecast_revenue?: number;
-    shortfall?: number;
-    account_health_score?: number;
+    // Removed: target_2026, current_revenue, forecast_revenue, shortfall, account_health_score
 
     target_projection_2026_accounts?: number;
     target_projection_2026_delivery?: number;

@@ -28,7 +28,6 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
     const filteredAccounts = accounts.filter((account) => {
         const matchesSearch =
             account.account_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            account.account_leader.toLowerCase().includes(searchQuery.toLowerCase()) ||
             account.account_id.toLowerCase().includes(searchQuery.toLowerCase());
 
         const matchesDeliveryUnit =

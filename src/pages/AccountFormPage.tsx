@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { AccountForm } from '@/components/accounts/AccountForm';
@@ -6,6 +7,7 @@ import { Account } from '@/types/account';
 import { useToast } from '@/hooks/use-toast';
 import { useAccounts } from '@/contexts/AccountContext';
 import { ArrowLeft } from 'lucide-react';
+import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 
 const AccountFormPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -13,22 +15,34 @@ const AccountFormPage = () => {
     const { accounts, addAccount, updateAccount } = useAccounts();
     const { toast } = useToast();
 
+    const [pendingUpdate, setPendingUpdate] = useState<Partial<Account> | null>(null);
+    const [isUpdateOpen, setIsUpdateOpen] = useState(false);
+
     // Get account from context instead of mock file
     const account = id ? accounts.find(a => a.account_id === id) : undefined;
     const isEditing = !!id;
 
+    const confirmUpdate = async () => {
+        if (!isEditing || !id || !pendingUpdate) return;
+
+        const success = await updateAccount(id, pendingUpdate);
+        if (success) {
+            navigate(`/accounts/${id}`);
+        }
+        setIsUpdateOpen(false);
+        setPendingUpdate(null);
+    };
+
     const handleSubmit = async (accountData: Partial<Account>) => {
         if (isEditing && id) {
-            const success = await updateAccount(id, accountData);
-            if (success) {
-                navigate(`/accounts/${id}`);
-            }
+            setPendingUpdate(accountData);
+            setIsUpdateOpen(true);
         } else {
             // New account
             const newAccount = {
                 ...accountData,
                 account_id: `acc-${Date.now()}`,
-                account_health_score: 50, // Default
+                // Removed: account_health_score
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
                 projects: [],
@@ -73,6 +87,15 @@ const AccountFormPage = () => {
 
                 {/* Account Form */}
                 <AccountForm account={account} onSubmit={handleSubmit} onCancel={handleCancel} />
+
+                <ConfirmationDialog
+                    open={isUpdateOpen}
+                    onOpenChange={setIsUpdateOpen}
+                    title="Update Account"
+                    description="Are you sure you want to update this account?"
+                    onConfirm={confirmUpdate}
+                    confirmText="Update Account"
+                />
             </div>
         </MainLayout>
     );

@@ -63,7 +63,7 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
                                 <h3 className="font-semibold text-foreground truncate">{account.account_name}</h3>
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
-                                Leader: <span className="font-medium text-foreground">{account.account_leader}</span>
+                                Delivery Unit: <span className="font-medium text-foreground">{account.delivery_unit}</span>
                             </p>
                         </div>
                     </div>
@@ -97,21 +97,7 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
                     </div>
                 </div>
 
-                {/* Health Score */}
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Account Health Score</span>
-                        <span className={cn('text-sm font-semibold px-2 py-0.5 rounded border', getHealthScoreColor(account.account_health_score))}>
-                            {account.account_health_score.toFixed(1)}%
-                        </span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                        <div
-                            className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300"
-                            style={{ width: `${Math.min(account.account_health_score, 100)}%` }}
-                        />
-                    </div>
-                </div>
+                {/* Health Score removed as per request */}
 
                 {/* Projects Info - REMOVED */}
                 <div className="flex items-center justify-between pt-2 border-t border-border">

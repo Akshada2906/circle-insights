@@ -90,34 +90,38 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel }: 
                 </Card>
             )}
 
-            <Tabs defaultValue="roles" className="w-full">
+            <Tabs defaultValue="mapping" className="w-full">
                 <TabsList className="grid grid-cols-3 w-full">
-                    <TabsTrigger value="roles">Roles & Stakeholders</TabsTrigger>
-                    <TabsTrigger value="competition">Competition</TabsTrigger>
+                    <TabsTrigger value="mapping">Stakeholder Mapping</TabsTrigger>
+                    <TabsTrigger value="competition">Competition & Positioning</TabsTrigger>
                     <TabsTrigger value="readiness">Internal Readiness</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="roles" className="space-y-4 py-4">
+                {/* Tab 1: Stakeholder Mapping */}
+                <TabsContent value="mapping" className="space-y-4 py-4">
                     <Card>
                         <CardContent className="space-y-4 pt-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="executive_sponsor">Executive Sponsor</Label>
-                                <Input
-                                    id="executive_sponsor"
-                                    value={formData.executive_sponsor}
-                                    onChange={(e) => setFormData({ ...formData, executive_sponsor: e.target.value })}
-                                    placeholder="Name - Title"
-                                />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="executive_sponsor">Executive Sponsor</Label>
+                                    <Input
+                                        id="executive_sponsor"
+                                        value={formData.executive_sponsor}
+                                        onChange={(e) => setFormData({ ...formData, executive_sponsor: e.target.value })}
+                                        placeholder="Name - Title"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="technical_decision_maker">Technical Decision Maker</Label>
+                                    <Input
+                                        id="technical_decision_maker"
+                                        value={formData.technical_decision_maker}
+                                        onChange={(e) => setFormData({ ...formData, technical_decision_maker: e.target.value })}
+                                        placeholder="Name - Title"
+                                    />
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="technical_decision_maker">Technical Decision Maker</Label>
-                                <Input
-                                    id="technical_decision_maker"
-                                    value={formData.technical_decision_maker}
-                                    onChange={(e) => setFormData({ ...formData, technical_decision_maker: e.target.value })}
-                                    placeholder="Name - Title"
-                                />
-                            </div>
+
                             <div className="space-y-2">
                                 <Label htmlFor="influencer">Influencer/s</Label>
                                 <Textarea
@@ -142,7 +146,7 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel }: 
                                     id="negative_stakeholder"
                                     value={formData.negative_stakeholder}
                                     onChange={(e) => setFormData({ ...formData, negative_stakeholder: e.target.value })}
-                                    rows={2}
+                                    rows={3}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -157,6 +161,7 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel }: 
                     </Card>
                 </TabsContent>
 
+                {/* Tab 2: Competition & Positioning */}
                 <TabsContent value="competition" className="space-y-4 py-4">
                     <Card>
                         <CardContent className="space-y-4 pt-4">
@@ -166,7 +171,7 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel }: 
                                     id="key_competitors"
                                     value={formData.key_competitors}
                                     onChange={(e) => setFormData({ ...formData, key_competitors: e.target.value })}
-                                    rows={3}
+                                    rows={2}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -217,6 +222,7 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel }: 
                     </Card>
                 </TabsContent>
 
+                {/* Tab 3: Internal Readiness */}
                 <TabsContent value="readiness" className="space-y-4 py-4">
                     <Card>
                         <CardContent className="space-y-4 pt-4">
