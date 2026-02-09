@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { useAccounts } from '@/contexts/AccountContext';
+import { api } from '@/services/api';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,9 +10,22 @@ import { useNavigate } from 'react-router-dom';
 const Index = () => {
   const { accounts } = useAccounts();
   const navigate = useNavigate();
+  const [stakeholderCount, setStakeholderCount] = useState<number>(0);
 
   const totalAccounts = accounts.length;
-  const totalStakeholders = accounts.reduce((acc, account) => acc + (account.strategic_profiles?.length || 0), 0);
+
+  useEffect(() => {
+    const fetchStakeholderCount = async () => {
+      try {
+        const stakeholders = await api.getAllStakeholders();
+        setStakeholderCount(stakeholders.length);
+      } catch (error) {
+        console.error("Failed to fetch stakeholder count", error);
+      }
+    };
+
+    fetchStakeholderCount();
+  }, []);
 
   return (
     <MainLayout>
@@ -45,7 +60,7 @@ const Index = () => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalStakeholders}</div>
+              <div className="text-2xl font-bold">{stakeholderCount}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Documented strategic profiles
               </p>

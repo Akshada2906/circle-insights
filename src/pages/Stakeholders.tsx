@@ -1,16 +1,11 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useAccounts } from '@/contexts/AccountContext';
 import { api } from '@/services/api';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { StrategicProfileForm } from '@/components/accounts/StrategicProfileForm';
 import { StrategicStakeholderProfile } from '@/types/account';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,100 +13,96 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, Award, ShieldAlert, Swords, Trash2, Edit, MoreVertical, Pencil } from 'lucide-react';
+import { Plus, Users, Award, ShieldAlert, Swords, Trash2, MoreVertical, Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 const Stakeholders = () => {
-  const { accounts, refreshAccounts } = useAccounts();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProfile, setEditingProfile] = useState<StrategicStakeholderProfile | undefined>();
+  const { refreshAccounts } = useAccounts();
+  const navigate = useNavigate();
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const { toast } = useToast();
 
-  // Derived state: Extract all profiles from all accounts
-  // We attach account_id/name to each profile so we know where it belongs
-  const profiles = accounts.flatMap(account =>
-    (account.strategic_profiles || []).map(profile => ({
-      ...profile,
-      account_name: account.account_name,
-      account_id: account.account_id
-    }))
-  );
+  const [profiles, setProfiles] = useState<StrategicStakeholderProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Mapper to convert API response to frontend profile type
+  const mapApiToProfile = (apiDetails: any): StrategicStakeholderProfile => {
+    return {
+      id: apiDetails.id,
+      account_id: apiDetails.account_id,
+      account_name: apiDetails.account_name,
+      executive_sponsor: apiDetails.executive_sponsor || '',
+      technical_decision_maker: apiDetails.technical_decision_maker || '',
+      influencer: apiDetails.influencers || '',
+      neutral_stakeholders: apiDetails.neutral_stakeholders || '',
+      negative_stakeholder: apiDetails.negative_stakeholder || '',
+      succession_risk: apiDetails.succession_risk || '',
+      key_competitors: apiDetails.key_competitors || '',
+      our_positioning: apiDetails.our_positioning_vs_competition || '',
+      incumbency_strength: apiDetails.incumbency_strength as any,
+      areas_competition_stronger: apiDetails.areas_competition_stronger || '',
+      white_spaces_we_own: apiDetails.white_spaces_we_own || '',
+      account_review_cadence: apiDetails.account_review_cadence_frequency || '',
+      qbr_happening: apiDetails.qbr_happening ? 'Yes' : 'No',
+      technical_audit_frequency: apiDetails.technical_audit_frequency || '',
+      created_at: apiDetails.created_at,
+      updated_at: apiDetails.updated_at
+    };
+  };
+
+  const fetchStakeholders = async () => {
+    setIsLoading(true);
+    try {
+      const data = await api.getAllStakeholders();
+      const mappedProfiles = data.map(mapApiToProfile);
+      setProfiles(mappedProfiles);
+    } catch (error) {
+      console.error("Failed to fetch stakeholders", error);
+      toast({
+        title: "Error",
+        description: "Failed to load stakeholders.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStakeholders();
+  }, []); // Fetch on mount
 
   const handleAddProfile = () => {
-    setEditingProfile(undefined);
-    setIsDialogOpen(true);
+    navigate('/stakeholders/new');
   };
 
   const handleEditProfile = (profile: StrategicStakeholderProfile) => {
-    setEditingProfile(profile);
-    setIsDialogOpen(true);
+    navigate(`/stakeholders/${profile.id}/edit`);
   };
 
-  const handleDeleteProfile = async (e: React.MouseEvent, profileId: string) => {
+  const handleDeleteProfile = (e: React.MouseEvent, profileId: string) => {
     e.stopPropagation(); // Prevent card click
-    if (!confirm("Are you sure you want to delete this profile?")) return;
+    setDeleteId(profileId);
+    setIsDeleteOpen(true);
+  };
+
+  const confirmDeleteProfile = async () => {
+    if (!deleteId) return;
 
     try {
-      await api.deleteStakeholderDetails(profileId);
-      await refreshAccounts();
+      await api.deleteStakeholderDetails(deleteId);
+      await refreshAccounts(); // Keep context in sync
+      await fetchStakeholders(); // Refresh local list
       toast({ title: 'Profile Deleted', description: 'Strategic profile deleted successfully.' });
     } catch (err) {
       console.error("Failed to delete profile", err);
       toast({ title: 'Error', variant: 'destructive', description: 'Failed to delete profile.' });
-    }
-  };
-
-  const handleSubmit = async (profileData: Partial<StrategicStakeholderProfile>) => {
-    try {
-      if (editingProfile && editingProfile.id) {
-        // Update
-        const updatePayload = {
-          ...profileData,
-          // We map frontend fields to backend expected fields manually or trust the spread if names match
-          // Our api.ts updateStakeholderDetails expects StakeholderDetailsUpdate
-          // We need to match keys. Fortunately our mapApiToStrategicProfile was inverse.
-          // But we must be careful. The form returns `StrategicStakeholderProfile` keys.
-          // The API expects `StakeholderDetailsUpdate` keys.
-          // We should probably map it back. Or simply pass it if keys align mostly.
-          // Let's rely on the fact that we aligned them mostly, but let's double check mapping.
-          // Actually, `api.ts` `StakeholderDetailsUpdate` uses exact keys like `technical_decision_maker`.
-          // BUT `StrategicStakeholderProfile` uses `technical_decision_maker` too.
-          // Checking `types/account`: yes.
-          // Checking `types/dashboard-api`: `StakeholderDetailsUpdate` also uses `technical_decision_maker`.
-          // So spread works for most.
-        };
-
-        // We need to clean up `id`, `created_at` etc from payload if they are present
-        const { id, created_at, updated_at, ...cleanPayload } = profileData as any;
-
-        await api.updateStakeholderDetails(editingProfile.id, cleanPayload);
-        toast({ title: 'Profile Updated', description: 'Strategic profile updated successfully.' });
-      } else {
-        // Create
-        // Needs account_id and account_name
-        if (!profileData.account_id) {
-          toast({ title: 'Error', variant: 'destructive', description: 'Account is required.' });
-          return;
-        }
-
-        const createPayload = {
-          account_id: profileData.account_id,
-          account_name: profileData.account_name || 'Unknown',
-          ...profileData
-        };
-        // Clean up
-        const { id, created_at, updated_at, ...cleanPayload } = createPayload as any;
-
-        await api.createStakeholderDetails(cleanPayload);
-        toast({ title: 'Profile Created', description: 'New strategic profile added.' });
-      }
-      await refreshAccounts(); // Reload data
-      setIsDialogOpen(false);
-    } catch (err) {
-      console.error("Failed to save profile", err);
-      toast({ title: 'Error', variant: 'destructive', description: 'Failed to save profile.' });
+    } finally {
+      setIsDeleteOpen(false);
+      setDeleteId(null);
     }
   };
 
@@ -137,7 +128,7 @@ const Stakeholders = () => {
               No profiles found. Click "Add Profile" to create one.
             </div>
           ) : profiles.map(profile => (
-            <Card key={profile.id} className="flex flex-col hover:border-primary/50 transition-colors cursor-pointer group" onClick={() => handleEditProfile(profile)}>
+            <Card key={profile.id} className="flex flex-col hover:border-primary/50 transition-colors cursor-pointer group" onClick={() => navigate(`/stakeholders/${profile.id}`)}>
               <CardHeader className="pb-3 relative">
                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
                   <DropdownMenu>
@@ -192,13 +183,13 @@ const Stakeholders = () => {
                       <p className="text-xs text-green-700 dark:text-green-400 font-medium mb-1 flex items-center gap-1">
                         <Award className="w-3 h-3" /> Readiness
                       </p>
-                      <p className="text-xs">{profile.account_review_cadence || '-'}</p>
+                      <p className="text-xs text-green-900 dark:text-green-100 font-medium">{profile.account_review_cadence || '-'}</p>
                     </div>
                     <div className="bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-100 dark:border-amber-900/50">
                       <p className="text-xs text-amber-700 dark:text-amber-400 font-medium mb-1 flex items-center gap-1">
                         <ShieldAlert className="w-3 h-3" /> Risk
                       </p>
-                      <p className="text-xs truncate" title={profile.succession_risk}>{profile.succession_risk || 'None'}</p>
+                      <p className="text-xs text-amber-900 dark:text-amber-100 font-medium truncate" title={profile.succession_risk}>{profile.succession_risk || 'None'}</p>
                     </div>
                   </div>
 
@@ -219,22 +210,15 @@ const Stakeholders = () => {
           ))}
         </div>
 
-        {/* Add/Edit Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingProfile ? 'Edit Strategic Profile' : 'Add Strategic Profile'}
-              </DialogTitle>
-            </DialogHeader>
-            <StrategicProfileForm
-              profile={editingProfile}
-              accounts={accounts}
-              onSubmit={handleSubmit}
-              onCancel={() => setIsDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <ConfirmationDialog
+          open={isDeleteOpen}
+          onOpenChange={setIsDeleteOpen}
+          title="Delete Profile"
+          description="Are you sure you want to delete this strategic profile? This action cannot be undone."
+          onConfirm={confirmDeleteProfile}
+          variant="destructive"
+          confirmText="Delete"
+        />
       </div>
     </MainLayout>
   );

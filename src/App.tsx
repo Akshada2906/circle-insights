@@ -9,6 +9,9 @@ import Index from "./pages/Index";
 import Accounts from "./pages/Accounts";
 import AccountDetails from "./pages/AccountDetails";
 import AccountFormPage from "./pages/AccountFormPage";
+import StakeholderFormPage from "./pages/StakeholderFormPage";
+import StakeholderDetails from "./pages/StakeholderDetails";
+
 import Stakeholders from "./pages/Stakeholders";
 import Financials from "./pages/Financials";
 import Circles from "./pages/Circles";
@@ -33,6 +36,9 @@ const App = () => (
               <Route path="/accounts/:id" element={<AccountDetails />} />
               <Route path="/accounts/:id/edit" element={<AccountFormPage />} />
               <Route path="/stakeholders" element={<Stakeholders />} />
+              <Route path="/stakeholders/new" element={<StakeholderFormPage />} />
+              <Route path="/stakeholders/:id" element={<StakeholderDetails />} />
+              <Route path="/stakeholders/:id/edit" element={<StakeholderFormPage />} />
               <Route path="/financials" element={<Financials />} />
               <Route path="/circles" element={<Circles />} />
               <Route path="/value-chain" element={<ValueChain />} />
