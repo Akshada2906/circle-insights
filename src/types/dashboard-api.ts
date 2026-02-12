@@ -6,7 +6,7 @@ export interface AccountDashboardResponse {
     company_revenue?: number;
     know_customer_value_chain?: boolean;
     account_focus?: string;
-    delivery_unit?: string;
+    // delivery_unit removed
     delivery_owner?: string;
     client_partner?: string;
     where_we_fit_in_value_chain?: string;
@@ -35,7 +35,7 @@ export interface AccountDashboardResponse {
     identified_areas_cross_up_selling?: string;
     nitor_executive_connect_frequency?: string;
     growth_action_plan_30days_ready?: boolean;
-    miro_board_link?: string;
+    account_research_link?: string;
     created_at: string;
     updated_at: string;
 }
@@ -47,7 +47,7 @@ export interface AccountDashboardCreate {
     company_revenue?: number;
     know_customer_value_chain?: boolean;
     account_focus?: string;
-    delivery_unit?: string;
+    // delivery_unit removed
     delivery_owner?: string;
     client_partner?: string;
     where_we_fit_in_value_chain?: string;
@@ -76,7 +76,7 @@ export interface AccountDashboardCreate {
     identified_areas_cross_up_selling?: string;
     nitor_executive_connect_frequency?: string;
     growth_action_plan_30days_ready?: boolean;
-    miro_board_link?: string;
+    account_research_link?: string;
 }
 
 export interface AccountDashboardUpdate extends Partial<AccountDashboardCreate> { }

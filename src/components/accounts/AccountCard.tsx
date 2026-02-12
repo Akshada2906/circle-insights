@@ -86,8 +86,8 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
 
             <CardContent className="pt-4 space-y-4">
                 <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">Delivery Unit</span>
-                    <p className="text-sm font-medium text-foreground">{account.delivery_unit}</p>
+                    <span className="text-xs text-muted-foreground">Delivery Owner</span>
+                    <p className="text-sm font-medium text-foreground">{account.delivery_owner || '-'}</p>
                 </div>
             </CardContent>
         </Card>

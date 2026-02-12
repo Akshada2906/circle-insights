@@ -28,9 +28,6 @@ const mapApiToAccount = (apiAccount: AccountDashboardResponse): AccountWithProje
     return {
         account_id: apiAccount.account_id,
         account_name: apiAccount.account_name,
-        delivery_unit: apiAccount.delivery_unit || 'Unknown',
-
-        // Map other fields as available
         domain: apiAccount.domain,
         company_revenue: apiAccount.company_revenue,
         know_customer_value_chain: apiAccount.know_customer_value_chain,
@@ -56,20 +53,17 @@ const mapApiToAccount = (apiAccount: AccountDashboardResponse): AccountWithProje
         connect_with_decision_maker: apiAccount.connect_with_decision_maker,
         total_active_connects: apiAccount.total_active_connects,
         visibility_client_roadmap_2026: apiAccount.visibility_client_roadmap_2026,
-        identified_areas_cross_up_selling: apiAccount.identified_areas_cross_up_selling,
         nitor_executive_connect_frequency: apiAccount.nitor_executive_connect_frequency,
         growth_action_plan_30days_ready: apiAccount.growth_action_plan_30days_ready,
-        miro_board_link: apiAccount.miro_board_link,
+        account_research_link: apiAccount.account_research_link,
 
         created_at: apiAccount.created_at,
         updated_at: apiAccount.updated_at,
 
-        projects: [], // Projects need to be fetched separately if available
+        projects: [],
         status: 'ACTIVE', // Default
     };
 };
-
-// Mapper function to convert API StakeholderDetails to frontend StrategicStakeholderProfile
 const mapApiToStrategicProfile = (apiDetails: any): any => {
     return {
         id: apiDetails.id,
@@ -175,15 +169,11 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
 
     const addAccount = async (newAccount: AccountWithProjects): Promise<boolean> => {
         try {
-            // Map frontend Create to API Create
             const apiPayload: AccountDashboardCreate = {
                 account_name: newAccount.account_name,
-                // Removed: account_leader, industry maps
                 domain: newAccount.domain,
-                company_revenue: newAccount.company_revenue,
                 know_customer_value_chain: newAccount.know_customer_value_chain,
                 account_focus: newAccount.account_focus,
-                delivery_unit: newAccount.delivery_unit,
                 delivery_owner: newAccount.delivery_owner,
                 client_partner: newAccount.client_partner,
                 where_we_fit_in_value_chain: newAccount.where_we_fit_in_value_chain,
@@ -208,17 +198,11 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
                 identified_areas_cross_up_selling: newAccount.identified_areas_cross_up_selling,
                 nitor_executive_connect_frequency: newAccount.nitor_executive_connect_frequency,
                 growth_action_plan_30days_ready: newAccount.growth_action_plan_30days_ready,
-                miro_board_link: newAccount.miro_board_link,
+                account_research_link: newAccount.account_research_link,
 
-                // New Financials
-                // Removed: target_2026, current_revenue, forecast_revenue, shortfall, account_health_score
             };
 
             const createdAccount = await api.createAccount(apiPayload);
-
-            // Create Stakeholder Details if any relevant data is present
-            // We blindly create it if we are mocking or if we want to ensure record exists
-            // Or only if fields are populated
             const stakeholderPayload = {
                 account_id: createdAccount.account_id,
                 account_name: createdAccount.account_name,
@@ -226,13 +210,10 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
                 technical_decision_maker: '',
             };
 
-            // Attempt to create stakeholder details
             try {
                 await api.createStakeholderDetails(stakeholderPayload);
             } catch (err) {
                 console.error("Failed to create stakeholder details:", err);
-                // We don't fail the whole operation if this fails, but we log it
-                // Ideally show a warning toast
             }
 
             await fetchAccounts(); // Refresh list
@@ -254,34 +235,14 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
 
     const updateAccount = async (accountId: string, updates: Partial<AccountWithProjects>): Promise<boolean> => {
         try {
-            // Map updates to API payload
             const apiPayload: AccountDashboardUpdate = {
                 account_name: updates.account_name
-                // In a real app, map all changed fields
             };
-            // Simplistic: Map all fields that might have changed based on `updates`
-            // For now, let's assume `updates` contains current form state which is full or partial
-            // We should ideally map all AccountDashboardUpdate fields from `updates`
-            // But for brevity, I'll rely on what's passed or what's needed.
-            // If `updates` is full object, we can map broadly.
-            // CAUTION: This might be incomplete if `updates` doesn't have all fields mapped below.
-
-            // ... (rest of mapping similar to create, omitted for brevity in this snippet replacement) ...
-            // Ideally we need a comprehensive update mapper or pass a dedicated object
             Object.assign(apiPayload, {
-                // Map a few critical ones or all if possible.
-                // For this task, we assume the API needs all fields or we handle it properly
-                // Let's re-use the create mapper logic or similar
-                // For now, let's just make the API call for the main account
-                ...updates as any // TypeScript might complain, but this is rough
+                ...updates as any
             });
-            // Cleanup unknown fields before sending if using 'as any'
 
             await api.updateAccount(accountId, apiPayload);
-
-            // Update Stakeholder Details - Account Name sync if needed
-            // Currently handled separately or normalized
-            // We removed logic that tried to update profile fields from Account updates
 
             await fetchAccounts();
             toast({
@@ -319,12 +280,8 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
             return false;
         }
     };
-
-    // Project operations - these would typically be separate API calls
-    // For now we'll keep them local or mock them if API doesn't support them
     const addProject = (newProject: Project) => {
         setProjects((prev) => [...prev, newProject]);
-        // Note: This won't persist to backend unless we have a project API
     };
 
     const updateProject = (projectId: string, updates: Partial<Project>) => {
