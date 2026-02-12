@@ -1,21 +1,15 @@
 export interface AccountDashboardResponse {
     account_id: string;
     account_name: string;
-    // Removed: account_leader, industry
     domain?: string;
     company_revenue?: number;
     know_customer_value_chain?: boolean;
     account_focus?: string;
-    delivery_unit?: string;
     delivery_owner?: string;
     client_partner?: string;
     where_we_fit_in_value_chain?: string;
     engagement_age?: number;
     last_year_business_done?: number;
-
-    // New Fields
-    // Removed: target_2026, current_revenue, forecast_revenue, shortfall, account_health_score
-
     target_projection_2026_accounts?: number;
     target_projection_2026_delivery?: number;
     current_pipeline_value?: number;
@@ -35,28 +29,22 @@ export interface AccountDashboardResponse {
     identified_areas_cross_up_selling?: string;
     nitor_executive_connect_frequency?: string;
     growth_action_plan_30days_ready?: boolean;
-    miro_board_link?: string;
+    account_research_link?: string;
     created_at: string;
     updated_at: string;
 }
 
 export interface AccountDashboardCreate {
     account_name: string;
-    // Removed: account_leader, industry
     domain?: string;
     company_revenue?: number;
     know_customer_value_chain?: boolean;
     account_focus?: string;
-    delivery_unit?: string;
     delivery_owner?: string;
     client_partner?: string;
     where_we_fit_in_value_chain?: string;
     engagement_age?: number;
     last_year_business_done?: number;
-
-    // New Fields
-    // Removed: target_2026, current_revenue, forecast_revenue, shortfall, account_health_score
-
     target_projection_2026_accounts?: number;
     target_projection_2026_delivery?: number;
     current_pipeline_value?: number;
@@ -76,7 +64,7 @@ export interface AccountDashboardCreate {
     identified_areas_cross_up_selling?: string;
     nitor_executive_connect_frequency?: string;
     growth_action_plan_30days_ready?: boolean;
-    miro_board_link?: string;
+    account_research_link?: string;
 }
 
 export interface AccountDashboardUpdate extends Partial<AccountDashboardCreate> { }

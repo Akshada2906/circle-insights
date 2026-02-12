@@ -28,9 +28,6 @@ const mapApiToAccount = (apiAccount: AccountDashboardResponse): AccountWithProje
     return {
         account_id: apiAccount.account_id,
         account_name: apiAccount.account_name,
-        delivery_unit: apiAccount.delivery_unit || 'Unknown',
-
-        // Map other fields as available
         domain: apiAccount.domain,
         company_revenue: apiAccount.company_revenue,
         know_customer_value_chain: apiAccount.know_customer_value_chain,
@@ -59,7 +56,7 @@ const mapApiToAccount = (apiAccount: AccountDashboardResponse): AccountWithProje
         identified_areas_cross_up_selling: apiAccount.identified_areas_cross_up_selling,
         nitor_executive_connect_frequency: apiAccount.nitor_executive_connect_frequency,
         growth_action_plan_30days_ready: apiAccount.growth_action_plan_30days_ready,
-        miro_board_link: apiAccount.miro_board_link,
+        account_research_link: apiAccount.account_research_link,
 
         created_at: apiAccount.created_at,
         updated_at: apiAccount.updated_at,
@@ -175,15 +172,13 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
 
     const addAccount = async (newAccount: AccountWithProjects): Promise<boolean> => {
         try {
-            // Map frontend Create to API Create
             const apiPayload: AccountDashboardCreate = {
                 account_name: newAccount.account_name,
-                // Removed: account_leader, industry maps
                 domain: newAccount.domain,
                 company_revenue: newAccount.company_revenue,
                 know_customer_value_chain: newAccount.know_customer_value_chain,
                 account_focus: newAccount.account_focus,
-                delivery_unit: newAccount.delivery_unit,
+                // delivery_unit removed
                 delivery_owner: newAccount.delivery_owner,
                 client_partner: newAccount.client_partner,
                 where_we_fit_in_value_chain: newAccount.where_we_fit_in_value_chain,
@@ -208,7 +203,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
                 identified_areas_cross_up_selling: newAccount.identified_areas_cross_up_selling,
                 nitor_executive_connect_frequency: newAccount.nitor_executive_connect_frequency,
                 growth_action_plan_30days_ready: newAccount.growth_action_plan_30days_ready,
-                miro_board_link: newAccount.miro_board_link,
+                account_research_link: newAccount.account_research_link,
 
                 // New Financials
                 // Removed: target_2026, current_revenue, forecast_revenue, shortfall, account_health_score

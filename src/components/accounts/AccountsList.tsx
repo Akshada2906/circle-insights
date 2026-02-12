@@ -54,7 +54,7 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
             ['Domain', ...filteredAccounts.map(acc => val(acc.domain))],
             ['Account Focus (Platinum/Gold/Silver)', ...filteredAccounts.map(acc => val(acc.account_focus))],
             ['Engagement Age (As of Jan 2026)', ...filteredAccounts.map(acc => val(acc.engagement_age))],
-            ['Miro Board Link', ...filteredAccounts.map(acc => val(acc.miro_board_link))],
+            ['Account Research Link', ...filteredAccounts.map(acc => val(acc.account_research_link))],
 
             // --- Financials ---
             ['Company Revenue (USD)', ...filteredAccounts.map(acc => val(acc.company_revenue))],
@@ -65,7 +65,6 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
             ['Revenue Attrition / Leakage Possibility', ...filteredAccounts.map(acc => val(acc.revenue_attrition_possibility))],
 
             // --- Delivery & Operations ---
-            ['Delivery Unit', ...filteredAccounts.map(acc => val(acc.delivery_unit))],
             ['Delivery Owner', ...filteredAccounts.map(acc => val(acc.delivery_owner))],
             ['Team Size', ...filteredAccounts.map(acc => val(acc.team_size))],
             ['Overall Delivery Health', ...filteredAccounts.map(acc => val(acc.overall_delivery_health))],
@@ -147,7 +146,7 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
                 'Domain': account.domain || '-',
                 'Focus': account.account_focus || '-',
                 'Age': account.engagement_age || '-',
-                'Miro': account.miro_board_link || '-'
+                'Research Link': account.account_research_link || '-'
             }];
 
             const financialsData = [{
@@ -160,7 +159,6 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
             }];
 
             const deliveryData = [{
-                'Unit': account.delivery_unit || '-',
                 'Owner': account.delivery_owner || '-',
                 'Size': account.team_size || '-',
                 'Health': account.overall_delivery_health || '-',
