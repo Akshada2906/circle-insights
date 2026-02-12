@@ -173,10 +173,10 @@ const AccountDetails = () => {
                                     <p className="font-medium text-base text-foreground bg-slate-50 p-2 rounded-md border border-slate-100">{account.engagement_age || '-'}</p>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Miro Board</span>
+                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Account Research Link</span>
                                     <div className="bg-slate-50 p-2 rounded-md border border-slate-100">
-                                        <a href={account.miro_board_link} target="_blank" rel="noreferrer" className="text-blue-600 hover:text-blue-700 hover:underline truncate block font-medium">
-                                            {account.miro_board_link || '-'}
+                                        <a href={account.account_research_link} target="_blank" rel="noreferrer" className="text-blue-600 hover:text-blue-700 hover:underline truncate block font-medium">
+                                            {account.account_research_link || '-'}
                                         </a>
                                     </div>
                                 </div>
