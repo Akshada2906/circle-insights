@@ -49,27 +49,24 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
 
     return (
         <Card
-            className="group hover:shadow-lg transition-all duration-200 cursor-pointer border-border hover:border-primary/50"
+            className="group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer border-blue-100 hover:border-blue-300 border-t-4 border-t-blue-600 bg-gradient-to-br from-white to-blue-100/40"
             onClick={handleCardClick}
         >
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 border-b border-blue-100/50 bg-gradient-to-r from-blue-50/50 to-transparent">
                 <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className="p-2 bg-primary/10 rounded-lg shrink-0">
-                            <Building2 className="w-5 h-5 text-primary" />
+                        <div className="p-2 bg-blue-100/50 rounded-lg shrink-0 text-blue-600">
+                            <Building2 className="w-5 h-5" />
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold text-foreground truncate">{account.account_name}</h3>
+                                <h3 className="font-semibold truncate text-lg text-blue-950">{account.account_name}</h3>
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Delivery Unit: <span className="font-medium text-foreground">{account.delivery_unit}</span>
-                            </p>
                         </div>
                     </div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 hover:bg-blue-100/50 text-blue-900/40 hover:text-blue-900">
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
@@ -87,26 +84,10 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
                 </div>
             </CardHeader>
 
-            <CardContent className="space-y-4">
-                {/* Account Details */}
-                <div className="grid grid-cols-2 gap-3">
-
-                    <div className="space-y-1">
-                        <span className="text-xs text-muted-foreground">Delivery Unit</span>
-                        <p className="text-sm font-medium text-foreground">{account.delivery_unit}</p>
-                    </div>
-                </div>
-
-                {/* Health Score removed as per request */}
-
-                {/* Projects Info - REMOVED */}
-                <div className="flex items-center justify-between pt-2 border-t border-border">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                        {/* Projects count removed */}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                        {account.delivery_unit}
-                    </div>
+            <CardContent className="pt-4 space-y-4">
+                <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Delivery Unit</span>
+                    <p className="text-sm font-medium text-foreground">{account.delivery_unit}</p>
                 </div>
             </CardContent>
         </Card>

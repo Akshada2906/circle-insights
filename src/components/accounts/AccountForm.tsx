@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { Building2, DollarSign, Briefcase, Target, Users } from 'lucide-react';
 
 interface AccountFormProps {
     account?: Account;
@@ -31,7 +32,6 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
         company_revenue: account?.company_revenue || 0,
         know_customer_value_chain: account?.know_customer_value_chain || false,
         account_focus: account?.account_focus || 'Silver',
-        delivery_unit: account?.delivery_unit || '',
         delivery_owner: account?.delivery_owner || '',
         client_partner: account?.client_partner || '',
         where_we_fit_in_value_chain: account?.where_we_fit_in_value_chain || '',
@@ -56,23 +56,16 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
         identified_areas_cross_up_selling: account?.identified_areas_cross_up_selling || '',
         nitor_executive_connect_frequency: account?.nitor_executive_connect_frequency || '',
         growth_action_plan_30days_ready: account?.growth_action_plan_30days_ready || false,
-        miro_board_link: account?.miro_board_link || '',
+        account_research_link: account?.account_research_link || '',
     });
 
     const { toast } = useToast();
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    // Removed: shortfall, healthScore calculations
-
-    // Health score color helper removed
-
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {};
 
         if (!formData.account_name?.trim()) newErrors.account_name = 'Account name is required';
-        if (!formData.delivery_unit) newErrors.delivery_unit = 'Delivery unit is required';
-
-        // Removed target_2026 validation
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -120,17 +113,23 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <Tabs defaultValue="general" className="w-full">
-                <TabsList className="grid grid-cols-4 w-full">
-                    <TabsTrigger value="general">General</TabsTrigger>
-                    <TabsTrigger value="financials">Financials</TabsTrigger>
-                    <TabsTrigger value="delivery">Delivery</TabsTrigger>
-                    <TabsTrigger value="strategy">Strategy & Relationships</TabsTrigger>
+                <TabsList className="grid grid-cols-4 w-full gap-4">
+                    <TabsTrigger value="general" className="tab-blue">General</TabsTrigger>
+                    <TabsTrigger value="financials" className="tab-green">Financials</TabsTrigger>
+                    <TabsTrigger value="delivery" className="tab-orange">Delivery</TabsTrigger>
+                    <TabsTrigger value="strategy" className="tab-purple">Strategy & Relationships</TabsTrigger>
                 </TabsList>
 
-                {/* GENERAL INFO */}
                 <TabsContent value="general" className="space-y-4 py-4">
                     <Card>
-                        <CardHeader><CardTitle>Basic Information</CardTitle></CardHeader>
+                        <CardHeader className="bg-gradient-to-r from-blue-50/80 to-transparent border-b border-blue-100 pb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-blue-100/50 rounded-lg text-blue-600">
+                                    <Building2 className="w-5 h-5" />
+                                </div>
+                                <CardTitle className="text-lg text-blue-950">Basic Information</CardTitle>
+                            </div>
+                        </CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="account_name">Account Name *</Label>
@@ -158,8 +157,8 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                                 <Input type="number" id="engagement_age" value={formData.engagement_age || ''} onChange={(e) => handleNumberChange('engagement_age', e.target.value)} placeholder="e.g. 5" />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="miro_board_link">Miro Board Link</Label>
-                                <Input id="miro_board_link" value={formData.miro_board_link} onChange={(e) => setFormData({ ...formData, miro_board_link: e.target.value })} placeholder="https://miro.com/..." />
+                                <Label htmlFor="account_research_link">Account Research Link</Label>
+                                <Input id="account_research_link" value={formData.account_research_link} onChange={(e) => setFormData({ ...formData, account_research_link: e.target.value })} placeholder="https://..." />
                             </div>
                         </CardContent>
                     </Card>
@@ -168,7 +167,14 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                 {/* FINANCIALS */}
                 <TabsContent value="financials" className="space-y-4 py-4">
                     <Card>
-                        <CardHeader><CardTitle>Financial Metrics</CardTitle></CardHeader>
+                        <CardHeader className="bg-gradient-to-r from-blue-50/80 to-transparent border-b border-blue-100 pb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-blue-100/50 rounded-lg text-blue-600">
+                                    <DollarSign className="w-5 h-5" />
+                                </div>
+                                <CardTitle className="text-lg text-blue-950">Financial Metrics</CardTitle>
+                            </div>
+                        </CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="company_revenue">Company Revenue (USD)</Label>
@@ -201,13 +207,15 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                 {/* DELIVERY & TEAM */}
                 <TabsContent value="delivery" className="space-y-4 py-4">
                     <Card>
-                        <CardHeader><CardTitle>Delivery & Operations</CardTitle></CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="delivery_unit">Delivery Unit *</Label>
-                                <Input id="delivery_unit" value={formData.delivery_unit} onChange={(e) => setFormData({ ...formData, delivery_unit: e.target.value })} className={errors.delivery_unit ? 'border-destructive' : ''} />
-                                {errors.delivery_unit && <p className="text-xs text-destructive">{errors.delivery_unit}</p>}
+                        <CardHeader className="bg-gradient-to-r from-blue-50/80 to-transparent border-b border-blue-100 pb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-blue-100/50 rounded-lg text-blue-600">
+                                    <Briefcase className="w-5 h-5" />
+                                </div>
+                                <CardTitle className="text-lg text-blue-950">Delivery & Operations</CardTitle>
                             </div>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="delivery_owner">Delivery Owner</Label>
                                 <Input id="delivery_owner" value={formData.delivery_owner} onChange={(e) => setFormData({ ...formData, delivery_owner: e.target.value })} />
@@ -250,7 +258,14 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                 {/* STRATEGY & RELATIONSHIPS */}
                 <TabsContent value="strategy" className="space-y-4 py-4">
                     <Card>
-                        <CardHeader><CardTitle>Strategy & Value Chain</CardTitle></CardHeader>
+                        <CardHeader className="bg-gradient-to-r from-blue-50/80 to-transparent border-b border-blue-100 pb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-blue-100/50 rounded-lg text-blue-600">
+                                    <Target className="w-5 h-5" />
+                                </div>
+                                <CardTitle className="text-lg text-blue-950">Strategy & Value Chain</CardTitle>
+                            </div>
+                        </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
@@ -288,7 +303,14 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                     </Card>
 
                     <Card>
-                        <CardHeader><CardTitle>Stakeholders & Relationships</CardTitle></CardHeader>
+                        <CardHeader className="bg-gradient-to-r from-blue-50/80 to-transparent border-b border-blue-100 pb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-blue-100/50 rounded-lg text-blue-600">
+                                    <Users className="w-5 h-5" />
+                                </div>
+                                <CardTitle className="text-lg text-blue-950">Relationships</CardTitle>
+                            </div>
+                        </CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="client_partner">Client Partner</Label>

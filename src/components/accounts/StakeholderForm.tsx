@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Stakeholder } from '@/types/account';
+import { UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -114,11 +115,15 @@ export function StakeholderForm({ stakeholder, accountId, projects, onSubmit, on
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <span className="text-lg">👤</span>
-                        Stakeholder Information
-                    </CardTitle>
+                <CardHeader className="bg-gradient-to-r from-blue-50/80 to-transparent border-b border-blue-100 pb-4">
+                    <div className="flex items-center gap-2">
+                        <div className="p-2 bg-blue-100/50 rounded-lg text-blue-600">
+                            <UserPlus className="w-5 h-5" />
+                        </div>
+                        <CardTitle className="text-lg text-blue-950">
+                            Stakeholder Information
+                        </CardTitle>
+                    </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {/* Stakeholder Name */}
