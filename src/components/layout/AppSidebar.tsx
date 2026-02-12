@@ -74,24 +74,29 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
         className={cn(
           'w-full justify-start gap-3 h-11 px-3 relative transition-all duration-200',
           isActive
-            ? 'bg-primary/10 text-primary hover:bg-primary/15 border-l-2 border-primary rounded-l-none'
-            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+            ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 border-l-2 border-sidebar-accent-foreground rounded-l-none'
+            : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent',
           collapsed && 'justify-center px-0'
         )}
       >
-        <Icon className={cn('h-5 w-5 shrink-0', isActive && 'text-primary')} />
+        <Icon className={cn('h-5 w-5 shrink-0', isActive && 'text-sidebar-primary-foreground')} />
         {!collapsed && (
           <>
             <span className="font-medium">{item.title}</span>
             {item.badge && (
-              <span className="ml-auto bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+              <span className={cn(
+                "ml-auto text-xs px-2 py-0.5 rounded-full",
+                isActive
+                  ? "bg-sidebar-primary-foreground text-sidebar-primary"
+                  : "bg-sidebar-accent text-sidebar-foreground"
+              )}>
                 {item.badge}
               </span>
             )}
           </>
         )}
         {collapsed && item.badge && (
-          <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
+          <span className="absolute -top-1 -right-1 bg-sidebar-primary text-sidebar-primary-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full border border-sidebar-background">
             {item.badge}
           </span>
         )}
@@ -120,20 +125,20 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen bg-card border-r border-border flex flex-col transition-all duration-300 ease-in-out',
+        'fixed left-0 top-0 z-40 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col transition-all duration-300 ease-in-out',
         collapsed ? 'w-[68px]' : 'w-[260px]'
       )}
     >
       {/* Logo Section */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-border">
+      <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
         <div className={cn('flex items-center gap-3 overflow-hidden', collapsed && 'justify-center w-full')}>
-          <div className="p-2 bg-gradient-to-br from-primary to-chart-4 rounded-lg shadow-lg shadow-primary/20">
-            <Building2 className="w-5 h-5 text-primary-foreground" />
+          <div className="p-2 bg-gradient-to-br from-sidebar-primary to-chart-4 rounded-lg shadow-lg shadow-sidebar-primary/20">
+            <Building2 className="w-5 h-5 text-sidebar-primary-foreground" />
           </div>
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="font-bold text-foreground text-sm">OrgManager</span>
-              <span className="text-[10px] text-muted-foreground">AI Penetration</span>
+              <span className="font-bold text-sidebar-foreground text-sm">OrgManager</span>
+              <span className="text-[10px] text-sidebar-foreground/70">AI Penetration</span>
             </div>
           )}
         </div>
@@ -147,7 +152,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
           ))}
         </nav>
 
-        <Separator className="my-4 mx-3" />
+        <Separator className="my-4 mx-3 bg-sidebar-border" />
 
         <nav className="px-3 space-y-1">
           {secondaryNavItems.map((item) => (
@@ -157,22 +162,13 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
       </ScrollArea>
 
       {/* Account Section */}
-      <div className="border-t border-border p-3">
+      <div className="border-t border-sidebar-border p-3">
         <div
           className={cn(
-            'flex items-center gap-3 p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer',
+            'flex items-center gap-3 p-2 rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer',
             collapsed && 'justify-center p-2'
           )}
         >
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-semibold text-sm shrink-0">
-            TC
-          </div>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">TechCorp Global</p>
-              <p className="text-xs text-muted-foreground truncate">Enterprise Account</p>
-            </div>
-          )}
         </div>
       </div>
 
@@ -181,7 +177,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
         variant="ghost"
         size="icon"
         onClick={onToggle}
-        className="absolute -right-3 top-20 w-6 h-6 rounded-full border border-border bg-card shadow-md hover:bg-muted"
+        className="absolute -right-3 top-20 w-6 h-6 rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
       >
         {collapsed ? (
           <ChevronRight className="w-3 h-3" />

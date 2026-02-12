@@ -12,7 +12,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Users, Swords, ShieldCheck, Building, ClipboardCheck } from 'lucide-react';
 
 interface StrategicProfileFormProps {
     profile?: StrategicStakeholderProfile;
@@ -67,6 +68,14 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel }: 
             {/* Account Selection - Only show if accounts provided and we don't have a fixed profile with ID (edit mode usually implies context, but here we cover both) */}
             {accounts && accounts.length > 0 && !profile?.id && (
                 <Card>
+                    <CardHeader className="bg-gradient-to-r from-blue-50/80 to-transparent border-b border-blue-100 pb-4">
+                        <div className="flex items-center gap-2">
+                            <div className="p-2 bg-blue-100/50 rounded-lg text-blue-600">
+                                <Building className="w-5 h-5" />
+                            </div>
+                            <CardTitle className="text-lg text-blue-950">Account Selection</CardTitle>
+                        </div>
+                    </CardHeader>
                     <CardContent className="pt-6">
                         <div className="space-y-2">
                             <Label htmlFor="account_select">Select Account <span className="text-red-500">*</span></Label>
@@ -91,15 +100,23 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel }: 
             )}
 
             <Tabs defaultValue="mapping" className="w-full">
-                <TabsList className="grid grid-cols-3 w-full">
-                    <TabsTrigger value="mapping">Stakeholder Mapping</TabsTrigger>
-                    <TabsTrigger value="competition">Competition & Positioning</TabsTrigger>
-                    <TabsTrigger value="readiness">Internal Readiness</TabsTrigger>
+                <TabsList className="grid grid-cols-3 w-full gap-4">
+                    <TabsTrigger value="mapping" className="tab-purple">Stakeholder Mapping</TabsTrigger>
+                    <TabsTrigger value="competition" className="tab-rose">Competition & Positioning</TabsTrigger>
+                    <TabsTrigger value="readiness" className="tab-emerald">Internal Readiness</TabsTrigger>
                 </TabsList>
 
                 {/* Tab 1: Stakeholder Mapping */}
                 <TabsContent value="mapping" className="space-y-4 py-4">
-                    <Card>
+                    <Card className="border-t-4 border-t-purple-500 shadow-sm">
+                        <CardHeader className="bg-gradient-to-r from-purple-50/80 to-transparent border-b border-purple-100 pb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-purple-100/50 rounded-lg text-purple-600">
+                                    <Users className="w-5 h-5" />
+                                </div>
+                                <CardTitle className="text-lg text-purple-950">Stakeholder Mapping</CardTitle>
+                            </div>
+                        </CardHeader>
                         <CardContent className="space-y-4 pt-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
@@ -163,7 +180,15 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel }: 
 
                 {/* Tab 2: Competition & Positioning */}
                 <TabsContent value="competition" className="space-y-4 py-4">
-                    <Card>
+                    <Card className="border-t-4 border-t-rose-500 shadow-sm">
+                        <CardHeader className="bg-gradient-to-r from-rose-50/80 to-transparent border-b border-rose-100 pb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-rose-100/50 rounded-lg text-rose-600">
+                                    <Swords className="w-5 h-5" />
+                                </div>
+                                <CardTitle className="text-lg text-rose-950">Competition & Positioning</CardTitle>
+                            </div>
+                        </CardHeader>
                         <CardContent className="space-y-4 pt-4">
                             <div className="space-y-2">
                                 <Label htmlFor="key_competitors">Key Competitors in Account</Label>
@@ -224,7 +249,15 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel }: 
 
                 {/* Tab 3: Internal Readiness */}
                 <TabsContent value="readiness" className="space-y-4 py-4">
-                    <Card>
+                    <Card className="border-t-4 border-t-emerald-500 shadow-sm">
+                        <CardHeader className="bg-gradient-to-r from-emerald-50/80 to-transparent border-b border-emerald-100 pb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-emerald-100/50 rounded-lg text-emerald-600">
+                                    <ShieldCheck className="w-5 h-5" />
+                                </div>
+                                <CardTitle className="text-lg text-emerald-950">Internal Readiness</CardTitle>
+                            </div>
+                        </CardHeader>
                         <CardContent className="space-y-4 pt-4">
                             <div className="space-y-2">
                                 <Label htmlFor="account_review_cadence">Account Review Cadence</Label>

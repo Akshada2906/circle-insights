@@ -3,7 +3,6 @@
 export interface Account {
     account_id: string;
     account_name: string;
-    delivery_unit: string;
     domain?: string;
     company_revenue?: number;
     know_customer_value_chain?: boolean;
@@ -32,7 +31,7 @@ export interface Account {
     identified_areas_cross_up_selling?: string;
     nitor_executive_connect_frequency?: string;
     growth_action_plan_30days_ready?: boolean;
-    miro_board_link?: string;
+    account_research_link?: string;
 
     // Removed legacy/incorrect fields: ai_summary, leadership_comments, and strategic profile fields
     // Strategic fields should be accessed via StrategicStakeholderProfile objects
