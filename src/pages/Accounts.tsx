@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { AccountsList } from '@/components/accounts/AccountsList';
 import { useAccounts } from '@/contexts/AccountContext';
@@ -6,10 +6,14 @@ import { useToast } from '@/hooks/use-toast';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 
 const Accounts = () => {
-    const { accounts, deleteAccount } = useAccounts();
+    const { accounts, deleteAccount, refreshAccounts } = useAccounts();
     const { toast } = useToast();
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+    useEffect(() => {
+        refreshAccounts();
+    }, [refreshAccounts]);
 
     const handleDelete = (accountId: string) => {
         setDeleteId(accountId);

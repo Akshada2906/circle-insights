@@ -96,7 +96,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
 
 
 
-    const fetchAccounts = async () => {
+    const fetchAccounts = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
@@ -114,7 +114,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [toast]);
 
     const fetchAccount = useCallback(async (accountId: string) => {
         try {
@@ -161,11 +161,11 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         fetchAccounts();
-    }, []);
+    }, [fetchAccounts]);
 
-    const refreshAccounts = async () => {
+    const refreshAccounts = useCallback(async () => {
         await fetchAccounts();
-    };
+    }, [fetchAccounts]);
 
     const addAccount = async (newAccount: AccountWithProjects): Promise<boolean> => {
         try {

@@ -110,14 +110,35 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
         }).format(value);
     };
 
+    const TABS = ['general', 'financials', 'delivery', 'strategy'];
+    const [activeTab, setActiveTab] = useState('general');
+
+    const handleNext = () => {
+        const currentIndex = TABS.indexOf(activeTab);
+        if (currentIndex < TABS.length - 1) {
+            setActiveTab(TABS[currentIndex + 1]);
+        }
+    };
+
+    const handlePrevious = () => {
+        const currentIndex = TABS.indexOf(activeTab);
+        if (currentIndex > 0) {
+            setActiveTab(TABS[currentIndex - 1]);
+        }
+    };
+
+    const isLastTab = activeTab === TABS[TABS.length - 1];
+    const isFirstTab = activeTab === TABS[0];
+    const currentTabIndex = TABS.indexOf(activeTab);
+
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
-            <Tabs defaultValue="general" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid grid-cols-4 w-full gap-4">
-                    <TabsTrigger value="general" className="tab-blue">General</TabsTrigger>
-                    <TabsTrigger value="financials" className="tab-green">Financials</TabsTrigger>
-                    <TabsTrigger value="delivery" className="tab-orange">Delivery</TabsTrigger>
-                    <TabsTrigger value="strategy" className="tab-purple">Strategy & Relationships</TabsTrigger>
+                    <TabsTrigger value="general" className="tab-blue" disabled={0 > currentTabIndex}>General</TabsTrigger>
+                    <TabsTrigger value="financials" className="tab-green" disabled={1 > currentTabIndex}>Financials</TabsTrigger>
+                    <TabsTrigger value="delivery" className="tab-orange" disabled={2 > currentTabIndex}>Delivery</TabsTrigger>
+                    <TabsTrigger value="strategy" className="tab-purple" disabled={3 > currentTabIndex}>Strategy & Relationships</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="general" className="space-y-4 py-4">
@@ -346,13 +367,39 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
             </Tabs>
 
             {/* Form Actions */}
-            <div className="flex justify-end gap-3 sticky bottom-0 bg-background/95 backdrop-blur py-4 border-t z-10">
-                <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-                    Cancel
-                </Button>
-                <Button type="submit" disabled={isLoading}>
-                    {isLoading ? 'Saving...' : account ? 'Update Account' : 'Create Account'}
-                </Button>
+            <div className="flex justify-between items-center sticky bottom-0 bg-background/95 backdrop-blur py-4 border-t z-10 px-1">
+                <div className="flex gap-3">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handlePrevious}
+                        disabled={isFirstTab || isLoading}
+                    >
+                        Previous
+                    </Button>
+
+                    <Button
+                        type="button"
+                        onClick={handleNext}
+                        disabled={isLoading || isLastTab}
+                    >
+                        Next
+                    </Button>
+                </div>
+
+                <div className="flex gap-3">
+                    <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+                        Cancel
+                    </Button>
+
+                    <Button
+                        type="submit"
+                        disabled={isLoading || !isLastTab}
+                        className={!isLastTab ? "opacity-50 cursor-not-allowed" : ""}
+                    >
+                        {isLoading ? 'Saving...' : account ? 'Update Account' : 'Create Account'}
+                    </Button>
+                </div>
             </div>
         </form>
     );

@@ -63,6 +63,27 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel }: 
         });
     };
 
+    const TABS = ['mapping', 'competition', 'readiness'];
+    const [activeTab, setActiveTab] = useState('mapping');
+
+    const handleNext = () => {
+        const currentIndex = TABS.indexOf(activeTab);
+        if (currentIndex < TABS.length - 1) {
+            setActiveTab(TABS[currentIndex + 1]);
+        }
+    };
+
+    const handlePrevious = () => {
+        const currentIndex = TABS.indexOf(activeTab);
+        if (currentIndex > 0) {
+            setActiveTab(TABS[currentIndex - 1]);
+        }
+    };
+
+    const isLastTab = activeTab === TABS[TABS.length - 1];
+    const isFirstTab = activeTab === TABS[0];
+    const currentTabIndex = TABS.indexOf(activeTab);
+
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             {/* Account Selection - Only show if accounts provided and we don't have a fixed profile with ID (edit mode usually implies context, but here we cover both) */}
@@ -99,11 +120,11 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel }: 
                 </Card>
             )}
 
-            <Tabs defaultValue="mapping" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid grid-cols-3 w-full gap-4">
-                    <TabsTrigger value="mapping" className="tab-purple">Stakeholder Mapping</TabsTrigger>
-                    <TabsTrigger value="competition" className="tab-rose">Competition & Positioning</TabsTrigger>
-                    <TabsTrigger value="readiness" className="tab-emerald">Internal Readiness</TabsTrigger>
+                    <TabsTrigger value="mapping" className="tab-purple" disabled={0 > currentTabIndex}>Stakeholder Mapping</TabsTrigger>
+                    <TabsTrigger value="competition" className="tab-rose" disabled={1 > currentTabIndex}>Competition & Positioning</TabsTrigger>
+                    <TabsTrigger value="readiness" className="tab-emerald" disabled={2 > currentTabIndex}>Internal Readiness</TabsTrigger>
                 </TabsList>
 
                 {/* Tab 1: Stakeholder Mapping */}
@@ -296,13 +317,39 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel }: 
                 </TabsContent>
             </Tabs>
 
-            <div className="flex justify-end gap-3 sticky bottom-0 bg-background/95 backdrop-blur py-4 border-t z-10">
-                <Button type="button" variant="outline" onClick={onCancel}>
-                    Cancel
-                </Button>
-                <Button type="submit">
-                    {profile?.id ? 'Update Profile' : 'Create Profile'}
-                </Button>
+            <div className="flex justify-between items-center sticky bottom-0 bg-background/95 backdrop-blur py-4 border-t z-10 px-1">
+                <div className="flex gap-3">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handlePrevious}
+                        disabled={isFirstTab}
+                    >
+                        Previous
+                    </Button>
+
+                    <Button
+                        type="button"
+                        onClick={handleNext}
+                        disabled={isLastTab}
+                    >
+                        Next
+                    </Button>
+                </div>
+
+                <div className="flex gap-3">
+                    <Button type="button" variant="outline" onClick={onCancel}>
+                        Cancel
+                    </Button>
+
+                    <Button
+                        type="submit"
+                        disabled={!isLastTab}
+                        className={!isLastTab ? "opacity-50 cursor-not-allowed" : ""}
+                    >
+                        {profile?.id ? 'Update Profile' : 'Create Profile'}
+                    </Button>
+                </div>
             </div>
         </form>
     );
