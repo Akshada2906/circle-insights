@@ -8,11 +8,15 @@ import { Users, Building2, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
-  const { accounts } = useAccounts();
+  const { accounts, refreshAccounts } = useAccounts();
   const navigate = useNavigate();
   const [stakeholderCount, setStakeholderCount] = useState<number>(0);
 
   const totalAccounts = accounts.length;
+
+  useEffect(() => {
+    refreshAccounts();
+  }, [refreshAccounts]);
 
   useEffect(() => {
     const fetchStakeholderCount = async () => {
