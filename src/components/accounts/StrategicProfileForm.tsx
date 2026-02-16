@@ -20,9 +20,10 @@ interface StrategicProfileFormProps {
     accounts?: AccountWithProjects[];
     onSubmit: (profile: Partial<StrategicStakeholderProfile>) => void;
     onCancel: () => void;
+    isLoading?: boolean;
 }
 
-export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel }: StrategicProfileFormProps) {
+export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel, isLoading = false }: StrategicProfileFormProps) {
     const [formData, setFormData] = useState<Partial<StrategicStakeholderProfile>>({
         account_id: profile?.account_id || '',
         account_name: profile?.account_name || '',
@@ -323,7 +324,7 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel }: 
                         type="button"
                         variant="outline"
                         onClick={handlePrevious}
-                        disabled={isFirstTab}
+                        disabled={isFirstTab || isLoading}
                     >
                         Previous
                     </Button>
@@ -331,23 +332,23 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel }: 
                     <Button
                         type="button"
                         onClick={handleNext}
-                        disabled={isLastTab}
+                        disabled={isLastTab || isLoading}
                     >
                         Next
                     </Button>
                 </div>
 
                 <div className="flex gap-3">
-                    <Button type="button" variant="outline" onClick={onCancel}>
+                    <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
                         Cancel
                     </Button>
 
                     <Button
                         type="submit"
-                        disabled={!isLastTab}
+                        disabled={!isLastTab || isLoading}
                         className={!isLastTab ? "opacity-50 cursor-not-allowed" : ""}
                     >
-                        {profile?.id ? 'Update Profile' : 'Create Profile'}
+                        {isLoading ? 'Saving...' : profile?.id ? 'Update Profile' : 'Create Profile'}
                     </Button>
                 </div>
             </div>

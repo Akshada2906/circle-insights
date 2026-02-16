@@ -203,18 +203,6 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
             };
 
             const createdAccount = await api.createAccount(apiPayload);
-            const stakeholderPayload = {
-                account_id: createdAccount.account_id,
-                account_name: createdAccount.account_name,
-                executive_sponsor: '',
-                technical_decision_maker: '',
-            };
-
-            try {
-                await api.createStakeholderDetails(stakeholderPayload);
-            } catch (err) {
-                console.error("Failed to create stakeholder details:", err);
-            }
 
             await fetchAccounts(); // Refresh list
             toast({
