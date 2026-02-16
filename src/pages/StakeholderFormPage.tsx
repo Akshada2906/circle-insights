@@ -199,6 +199,7 @@ const StakeholderFormPage = () => {
                     accounts={accounts}
                     onSubmit={handleSubmit}
                     onCancel={handleCancel}
+                    isLoading={isLoading}
                 />
 
                 <ConfirmationDialog
@@ -208,6 +209,7 @@ const StakeholderFormPage = () => {
                     description="Are you sure you want to update this strategic profile?"
                     onConfirm={confirmUpdate}
                     confirmText="Update Profile"
+                    isLoading={isLoading}
                 />
             </div>
         </MainLayout>

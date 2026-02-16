@@ -32,8 +32,8 @@ const Stakeholders = () => {
   const [profiles, setProfiles] = useState<StrategicStakeholderProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Mapper to convert API response to frontend profile type
   const mapApiToProfile = (apiDetails: any): StrategicStakeholderProfile => {
     return {
       id: apiDetails.id,
@@ -97,6 +97,7 @@ const Stakeholders = () => {
   const confirmDeleteProfile = async () => {
     if (!deleteId) return;
 
+    setIsDeleting(true);
     try {
       await api.deleteStakeholderDetails(deleteId);
       await refreshAccounts(); // Keep context in sync
@@ -106,6 +107,7 @@ const Stakeholders = () => {
       console.error("Failed to delete profile", err);
       toast({ title: 'Error', variant: 'destructive', description: 'Failed to delete profile.' });
     } finally {
+      setIsDeleting(false);
       setIsDeleteOpen(false);
       setDeleteId(null);
     }
@@ -384,6 +386,7 @@ const Stakeholders = () => {
           onConfirm={confirmDeleteProfile}
           variant="destructive"
           confirmText="Delete"
+          isLoading={isDeleting}
         />
       </div>
     </MainLayout >

@@ -17,15 +17,19 @@ const AccountFormPage = () => {
 
     const [pendingUpdate, setPendingUpdate] = useState<Partial<Account> | null>(null);
     const [isUpdateOpen, setIsUpdateOpen] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
 
-    // Get account from context instead of mock file
     const account = id ? accounts.find(a => a.account_id === id) : undefined;
     const isEditing = !!id;
 
     const confirmUpdate = async () => {
         if (!isEditing || !id || !pendingUpdate) return;
 
+        setIsUpdating(true);
         const success = await updateAccount(id, pendingUpdate);
+        setIsUpdating(false);
+
         if (success) {
             navigate(`/accounts/${id}`);
         }
@@ -39,6 +43,7 @@ const AccountFormPage = () => {
             setIsUpdateOpen(true);
         } else {
             // New account
+            setIsCreating(true);
             const newAccount = {
                 ...accountData,
                 account_id: `acc-${Date.now()}`,
@@ -51,6 +56,8 @@ const AccountFormPage = () => {
             } as any;
 
             const success = await addAccount(newAccount);
+            setIsCreating(false);
+
             if (success) {
                 navigate('/accounts');
             }
@@ -86,7 +93,12 @@ const AccountFormPage = () => {
                 </div>
 
                 {/* Account Form */}
-                <AccountForm account={account} onSubmit={handleSubmit} onCancel={handleCancel} />
+                <AccountForm
+                    account={account}
+                    onSubmit={handleSubmit}
+                    onCancel={handleCancel}
+                    isLoading={isCreating || isUpdating}
+                />
 
                 <ConfirmationDialog
                     open={isUpdateOpen}
@@ -95,6 +107,7 @@ const AccountFormPage = () => {
                     description="Are you sure you want to update this account?"
                     onConfirm={confirmUpdate}
                     confirmText="Update Account"
+                    isLoading={isUpdating}
                 />
             </div>
         </MainLayout>

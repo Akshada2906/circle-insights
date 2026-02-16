@@ -10,6 +10,7 @@ const Accounts = () => {
     const { toast } = useToast();
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         refreshAccounts();
@@ -23,6 +24,7 @@ const Accounts = () => {
     const confirmDelete = async () => {
         if (!deleteId) return;
 
+        setIsDeleting(true);
         try {
             await deleteAccount(deleteId);
             toast({
@@ -37,6 +39,7 @@ const Accounts = () => {
                 variant: 'destructive'
             });
         } finally {
+            setIsDeleting(false);
             setIsDeleteOpen(false);
             setDeleteId(null);
         }
@@ -56,6 +59,7 @@ const Accounts = () => {
                     onConfirm={confirmDelete}
                     variant="destructive"
                     confirmText="Delete Account"
+                    isLoading={isDeleting}
                 />
             </div>
         </MainLayout>
