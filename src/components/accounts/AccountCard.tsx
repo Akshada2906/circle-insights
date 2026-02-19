@@ -91,7 +91,7 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
                 </div>
                 <div className="space-y-1">
                     <span className="text-xs text-muted-foreground">Current Pipeline</span>
-                    <p className="text-sm font-medium text-foreground truncate" title={account.current_pipeline_value || '-'}>{account.current_pipeline_value || '-'}</p>
+                    <p className="text-sm font-medium text-foreground" title={account.current_pipeline_value || '-'}>{account.current_pipeline_value || '-'}</p>
                 </div>
                 <div className="space-y-1">
                     <span className="text-xs text-muted-foreground">Active Projects</span>
