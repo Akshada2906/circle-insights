@@ -13,7 +13,21 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Swords, ShieldCheck, Building, ClipboardCheck } from 'lucide-react';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Check, ChevronsUpDown, Users, Swords, ShieldCheck, Building } from 'lucide-react';
 
 interface StrategicProfileFormProps {
     profile?: StrategicStakeholderProfile;
@@ -47,7 +61,6 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel, is
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Validation: Account is required for global create
         if (!formData.account_id && accounts && accounts.length > 0) {
             alert("Please select an account.");
             return;
@@ -65,6 +78,7 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel, is
     };
 
     const TABS = ['mapping', 'competition', 'readiness'];
+    const [open, setOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('mapping');
 
     const handleNext = () => {
@@ -87,7 +101,6 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel, is
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Account Selection - Only show if accounts provided and we don't have a fixed profile with ID (edit mode usually implies context, but here we cover both) */}
             {accounts && accounts.length > 0 && !profile?.id && (
                 <Card>
                     <CardHeader className="bg-gradient-to-r from-blue-50/80 to-transparent border-b border-blue-100 pb-4">
@@ -99,23 +112,56 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel, is
                         </div>
                     </CardHeader>
                     <CardContent className="pt-6">
-                        <div className="space-y-2">
+                        <div className="space-y-2 flex flex-col">
                             <Label htmlFor="account_select">Select Account <span className="text-red-500">*</span></Label>
-                            <Select
-                                value={formData.account_id}
-                                onValueChange={handleAccountChange}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select an account..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {accounts.map(acc => (
-                                        <SelectItem key={acc.account_id} value={acc.account_id}>
-                                            {acc.account_name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <Popover open={open} onOpenChange={setOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={open}
+                                        className={cn(
+                                            "w-full justify-between",
+                                            !formData.account_id && "text-muted-foreground"
+                                        )}
+                                    >
+                                        {formData.account_id
+                                            ? accounts.find((acc) => acc.account_id === formData.account_id)?.account_name
+                                            : "Select an account..."}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                    <Command>
+                                        <CommandInput placeholder="Search account..." />
+                                        <CommandList className="max-h-[300px] overflow-y-auto overflow-x-hidden">
+                                            <CommandEmpty>No account found.</CommandEmpty>
+                                            <CommandGroup>
+                                                {accounts.map((acc) => (
+                                                    <CommandItem
+                                                        value={acc.account_name}
+                                                        key={acc.account_id}
+                                                        onSelect={() => {
+                                                            handleAccountChange(acc.account_id);
+                                                            setOpen(false);
+                                                        }}
+                                                    >
+                                                        <Check
+                                                            className={cn(
+                                                                "mr-2 h-4 w-4",
+                                                                acc.account_id === formData.account_id
+                                                                    ? "opacity-100"
+                                                                    : "opacity-0"
+                                                            )}
+                                                        />
+                                                        {acc.account_name}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
                         </div>
                     </CardContent>
                 </Card>
