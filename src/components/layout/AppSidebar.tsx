@@ -130,15 +130,22 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
       )}
     >
       {/* Logo Section */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
-        <div className={cn('flex items-center gap-3 overflow-hidden', collapsed && 'justify-center w-full')}>
-          <div className="p-2 bg-gradient-to-br from-sidebar-primary to-chart-4 rounded-lg shadow-lg shadow-sidebar-primary/20">
-            <Building2 className="w-5 h-5 text-sidebar-primary-foreground" />
+      <div className={cn("flex items-center justify-center border-b border-sidebar-border transition-all duration-300",
+        collapsed ? "h-16 px-4" : "h-32 px-4"
+      )}>
+        <div className={cn('flex items-center overflow-hidden w-full transition-all duration-300', collapsed ? 'justify-center' : 'flex-col gap-2')}>
+          <div className={cn("bg-white rounded-full flex items-center justify-center p-2 shadow-sm transition-all duration-300 hover:scale-105",
+            collapsed ? "w-10 h-10" : "w-16 h-16"
+          )}>
+            <img
+              src="/Nitor Logo.png"
+              alt="Nitor Logo"
+              className="w-full h-full object-contain"
+            />
           </div>
           {!collapsed && (
-            <div className="flex flex-col">
-              <span className="font-bold text-sidebar-foreground text-sm">OrgManager</span>
-              <span className="text-[10px] text-sidebar-foreground/70">AI Penetration</span>
+            <div className="flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+              <span className="font-bold text-sidebar-foreground text-lg">Smart Organization Portal</span>
             </div>
           )}
         </div>
