@@ -49,7 +49,7 @@ const Accounts = () => {
     return (
         <MainLayout>
             <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <AccountsList accounts={accounts} onDelete={handleDelete} />
+                <AccountsList accounts={accounts} onDelete={handleDelete} onRefresh={refreshAccounts} />
 
                 <ConfirmationDialog
                     open={isDeleteOpen}

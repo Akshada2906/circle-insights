@@ -95,14 +95,7 @@ const AccountDetails = () => {
 
 
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(value);
-    };
+
 
     const getHealthScoreColor = (score: number) => {
         if (score >= 70) return 'bg-green-100 text-green-700 border-green-300';
@@ -195,23 +188,23 @@ const AccountDetails = () => {
                             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
                                 <div className="space-y-1.5 p-3 rounded-lg bg-emerald-50/30 border border-emerald-100/50">
                                     <span className="text-xs font-medium text-emerald-700/80 uppercase tracking-wider">Company Revenue</span>
-                                    <p className="text-xl font-bold text-emerald-900">{formatCurrency(account.company_revenue || 0)}</p>
+                                    <p className="text-xl font-bold text-emerald-900">{account.company_revenue || '-'}</p>
                                 </div>
                                 <div className="space-y-1.5 p-3 rounded-lg bg-emerald-50/30 border border-emerald-100/50">
                                     <span className="text-xs font-medium text-emerald-700/80 uppercase tracking-wider">Last Year Business</span>
-                                    <p className="text-xl font-bold text-emerald-900">{formatCurrency(account.last_year_business_done || 0)}</p>
+                                    <p className="text-xl font-bold text-emerald-900">{account.last_year_business_done || '-'}</p>
                                 </div>
                                 <div className="space-y-1.5 p-3 rounded-lg bg-emerald-50/30 border border-emerald-100/50">
                                     <span className="text-xs font-medium text-emerald-700/80 uppercase tracking-wider">Current Pipeline</span>
-                                    <p className="text-xl font-bold text-emerald-900">{formatCurrency(account.current_pipeline_value || 0)}</p>
+                                    <p className="text-xl font-bold text-emerald-900">{account.current_pipeline_value || '-'}</p>
                                 </div>
                                 <div className="space-y-1.5 p-3 rounded-lg bg-white border border-slate-100">
                                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Target 2026 (Accounts)</span>
-                                    <p className="text-lg font-semibold text-foreground">{formatCurrency(account.target_projection_2026_accounts || 0)}</p>
+                                    <p className="text-lg font-semibold text-foreground">{account.target_projection_2026_accounts || '-'}</p>
                                 </div>
                                 <div className="space-y-1.5 p-3 rounded-lg bg-white border border-slate-100">
                                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Target 2026 (Delivery)</span>
-                                    <p className="text-lg font-semibold text-foreground">{formatCurrency(account.target_projection_2026_delivery || 0)}</p>
+                                    <p className="text-lg font-semibold text-foreground">{account.target_projection_2026_delivery || '-'}</p>
                                 </div>
                                 <div className="space-y-1.5 p-3 rounded-lg bg-white border border-slate-100">
                                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Revenue Attrition Risk</span>
@@ -247,17 +240,26 @@ const AccountDetails = () => {
                                 <div className="grid grid-cols-2 gap-4 md:col-span-2">
                                     <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
                                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">Team Size</span>
-                                        <p className="text-2xl font-bold text-slate-800">{account.team_size || 0}</p>
+                                        <p className="text-2xl font-bold text-slate-800">{account.team_size || '-'}</p>
                                     </div>
                                     <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
                                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">Active Projects</span>
-                                        <p className="text-2xl font-bold text-slate-800">{account.number_of_active_projects || 0}</p>
+                                        <p className="text-2xl font-bold text-slate-800">{account.number_of_active_projects || '-'}</p>
                                     </div>
                                 </div>
 
                                 <div className="space-y-1">
                                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Overall Health</span>
-                                    <Badge variant={account.overall_delivery_health === 'Green' ? 'default' : account.overall_delivery_health === 'Amber' ? 'secondary' : 'destructive'} className="mt-1">
+                                    <Badge
+                                        variant="outline"
+                                        className={cn(
+                                            "mt-1 border",
+                                            account.overall_delivery_health === 'Green' ? "bg-green-100 text-green-700 border-green-200 hover:bg-green-100" :
+                                                account.overall_delivery_health === 'Red' ? "bg-red-100 text-red-700 border-red-200 hover:bg-red-100" :
+                                                    account.overall_delivery_health === 'Amber' ? "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100" :
+                                                        "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-100"
+                                        )}
+                                    >
                                         {account.overall_delivery_health || '-'}
                                     </Badge>
                                 </div>
@@ -326,9 +328,9 @@ const AccountDetails = () => {
                                 <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Champion</span><p className="font-medium text-lg">{account.champion_customer_side || '-'}</p></div>
                                 <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Champion Profile</span><p className="font-medium">{account.champion_profile || '-'}</p></div>
                                 <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Exec Connect Frequency</span><p className="font-medium">{account.nitor_executive_connect_frequency || '-'}</p></div>
-                                <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">NPS</span><p className="font-bold text-3xl text-violet-600">{account.current_nps || 0}</p></div>
+                                <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">NPS</span><p className="font-bold text-3xl text-violet-600">{account.current_nps || '-'}</p></div>
                                 <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Decision Maker Connect</span><p className="font-medium">{account.connect_with_decision_maker ? 'Yes' : 'No'}</p></div>
-                                <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Active Connects</span><p className="font-medium text-lg">{account.total_active_connects || 0}</p></div>
+                                <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Active Connects</span><p className="font-medium text-lg">{account.total_active_connects || '-'}</p></div>
                             </CardContent>
                         </Card>
                     </TabsContent>

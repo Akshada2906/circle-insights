@@ -29,29 +29,29 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
     const [formData, setFormData] = useState<Partial<Account>>({
         account_name: account?.account_name || '',
         domain: account?.domain || '',
-        company_revenue: account?.company_revenue || 0,
+        company_revenue: account?.company_revenue || '',
         know_customer_value_chain: account?.know_customer_value_chain || false,
         account_focus: account?.account_focus || 'Silver',
         delivery_owner: account?.delivery_owner || '',
         client_partner: account?.client_partner || '',
         where_we_fit_in_value_chain: account?.where_we_fit_in_value_chain || '',
-        engagement_age: account?.engagement_age || 0,
-        last_year_business_done: account?.last_year_business_done || 0,
-        target_projection_2026_accounts: account?.target_projection_2026_accounts || 0,
-        target_projection_2026_delivery: account?.target_projection_2026_delivery || 0,
-        current_pipeline_value: account?.current_pipeline_value || 0,
+        engagement_age: account?.engagement_age || '',
+        last_year_business_done: account?.last_year_business_done || '',
+        target_projection_2026_accounts: account?.target_projection_2026_accounts || '',
+        target_projection_2026_delivery: account?.target_projection_2026_delivery || '',
+        current_pipeline_value: account?.current_pipeline_value || '',
         revenue_attrition_possibility: account?.revenue_attrition_possibility || '',
         current_engagement_areas: account?.current_engagement_areas || '',
-        team_size: account?.team_size || 0,
+        team_size: account?.team_size || '',
         engagement_models: account?.engagement_models || '',
         current_rate_card_health: account?.current_rate_card_health || 'At',
-        number_of_active_projects: account?.number_of_active_projects || 0,
+        number_of_active_projects: account?.number_of_active_projects || '',
         overall_delivery_health: account?.overall_delivery_health || '',
-        current_nps: account?.current_nps || 0,
+        current_nps: account?.current_nps || '',
         champion_customer_side: account?.champion_customer_side || '',
         champion_profile: account?.champion_profile || '',
         connect_with_decision_maker: account?.connect_with_decision_maker || false,
-        total_active_connects: account?.total_active_connects || 0,
+        total_active_connects: account?.total_active_connects || '',
         visibility_client_roadmap_2026: account?.visibility_client_roadmap_2026 || '',
         identified_areas_cross_up_selling: account?.identified_areas_cross_up_selling || '',
         nitor_executive_connect_frequency: account?.nitor_executive_connect_frequency || '',
@@ -84,7 +84,6 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
 
         const submissionData: Partial<Account> = {
             ...formData,
-            // Removed: shortfall, account_health_score
             updated_at: new Date().toISOString(),
         };
 
@@ -96,19 +95,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
         onSubmit(submissionData);
     };
 
-    const handleNumberChange = (field: keyof Account, value: string) => {
-        const numValue = value === '' ? 0 : parseFloat(value);
-        setFormData((prev) => ({ ...prev, [field]: isNaN(numValue) ? 0 : numValue }));
-    };
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(value);
-    };
 
     const TABS = ['general', 'financials', 'delivery', 'strategy'];
     const [activeTab, setActiveTab] = useState('general');
@@ -175,7 +162,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="engagement_age">Engagement Age (Jan 2026)</Label>
-                                <Input type="number" id="engagement_age" value={formData.engagement_age || ''} onChange={(e) => handleNumberChange('engagement_age', e.target.value)} placeholder="e.g. 5" />
+                                <Input id="engagement_age" value={formData.engagement_age || ''} onChange={(e) => setFormData({ ...formData, engagement_age: e.target.value })} placeholder="e.g. 5" />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="account_research_link">Account Research Link</Label>
@@ -199,23 +186,23 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="company_revenue">Company Revenue (USD)</Label>
-                                <Input type="number" id="company_revenue" value={formData.company_revenue || ''} onChange={(e) => handleNumberChange('company_revenue', e.target.value)} />
+                                <Input id="company_revenue" value={formData.company_revenue || ''} onChange={(e) => setFormData({ ...formData, company_revenue: e.target.value })} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="last_year_business_done">Last Year Business Done (USD Jan 25-Dec 25)</Label>
-                                <Input type="number" id="last_year_business_done" value={formData.last_year_business_done || ''} onChange={(e) => handleNumberChange('last_year_business_done', e.target.value)} />
+                                <Input id="last_year_business_done" value={formData.last_year_business_done || ''} onChange={(e) => setFormData({ ...formData, last_year_business_done: e.target.value })} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="target_projection_2026_accounts">Target Projection 2026 (Accounts Team)</Label>
-                                <Input type="number" id="target_projection_2026_accounts" value={formData.target_projection_2026_accounts || ''} onChange={(e) => handleNumberChange('target_projection_2026_accounts', e.target.value)} />
+                                <Input id="target_projection_2026_accounts" value={formData.target_projection_2026_accounts || ''} onChange={(e) => setFormData({ ...formData, target_projection_2026_accounts: e.target.value })} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="target_projection_2026_delivery">Target Projection 2026 (Delivery)</Label>
-                                <Input type="number" id="target_projection_2026_delivery" value={formData.target_projection_2026_delivery || ''} onChange={(e) => handleNumberChange('target_projection_2026_delivery', e.target.value)} />
+                                <Input id="target_projection_2026_delivery" value={formData.target_projection_2026_delivery || ''} onChange={(e) => setFormData({ ...formData, target_projection_2026_delivery: e.target.value })} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="current_pipeline_value">Current Pipeline Value (Next 6-12 Months)</Label>
-                                <Input type="number" id="current_pipeline_value" value={formData.current_pipeline_value || ''} onChange={(e) => handleNumberChange('current_pipeline_value', e.target.value)} />
+                                <Input id="current_pipeline_value" value={formData.current_pipeline_value || ''} onChange={(e) => setFormData({ ...formData, current_pipeline_value: e.target.value })} />
                             </div>
                             <div className="md:col-span-2 space-y-2">
                                 <Label htmlFor="revenue_attrition_possibility">Any Revenue Attrition / Leakage Possibility?</Label>
@@ -243,7 +230,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="team_size">Team Size</Label>
-                                <Input type="number" id="team_size" value={formData.team_size || ''} onChange={(e) => handleNumberChange('team_size', e.target.value)} />
+                                <Input id="team_size" value={formData.team_size || ''} onChange={(e) => setFormData({ ...formData, team_size: e.target.value })} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="overall_delivery_health">Overall Delivery Health</Label>
@@ -262,7 +249,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="number_of_active_projects">Number of Active Projects Running</Label>
-                                <Input type="number" id="number_of_active_projects" value={formData.number_of_active_projects || ''} onChange={(e) => handleNumberChange('number_of_active_projects', e.target.value)} />
+                                <Input id="number_of_active_projects" value={formData.number_of_active_projects || ''} onChange={(e) => setFormData({ ...formData, number_of_active_projects: e.target.value })} />
                             </div>
                             <div className="md:col-span-2 space-y-2">
                                 <Label htmlFor="engagement_models">Engagement Model/s</Label>
@@ -351,11 +338,11 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="current_nps">Current NPS</Label>
-                                <Input type="number" id="current_nps" value={formData.current_nps || ''} onChange={(e) => handleNumberChange('current_nps', e.target.value)} />
+                                <Input id="current_nps" value={formData.current_nps || ''} onChange={(e) => setFormData({ ...formData, current_nps: e.target.value })} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="total_active_connects">Total Active Connects from Account</Label>
-                                <Input type="number" id="total_active_connects" value={formData.total_active_connects || ''} onChange={(e) => handleNumberChange('total_active_connects', e.target.value)} />
+                                <Input id="total_active_connects" value={formData.total_active_connects || ''} onChange={(e) => setFormData({ ...formData, total_active_connects: e.target.value })} />
                             </div>
                             <div className="flex items-center space-x-2 pt-8">
                                 <input type="checkbox" id="connect_with_decision_maker" checked={formData.connect_with_decision_maker} onChange={(e) => setFormData({ ...formData, connect_with_decision_maker: e.target.checked })} className="h-4 w-4 rounded border-gray-300" />
