@@ -3,34 +3,34 @@ export interface AccountDashboardResponse {
     account_name: string;
     // Removed: account_leader, industry
     domain?: string;
-    company_revenue?: number;
+    company_revenue?: string;
     know_customer_value_chain?: boolean;
     account_focus?: string;
     // delivery_unit removed
     delivery_owner?: string;
     client_partner?: string;
     where_we_fit_in_value_chain?: string;
-    engagement_age?: number;
-    last_year_business_done?: number;
+    engagement_age?: string;
+    last_year_business_done?: string;
 
     // New Fields
     // Removed: target_2026, current_revenue, forecast_revenue, shortfall, account_health_score
 
-    target_projection_2026_accounts?: number;
-    target_projection_2026_delivery?: number;
-    current_pipeline_value?: number;
+    target_projection_2026_accounts?: string;
+    target_projection_2026_delivery?: string;
+    current_pipeline_value?: string;
     revenue_attrition_possibility?: string;
     current_engagement_areas?: string;
-    team_size?: number;
+    team_size?: string;
     engagement_models?: string;
     current_rate_card_health?: string;
-    number_of_active_projects?: number;
+    number_of_active_projects?: string;
     overall_delivery_health?: string;
-    current_nps?: number;
+    current_nps?: string;
     champion_customer_side?: string;
     champion_profile?: string;
     connect_with_decision_maker?: boolean;
-    total_active_connects?: number;
+    total_active_connects?: string;
     visibility_client_roadmap_2026?: string;
     identified_areas_cross_up_selling?: string;
     nitor_executive_connect_frequency?: string;
@@ -44,34 +44,34 @@ export interface AccountDashboardCreate {
     account_name: string;
     // Removed: account_leader, industry
     domain?: string;
-    company_revenue?: number;
+    company_revenue?: string;
     know_customer_value_chain?: boolean;
     account_focus?: string;
     // delivery_unit removed
     delivery_owner?: string;
     client_partner?: string;
     where_we_fit_in_value_chain?: string;
-    engagement_age?: number;
-    last_year_business_done?: number;
+    engagement_age?: string;
+    last_year_business_done?: string;
 
     // New Fields
     // Removed: target_2026, current_revenue, forecast_revenue, shortfall, account_health_score
 
-    target_projection_2026_accounts?: number;
-    target_projection_2026_delivery?: number;
-    current_pipeline_value?: number;
+    target_projection_2026_accounts?: string;
+    target_projection_2026_delivery?: string;
+    current_pipeline_value?: string;
     revenue_attrition_possibility?: string;
     current_engagement_areas?: string;
-    team_size?: number;
+    team_size?: string;
     engagement_models?: string;
     current_rate_card_health?: string;
-    number_of_active_projects?: number;
+    number_of_active_projects?: string;
     overall_delivery_health?: string;
-    current_nps?: number;
+    current_nps?: string;
     champion_customer_side?: string;
     champion_profile?: string;
     connect_with_decision_maker?: boolean;
-    total_active_connects?: number;
+    total_active_connects?: string;
     visibility_client_roadmap_2026?: string;
     identified_areas_cross_up_selling?: string;
     nitor_executive_connect_frequency?: string;
