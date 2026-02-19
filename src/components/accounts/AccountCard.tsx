@@ -84,10 +84,40 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
                 </div>
             </CardHeader>
 
-            <CardContent className="pt-4 space-y-4">
+            <CardContent className="pt-4 grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                     <span className="text-xs text-muted-foreground">Delivery Owner</span>
-                    <p className="text-sm font-medium text-foreground">{account.delivery_owner || '-'}</p>
+                    <p className="text-sm font-medium text-foreground truncate" title={account.delivery_owner || '-'}>{account.delivery_owner || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Current Pipeline</span>
+                    <p className="text-sm font-medium text-foreground truncate" title={account.current_pipeline_value || '-'}>{account.current_pipeline_value || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Active Projects</span>
+                    <p className="text-sm font-medium text-foreground truncate" title={account.number_of_active_projects || '-'}>{account.number_of_active_projects || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Engagement Model</span>
+                    <p className="text-sm font-medium text-foreground truncate" title={account.engagement_models || '-'}>{account.engagement_models || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Engagement Age</span>
+                    <p className="text-sm font-medium text-foreground truncate" title={account.engagement_age || '-'}>{account.engagement_age || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Overall Health</span>
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={cn(
+                            "font-medium",
+                            account.overall_delivery_health === 'Green' ? "bg-green-100 text-green-700 border-green-200" :
+                                account.overall_delivery_health === 'Amber' ? "bg-amber-100 text-amber-700 border-amber-200" :
+                                    account.overall_delivery_health === 'Red' ? "bg-red-100 text-red-700 border-red-200" :
+                                        "bg-gray-100 text-gray-700 border-gray-200"
+                        )}>
+                            {account.overall_delivery_health || 'Unknown'}
+                        </Badge>
+                    </div>
                 </div>
             </CardContent>
         </Card>
