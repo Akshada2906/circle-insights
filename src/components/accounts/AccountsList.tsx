@@ -26,6 +26,7 @@ interface AccountsListProps {
     accounts: AccountWithProjects[];
     onEdit?: (accountId: string) => void;
     onDelete?: (accountId: string) => void;
+    onRefresh?: () => Promise<void>;
 }
 
 export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) {
