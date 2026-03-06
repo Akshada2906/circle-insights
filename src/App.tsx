@@ -17,6 +17,7 @@ import Financials from "./pages/Financials";
 import Circles from "./pages/Circles";
 import ValueChain from "./pages/ValueChain";
 import Opportunities from "./pages/Opportunities";
+import MyCalendar from "./pages/MyCalendar";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/circles" element={<Circles />} />
               <Route path="/value-chain" element={<ValueChain />} />
               <Route path="/opportunities" element={<Opportunities />} />
+              <Route path="/calendar" element={<MyCalendar />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

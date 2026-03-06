@@ -14,6 +14,7 @@ import {
   BarChart3,
   Bell,
   Briefcase,
+  Calendar,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ const mainNavItems: NavItem[] = [
   { title: 'Dashboard', icon: LayoutDashboard, href: '/' },
   { title: 'Accounts', icon: Briefcase, href: '/accounts' },
   { title: 'Stakeholders', icon: Users, href: '/stakeholders' },
+  { title: 'My Calendar', icon: Calendar, href: '/calendar' },
   { title: 'Financials', icon: DollarSign, href: '/financials' },
   { title: 'Circles', icon: Target, href: '/circles' },
   { title: 'Value Chain', icon: GitBranch, href: '/value-chain' },
