@@ -1,4 +1,10 @@
 import { AccountDashboardResponse, AccountDashboardCreate, AccountDashboardUpdate, StakeholderDetailsResponse, StakeholderDetailsCreate, StakeholderDetailsUpdate } from "@/types/dashboard-api";
+import {
+    CalendarTaskCreate, CalendarTaskResponse, CalendarTaskUpdate,
+    CalendarMilestoneCreate, CalendarMilestoneResponse, CalendarMilestoneUpdate,
+    CalendarReminderCreate, CalendarReminderResponse, CalendarReminderUpdate,
+    CalendarEventResponse
+} from "@/types/calendar-api";
 
 const API_BASE_URL = "/api/v1/account-dashboard"; // Adjust base path as needed
 
@@ -102,6 +108,96 @@ export const api = {
 
     deleteStakeholderDetails: async (id: string): Promise<void> => {
         const response = await fetch(`/api/v1/stakeholder-details/${id}`, {
+            method: "DELETE",
+        });
+        return handleResponse<void>(response);
+    },
+
+    // Calendar Events
+    getCalendarEvents: async (): Promise<CalendarEventResponse[]> => {
+        const response = await fetch(`/api/v1/calendar/events/`);
+        return handleResponse<CalendarEventResponse[]>(response);
+    },
+
+    // Calendar Task
+    createCalendarTask: async (task: CalendarTaskCreate): Promise<CalendarTaskResponse> => {
+        const response = await fetch(`/api/v1/calendar/tasks/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(task),
+        });
+        return handleResponse<CalendarTaskResponse>(response);
+    },
+    updateCalendarTask: async (id: string, task: CalendarTaskUpdate): Promise<CalendarTaskResponse> => {
+        const response = await fetch(`/api/v1/calendar/tasks/${id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(task),
+        });
+        return handleResponse<CalendarTaskResponse>(response);
+    },
+    deleteCalendarTask: async (id: string): Promise<void> => {
+        const response = await fetch(`/api/v1/calendar/tasks/${id}`, {
+            method: "DELETE",
+        });
+        return handleResponse<void>(response);
+    },
+
+    // Calendar Milestone
+    createCalendarMilestone: async (milestone: CalendarMilestoneCreate): Promise<CalendarMilestoneResponse> => {
+        const response = await fetch(`/api/v1/calendar/milestones/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(milestone),
+        });
+        return handleResponse<CalendarMilestoneResponse>(response);
+    },
+    updateCalendarMilestone: async (id: string, milestone: CalendarMilestoneUpdate): Promise<CalendarMilestoneResponse> => {
+        const response = await fetch(`/api/v1/calendar/milestones/${id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(milestone),
+        });
+        return handleResponse<CalendarMilestoneResponse>(response);
+    },
+    deleteCalendarMilestone: async (id: string): Promise<void> => {
+        const response = await fetch(`/api/v1/calendar/milestones/${id}`, {
+            method: "DELETE",
+        });
+        return handleResponse<void>(response);
+    },
+
+    // Calendar Reminder
+    createCalendarReminder: async (reminder: CalendarReminderCreate): Promise<CalendarReminderResponse> => {
+        const response = await fetch(`/api/v1/calendar/reminders/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(reminder),
+        });
+        return handleResponse<CalendarReminderResponse>(response);
+    },
+    updateCalendarReminder: async (id: string, reminder: CalendarReminderUpdate): Promise<CalendarReminderResponse> => {
+        const response = await fetch(`/api/v1/calendar/reminders/${id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(reminder),
+        });
+        return handleResponse<CalendarReminderResponse>(response);
+    },
+    deleteCalendarReminder: async (id: string): Promise<void> => {
+        const response = await fetch(`/api/v1/calendar/reminders/${id}`, {
             method: "DELETE",
         });
         return handleResponse<void>(response);
