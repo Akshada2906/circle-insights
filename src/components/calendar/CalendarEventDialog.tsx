@@ -11,11 +11,13 @@ import { TaskForm } from './TaskForm';
 import { ReminderForm } from './ReminderForm';
 import { MilestoneForm } from './MilestoneForm';
 import { CheckSquare, Bell, Flag, Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
+import { CalendarEventResponse } from '@/types/calendar-api';
 
 interface CalendarEventDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     selectedDate: Date | null;
+    editEventData?: CalendarEventResponse | null;
 }
 
 type ViewState = 'menu' | 'task' | 'reminder' | 'milestone';
@@ -24,17 +26,23 @@ export function CalendarEventDialog({
     open,
     onOpenChange,
     selectedDate,
+    editEventData,
 }: CalendarEventDialogProps) {
     const [view, setView] = useState<ViewState>('menu');
 
-    // Reset view when dialog opens/closes
     useEffect(() => {
         if (!open) {
             setTimeout(() => setView('menu'), 200); // delay so it doesn't flicker while closing
         } else {
-            setView('menu');
+            if (editEventData) {
+                if (editEventData.event_type === 'TASK') setView('task');
+                if (editEventData.event_type === 'MILESTONE') setView('milestone');
+                if (editEventData.event_type === 'REMINDER') setView('reminder');
+            } else {
+                setView('menu');
+            }
         }
-    }, [open]);
+    }, [open, editEventData]);
 
     if (!selectedDate) return null;
 
@@ -109,23 +117,25 @@ export function CalendarEventDialog({
                 {view !== 'menu' && (
                     <div className="flex flex-col h-full max-h-[85vh]">
                         <div className="p-5 pb-4 border-b border-gray-100 flex items-center gap-3 shrink-0">
-                            <button
-                                onClick={() => setView('menu')}
-                                className="p-1.5 hover:bg-gray-100 rounded-md transition-colors text-gray-500"
-                            >
-                                <ArrowLeft className="h-5 w-5" />
-                            </button>
+                            {!editEventData && (
+                                <button
+                                    onClick={() => setView('menu')}
+                                    className="p-1.5 hover:bg-gray-100 rounded-md transition-colors text-gray-500"
+                                >
+                                    <ArrowLeft className="h-5 w-5" />
+                                </button>
+                            )}
                             <DialogTitle className="text-xl font-semibold">
-                                {view === 'task' && "Create New Task"}
-                                {view === 'reminder' && "New Reminder"}
-                                {view === 'milestone' && "Add Project Milestone"}
+                                {view === 'task' && (editEventData ? "Edit Task" : "Create New Task")}
+                                {view === 'reminder' && (editEventData ? "Edit Reminder" : "New Reminder")}
+                                {view === 'milestone' && (editEventData ? "Edit Milestone" : "Add Project Milestone")}
                             </DialogTitle>
                         </div>
 
                         <div className="overflow-y-auto px-6 pb-6 custom-scrollbar flex-1">
-                            {view === 'task' && <TaskForm selectedDate={selectedDate} onClose={handleClose} />}
-                            {view === 'reminder' && <ReminderForm selectedDate={selectedDate} onClose={handleClose} />}
-                            {view === 'milestone' && <MilestoneForm selectedDate={selectedDate} onClose={handleClose} />}
+                            {view === 'task' && <TaskForm selectedDate={selectedDate} onClose={handleClose} initialData={editEventData} />}
+                            {view === 'reminder' && <ReminderForm selectedDate={selectedDate} onClose={handleClose} initialData={editEventData} />}
+                            {view === 'milestone' && <MilestoneForm selectedDate={selectedDate} onClose={handleClose} initialData={editEventData} />}
                         </div>
                     </div>
                 )}

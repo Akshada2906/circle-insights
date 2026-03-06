@@ -11,16 +11,117 @@ import { CalendarIcon, Trophy, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Slider } from '@/components/ui/slider';
+import { api } from '@/services/api';
+import { useToast } from '@/components/ui/use-toast';
+import { CalendarMilestoneCreate, CalendarMilestoneUpdate, CalendarEventResponse } from '@/types/calendar-api';
+import { Loader2, Trash2 } from 'lucide-react';
+import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 
 interface Props {
     selectedDate: Date | null;
     onClose: () => void;
+    initialData?: CalendarEventResponse | null;
 }
 
-export function MilestoneForm({ selectedDate, onClose }: Props) {
-    const [targetDate, setTargetDate] = useState<Date | undefined>(selectedDate || new Date());
+export function MilestoneForm({ selectedDate, onClose, initialData }: Props) {
+    const isEditing = !!initialData;
+    const initialDetails = initialData?.details;
+
+    const [targetDate, setTargetDate] = useState<Date | undefined>(
+        initialDetails?.target_date ? new Date(initialDetails?.target_date) : (selectedDate || new Date())
+    );
     const [datePopoverOpen, setDatePopoverOpen] = useState(false);
-    const [progress, setProgress] = useState([0]);
+    const [progress, setProgress] = useState([initialDetails?.progress_percent || 0]);
+
+    const [name, setName] = useState(initialDetails?.milestone_name || "");
+    const [project, setProject] = useState("marketing");
+    const [description, setDescription] = useState(initialDetails?.description || "");
+    const [owner, setOwner] = useState("alex");
+    const [impact, setImpact] = useState(initialDetails?.impact_level || "HIGH");
+
+    const [isLoading, setIsLoading] = useState(false);
+    const { toast } = useToast();
+
+    const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+    const handleSubmitClick = () => {
+        if (!name.trim()) {
+            toast({
+                title: "Validation Error",
+                description: "Please enter a milestone name.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (isEditing) {
+            setIsUpdateDialogOpen(true);
+        } else {
+            executeSubmit();
+        }
+    };
+
+    const executeSubmit = async () => {
+        try {
+            setIsLoading(true);
+
+            if (isEditing && initialData?.details?.id) {
+                const milestoneUpdate: CalendarMilestoneUpdate = {
+                    milestone_name: name,
+                    description: description,
+                    target_date: targetDate ? format(targetDate, "yyyy-MM-dd'T'00:00:00.000'Z'") : null,
+                    impact_level: impact,
+                    progress_percent: progress[0],
+                };
+                await api.updateCalendarMilestone(initialData.details.id, milestoneUpdate);
+                toast({ title: "Success", description: "Milestone updated successfully." });
+            } else {
+                const milestone: CalendarMilestoneCreate = {
+                    milestone_name: name,
+                    description: description,
+                    target_date: targetDate ? format(targetDate, "yyyy-MM-dd'T'00:00:00.000'Z'") : null,
+                    impact_level: impact,
+                    progress_percent: progress[0],
+                };
+                await api.createCalendarMilestone(milestone);
+                toast({ title: "Success", description: "Milestone created successfully." });
+            }
+
+            onClose();
+        } catch (error) {
+            console.error(error);
+            toast({
+                title: "Error",
+                description: isEditing ? "Failed to update milestone" : "Failed to create milestone",
+                variant: "destructive"
+            });
+        } finally {
+            setIsLoading(false);
+            setIsUpdateDialogOpen(false);
+        }
+    };
+
+    const handleDeleteClick = () => {
+        if (!initialData?.details?.id) return;
+        setIsDeleteDialogOpen(true);
+    };
+
+    const executeDelete = async () => {
+        if (!initialData?.details?.id) return;
+
+        try {
+            setIsLoading(true);
+            await api.deleteCalendarMilestone(initialData.details.id);
+            toast({ title: "Success", description: "Milestone deleted successfully." });
+            onClose();
+        } catch (error) {
+            toast({ title: "Error", description: "Failed to delete milestone.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+            setIsDeleteDialogOpen(false);
+        }
+    };
 
     return (
         <div className="space-y-6 pt-2">
@@ -29,14 +130,14 @@ export function MilestoneForm({ selectedDate, onClose }: Props) {
                     <Label htmlFor="name" className="text-sm font-medium text-gray-700">Milestone Name</Label>
                     <div className="relative">
                         <Trophy className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                        <Input id="name" placeholder="e.g., Beta Release, Security Audit Complete" className="pl-9 shadow-sm" />
+                        <Input id="name" placeholder="e.g., Beta Release, Security Audit Complete" className="pl-9 shadow-sm" value={name} onChange={(e) => setName(e.target.value)} />
                     </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                         <Label className="text-sm font-medium text-gray-700">Project</Label>
-                        <Select defaultValue="marketing">
+                        <Select value={project} onValueChange={setProject}>
                             <SelectTrigger className="shadow-sm">
                                 <SelectValue placeholder="Select project" />
                             </SelectTrigger>
@@ -79,13 +180,15 @@ export function MilestoneForm({ selectedDate, onClose }: Props) {
                     <Textarea
                         placeholder="Outline the success criteria and deliverables for this milestone..."
                         className="resize-none min-h-[100px] shadow-sm"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
                     />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                         <Label className="text-sm font-medium text-gray-700">Owner</Label>
-                        <Select defaultValue="alex">
+                        <Select value={owner} onValueChange={setOwner}>
                             <SelectTrigger className="shadow-sm">
                                 <SelectValue placeholder="Select owner">
                                     <div className="flex items-center gap-2">
@@ -121,14 +224,14 @@ export function MilestoneForm({ selectedDate, onClose }: Props) {
                     </div>
                     <div className="space-y-1.5">
                         <Label className="text-sm font-medium text-gray-700">Impact Level</Label>
-                        <Select defaultValue="high">
+                        <Select value={impact} onValueChange={setImpact}>
                             <SelectTrigger className="shadow-sm">
                                 <SelectValue placeholder="Select impact" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="high">High Impact</SelectItem>
-                                <SelectItem value="medium">Medium Impact</SelectItem>
-                                <SelectItem value="low">Low Impact</SelectItem>
+                                <SelectItem value="HIGH">High Impact</SelectItem>
+                                <SelectItem value="MEDIUM">Medium Impact</SelectItem>
+                                <SelectItem value="LOW">Low Impact</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -163,10 +266,40 @@ export function MilestoneForm({ selectedDate, onClose }: Props) {
             <div className="flex justify-between items-center pt-6 border-t border-gray-100 mt-6 max-w-xl mx-auto">
                 <div className="text-xs text-gray-400">© 2024 Project Planner. All rights reserved.</div>
                 <div className="flex gap-2">
+                    {isEditing && (
+                        <Button variant="ghost" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleDeleteClick} disabled={isLoading}>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                        </Button>
+                    )}
                     <Button variant="outline" onClick={onClose} className="px-5 font-medium shadow-sm">Cancel</Button>
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white px-5 font-medium shadow-sm">Create Milestone</Button>
+                    <Button onClick={handleSubmitClick} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white px-5 font-medium shadow-sm">
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        {isEditing ? "Update Milestone" : "Create Milestone"}
+                    </Button>
                 </div>
             </div>
+
+            <ConfirmationDialog
+                open={isUpdateDialogOpen}
+                onOpenChange={setIsUpdateDialogOpen}
+                title="Update Milestone"
+                description="Are you sure you want to update this milestone? The changes will be saved."
+                onConfirm={executeSubmit}
+                confirmText="Update Milestone"
+                isLoading={isLoading}
+            />
+
+            <ConfirmationDialog
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
+                title="Delete Milestone"
+                description="Are you sure you want to delete this milestone? This action cannot be undone."
+                onConfirm={executeDelete}
+                variant="destructive"
+                confirmText="Delete Milestone"
+                isLoading={isLoading}
+            />
         </div>
     );
 }
