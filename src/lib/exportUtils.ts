@@ -68,6 +68,48 @@ export const exportFormattedAoAToExcel = (
 };
 
 /**
+ * Exports multiple Arrays of Arrays to an Excel file with multiple sheets, merge configurations, and optional styles.
+ * @param sheets Array of sheet definitions containing data, sheetName, merges, styles, and cols.
+ * @param fileName Name of the file to save (without extension).
+ */
+export const exportMultipleSheetsFormattedAoAToExcel = (
+    sheets: {
+        sheetName: string;
+        data: any[][];
+        merges?: XLSX.Range[];
+        styles?: Record<string, any>;
+        cols?: { wch: number }[];
+    }[],
+    fileName: string
+) => {
+    const workbook = XLSX.utils.book_new();
+
+    sheets.forEach(({ sheetName, data, merges, styles, cols }) => {
+        const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+        if (cols) {
+            worksheet['!cols'] = cols;
+        }
+
+        if (merges && merges.length > 0) {
+            worksheet['!merges'] = merges;
+        }
+
+        if (styles) {
+            Object.keys(styles).forEach(cellAddress => {
+                if (worksheet[cellAddress]) {
+                    worksheet[cellAddress].s = styles[cellAddress];
+                }
+            });
+        }
+
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    });
+
+    XLSX.writeFile(workbook, `${fileName}.xlsx`);
+};
+
+/**
  * Exports data to a PDF file with a table.
  * @param data Array of objects containing the data to export.
  * @param columns Array of objects defining the columns (header and dataKey).
