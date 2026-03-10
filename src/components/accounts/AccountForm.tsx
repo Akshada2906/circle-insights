@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Account } from '@/types/account';
+import { useState, useEffect } from 'react';
+import { Account, StrategicStakeholderProfile } from '@/types/account';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,8 +16,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, DollarSign, Briefcase, Target, Users } from 'lucide-react';
-
+import { Building2, DollarSign, Briefcase, Target, Users, Plus, Trash2 } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 interface AccountFormProps {
     account?: Account;
     onSubmit: (account: Partial<Account>) => void;
@@ -57,7 +57,23 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
         nitor_executive_connect_frequency: account?.nitor_executive_connect_frequency || '',
         growth_action_plan_30days_ready: account?.growth_action_plan_30days_ready || false,
         account_research_link: account?.account_research_link || '',
+
+        // Stakeholders Profile fields
+        stakeholder_profile_id: account?.stakeholder_profile_id || '',
     });
+
+    const [profiles, setProfiles] = useState<StrategicStakeholderProfile[]>(
+        account?.strategic_profiles && account.strategic_profiles.length > 0
+            ? account.strategic_profiles
+            : []
+    );
+
+    // Sync profiles if account data loads after initial mount
+    useEffect(() => {
+        if (account?.strategic_profiles) {
+            setProfiles(account.strategic_profiles);
+        }
+    }, [account?.strategic_profiles]);
 
     const { toast } = useToast();
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -84,6 +100,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
 
         const submissionData: Partial<Account> = {
             ...formData,
+            strategic_profiles: profiles,
             updated_at: new Date().toISOString(),
         };
 
@@ -97,7 +114,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
 
 
 
-    const TABS = ['general', 'financials', 'delivery', 'strategy'];
+    const TABS = ['general', 'financials', 'delivery', 'strategy', 'stakeholders', 'competition', 'readiness'];
     const [activeTab, setActiveTab] = useState('general');
 
     const handleNext = () => {
@@ -121,11 +138,14 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid grid-cols-4 w-full gap-4">
-                    <TabsTrigger value="general" className="tab-blue" disabled={0 > currentTabIndex}>General</TabsTrigger>
-                    <TabsTrigger value="financials" className="tab-green" disabled={1 > currentTabIndex}>Financials</TabsTrigger>
-                    <TabsTrigger value="delivery" className="tab-orange" disabled={2 > currentTabIndex}>Delivery</TabsTrigger>
-                    <TabsTrigger value="strategy" className="tab-purple" disabled={3 > currentTabIndex}>Strategy & Relationships</TabsTrigger>
+                <TabsList className="grid grid-cols-7 w-full gap-2 h-auto">
+                    <TabsTrigger value="general" className="tab-blue h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={0 > currentTabIndex}>General</TabsTrigger>
+                    <TabsTrigger value="financials" className="tab-green h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={1 > currentTabIndex}>Financials</TabsTrigger>
+                    <TabsTrigger value="delivery" className="tab-orange h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={2 > currentTabIndex}>Delivery</TabsTrigger>
+                    <TabsTrigger value="strategy" className="tab-purple h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={3 > currentTabIndex}>Strategy</TabsTrigger>
+                    <TabsTrigger value="stakeholders" className="tab-indigo h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={4 > currentTabIndex}>Stakeholders</TabsTrigger>
+                    <TabsTrigger value="competition" className="tab-rose h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={5 > currentTabIndex}>Competition</TabsTrigger>
+                    <TabsTrigger value="readiness" className="tab-emerald h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={6 > currentTabIndex}>Readiness</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="general" className="space-y-4 py-4">
@@ -347,6 +367,216 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                             <div className="flex items-center space-x-2 pt-8">
                                 <input type="checkbox" id="connect_with_decision_maker" checked={formData.connect_with_decision_maker} onChange={(e) => setFormData({ ...formData, connect_with_decision_maker: e.target.checked })} className="h-4 w-4 rounded border-gray-300" />
                                 <Label htmlFor="connect_with_decision_maker">Connect with Decision Maker (Yes/No)</Label>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* STAKEHOLDERS */}
+                <TabsContent value="stakeholders" className="space-y-6 py-4">
+                    <Card className="shadow-sm">
+                        <CardHeader className="bg-slate-50 border-b pb-4">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-base text-slate-800">Stakeholder List ({profiles.length})</CardTitle>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => setProfiles([...profiles, { id: `stk-${Date.now()}`, executive_sponsor: '', technical_decision_maker: '', influencer: '', neutral_stakeholders: '', negative_stakeholder: '', succession_risk: '', key_competitors: '', our_positioning: '', incumbency_strength: 'Medium', areas_competition_stronger: '', white_spaces_we_own: '', account_review_cadence: '', qbr_happening: 'No', technical_audit_frequency: '', created_at: '', updated_at: '' } as StrategicStakeholderProfile])}
+                                    className="bg-indigo-600 hover:bg-indigo-700"
+                                >
+                                    <Plus className="w-4 h-4 mr-2" /> Add Stakeholder Row
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4 pt-4 overflow-x-auto">
+                            {profiles.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                                    <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                    <p>No stakeholders added to the list yet.</p>
+                                    <p className="text-sm">Fill out the form above and click "Add to List Below" to save them.</p>
+                                </div>
+                            ) : (
+                                <div className="border rounded-md min-w-[800px]">
+                                    <Table>
+                                        <TableHeader className="bg-slate-50">
+                                            <TableRow>
+                                                <TableHead>Executive Sponsor</TableHead>
+                                                <TableHead>Technical Decision Maker</TableHead>
+                                                <TableHead>Influencers</TableHead>
+                                                <TableHead>Neutral Stakeholders</TableHead>
+                                                <TableHead>Negative Stakeholder</TableHead>
+                                                <TableHead>Succession Risk</TableHead>
+                                                <TableHead className="w-[50px]"></TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {profiles.map((profile, idx) => (
+                                                <TableRow key={profile.id || idx}>
+                                                    <TableCell><Input value={profile.executive_sponsor || ''} onChange={(e) => { const newProfiles = [...profiles]; newProfiles[idx] = { ...newProfiles[idx], executive_sponsor: e.target.value }; setProfiles(newProfiles); }} className="h-8 text-xs px-2" placeholder="Sponsor" /></TableCell>
+                                                    <TableCell><Input value={profile.technical_decision_maker || ''} onChange={(e) => { const newProfiles = [...profiles]; newProfiles[idx] = { ...newProfiles[idx], technical_decision_maker: e.target.value }; setProfiles(newProfiles); }} className="h-8 text-xs px-2" placeholder="TDM" /></TableCell>
+                                                    <TableCell><Input value={profile.influencer || ''} onChange={(e) => { const newProfiles = [...profiles]; newProfiles[idx] = { ...newProfiles[idx], influencer: e.target.value }; setProfiles(newProfiles); }} className="h-8 text-xs px-2" placeholder="Influencers" /></TableCell>
+                                                    <TableCell><Input value={profile.neutral_stakeholders || ''} onChange={(e) => { const newProfiles = [...profiles]; newProfiles[idx] = { ...newProfiles[idx], neutral_stakeholders: e.target.value }; setProfiles(newProfiles); }} className="h-8 text-xs px-2" placeholder="Neutral" /></TableCell>
+                                                    <TableCell><Input value={profile.negative_stakeholder || ''} onChange={(e) => { const newProfiles = [...profiles]; newProfiles[idx] = { ...newProfiles[idx], negative_stakeholder: e.target.value }; setProfiles(newProfiles); }} className="h-8 text-xs px-2" placeholder="Negative" /></TableCell>
+                                                    <TableCell><Input value={profile.succession_risk || ''} onChange={(e) => { const newProfiles = [...profiles]; newProfiles[idx] = { ...newProfiles[idx], succession_risk: e.target.value }; setProfiles(newProfiles); }} className="h-8 text-xs px-2" placeholder="Risk" /></TableCell>
+                                                    <TableCell>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                                                            onClick={async () => {
+                                                                const profileId = profiles[idx].id;
+                                                                // If it's a new row (has an ID starting with 'stk-'), just remove it locally
+                                                                if (profileId && profileId.startsWith('stk-')) {
+                                                                    setProfiles(profiles.filter((_, i) => i !== idx));
+                                                                    return;
+                                                                }
+
+                                                                try {
+                                                                    if (profileId) {
+                                                                        const { api } = await import('@/services/api');
+                                                                        await api.deleteStakeholderDetails(profileId);
+                                                                    }
+                                                                    setProfiles(profiles.filter((_, i) => i !== idx));
+                                                                    toast({
+                                                                        title: 'Success',
+                                                                        description: 'Stakeholder deleted successfully',
+                                                                    });
+                                                                } catch (err) {
+                                                                    console.error("Failed to delete stakeholder", err);
+                                                                    toast({
+                                                                        title: 'Error',
+                                                                        description: 'Failed to delete stakeholder. Please try again.',
+                                                                        variant: 'destructive',
+                                                                    });
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* COMPETITION & POSITIONING */}
+                <TabsContent value="competition" className="space-y-4 py-4">
+                    <Card className="border-t-4 border-t-rose-500 shadow-sm">
+                        <CardHeader className="bg-gradient-to-r from-rose-50/80 to-transparent border-b border-rose-100 pb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-rose-100/50 rounded-lg text-rose-600">
+                                    <Target className="w-5 h-5" />
+                                </div>
+                                <CardTitle className="text-lg text-rose-950">Competition & Positioning</CardTitle>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4 pt-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="key_competitors">Key Competitors in Account</Label>
+                                <Textarea
+                                    id="key_competitors"
+                                    value={formData.key_competitors}
+                                    onChange={(e) => setFormData({ ...formData, key_competitors: e.target.value })}
+                                    rows={2}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="our_positioning_vs_competition">Our Positioning vs Competition</Label>
+                                <Textarea
+                                    id="our_positioning_vs_competition"
+                                    value={formData.our_positioning_vs_competition}
+                                    onChange={(e) => setFormData({ ...formData, our_positioning_vs_competition: e.target.value })}
+                                    placeholder="Cost / Quality / Speed / Trust / AI / Domain / Value Additions"
+                                    rows={3}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="incumbency_strength">Incumbency Strength</Label>
+                                <Select
+                                    value={formData.incumbency_strength}
+                                    onValueChange={(val: any) => setFormData({ ...formData, incumbency_strength: val })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Strength" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="High">High</SelectItem>
+                                        <SelectItem value="Medium">Medium</SelectItem>
+                                        <SelectItem value="Low">Low</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="areas_competition_stronger">Areas Where Competition Is Stronger</Label>
+                                <Textarea
+                                    id="areas_competition_stronger"
+                                    value={formData.areas_competition_stronger}
+                                    onChange={(e) => setFormData({ ...formData, areas_competition_stronger: e.target.value })}
+                                    rows={3}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="white_spaces_we_own">White Spaces We Own Clearly</Label>
+                                <Textarea
+                                    id="white_spaces_we_own"
+                                    value={formData.white_spaces_we_own}
+                                    onChange={(e) => setFormData({ ...formData, white_spaces_we_own: e.target.value })}
+                                    rows={3}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* INTERNAL READINESS */}
+                <TabsContent value="readiness" className="space-y-4 py-4">
+                    <Card className="border-t-4 border-t-emerald-500 shadow-sm">
+                        <CardHeader className="bg-gradient-to-r from-emerald-50/80 to-transparent border-b border-emerald-100 pb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-emerald-100/50 rounded-lg text-emerald-600">
+                                    <Target className="w-5 h-5" />
+                                </div>
+                                <CardTitle className="text-lg text-emerald-950">Internal Readiness</CardTitle>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4 pt-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="account_review_cadence_frequency">Account Review Cadence</Label>
+                                <Input
+                                    id="account_review_cadence_frequency"
+                                    value={formData.account_review_cadence_frequency}
+                                    onChange={(e) => setFormData({ ...formData, account_review_cadence_frequency: e.target.value })}
+                                    placeholder="e.g. Yes - Every Month"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="qbr_happening">QBR Happening?</Label>
+                                <Select
+                                    value={formData.qbr_happening ? "Yes" : "No"}
+                                    onValueChange={(val: any) => setFormData({ ...formData, qbr_happening: val === "Yes" })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Yes">Yes</SelectItem>
+                                        <SelectItem value="No">No</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="technical_audit_frequency">Technical Audit Frequency</Label>
+                                <Input
+                                    id="technical_audit_frequency"
+                                    value={formData.technical_audit_frequency}
+                                    onChange={(e) => setFormData({ ...formData, technical_audit_frequency: e.target.value })}
+                                />
                             </div>
                         </CardContent>
                     </Card>

@@ -77,7 +77,7 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel, is
         });
     };
 
-    const TABS = ['mapping', 'competition', 'readiness'];
+    const TABS = ['mapping'];
     const [open, setOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('mapping');
 
@@ -168,10 +168,8 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel, is
             )}
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid grid-cols-3 w-full gap-4">
+                <TabsList className="grid grid-cols-1 w-full gap-4">
                     <TabsTrigger value="mapping" className="tab-purple" disabled={0 > currentTabIndex}>Stakeholder Mapping</TabsTrigger>
-                    <TabsTrigger value="competition" className="tab-rose" disabled={1 > currentTabIndex}>Competition & Positioning</TabsTrigger>
-                    <TabsTrigger value="readiness" className="tab-emerald" disabled={2 > currentTabIndex}>Internal Readiness</TabsTrigger>
                 </TabsList>
 
                 {/* Tab 1: Stakeholder Mapping */}
@@ -246,122 +244,7 @@ export function StrategicProfileForm({ profile, accounts, onSubmit, onCancel, is
                     </Card>
                 </TabsContent>
 
-                {/* Tab 2: Competition & Positioning */}
-                <TabsContent value="competition" className="space-y-4 py-4">
-                    <Card className="border-t-4 border-t-rose-500 shadow-sm">
-                        <CardHeader className="bg-gradient-to-r from-rose-50/80 to-transparent border-b border-rose-100 pb-4">
-                            <div className="flex items-center gap-2">
-                                <div className="p-2 bg-rose-100/50 rounded-lg text-rose-600">
-                                    <Swords className="w-5 h-5" />
-                                </div>
-                                <CardTitle className="text-lg text-rose-950">Competition & Positioning</CardTitle>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4 pt-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="key_competitors">Key Competitors in Account</Label>
-                                <Textarea
-                                    id="key_competitors"
-                                    value={formData.key_competitors}
-                                    onChange={(e) => setFormData({ ...formData, key_competitors: e.target.value })}
-                                    rows={2}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="our_positioning">Our Positioning vs Competition</Label>
-                                <Textarea
-                                    id="our_positioning"
-                                    value={formData.our_positioning}
-                                    onChange={(e) => setFormData({ ...formData, our_positioning: e.target.value })}
-                                    placeholder="Cost / Quality / Speed / Trust / AI / Domain / Value Additions"
-                                    rows={3}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="incumbency_strength">Incumbency Strength</Label>
-                                <Select
-                                    value={formData.incumbency_strength}
-                                    onValueChange={(val: any) => setFormData({ ...formData, incumbency_strength: val })}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Strength" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="High">High</SelectItem>
-                                        <SelectItem value="Medium">Medium</SelectItem>
-                                        <SelectItem value="Low">Low</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="areas_competition_stronger">Areas Where Competition Is Stronger</Label>
-                                <Textarea
-                                    id="areas_competition_stronger"
-                                    value={formData.areas_competition_stronger}
-                                    onChange={(e) => setFormData({ ...formData, areas_competition_stronger: e.target.value })}
-                                    rows={3}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="white_spaces_we_own">White Spaces We Own Clearly</Label>
-                                <Textarea
-                                    id="white_spaces_we_own"
-                                    value={formData.white_spaces_we_own}
-                                    onChange={(e) => setFormData({ ...formData, white_spaces_we_own: e.target.value })}
-                                    rows={3}
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
 
-                {/* Tab 3: Internal Readiness */}
-                <TabsContent value="readiness" className="space-y-4 py-4">
-                    <Card className="border-t-4 border-t-emerald-500 shadow-sm">
-                        <CardHeader className="bg-gradient-to-r from-emerald-50/80 to-transparent border-b border-emerald-100 pb-4">
-                            <div className="flex items-center gap-2">
-                                <div className="p-2 bg-emerald-100/50 rounded-lg text-emerald-600">
-                                    <ShieldCheck className="w-5 h-5" />
-                                </div>
-                                <CardTitle className="text-lg text-emerald-950">Internal Readiness</CardTitle>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4 pt-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="account_review_cadence">Account Review Cadence</Label>
-                                <Input
-                                    id="account_review_cadence"
-                                    value={formData.account_review_cadence}
-                                    onChange={(e) => setFormData({ ...formData, account_review_cadence: e.target.value })}
-                                    placeholder="e.g. Yes - Every Month"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="qbr_happening">QBR Happening?</Label>
-                                <Select
-                                    value={formData.qbr_happening}
-                                    onValueChange={(val: any) => setFormData({ ...formData, qbr_happening: val })}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Yes">Yes</SelectItem>
-                                        <SelectItem value="No">No</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="technical_audit_frequency">Technical Audit Frequency</Label>
-                                <Input
-                                    id="technical_audit_frequency"
-                                    value={formData.technical_audit_frequency}
-                                    onChange={(e) => setFormData({ ...formData, technical_audit_frequency: e.target.value })}
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
             </Tabs>
 
             <div className="flex justify-between items-center sticky bottom-0 bg-background/95 backdrop-blur py-4 border-t z-10 px-1">

@@ -61,30 +61,54 @@ const mapApiToAccount = (apiAccount: AccountDashboardResponse): AccountWithProje
         updated_at: apiAccount.updated_at,
 
         projects: [],
-        status: 'ACTIVE', // Default
+        status: 'ACTIVE',
     };
 };
 const mapApiToStrategicProfile = (apiDetails: any): any => {
     return {
         id: apiDetails.id,
+        stakeholder_profile_id: apiDetails.id,
         executive_sponsor: apiDetails.executive_sponsor || '',
         technical_decision_maker: apiDetails.technical_decision_maker || '',
         influencer: apiDetails.influencers || '',
         neutral_stakeholders: apiDetails.neutral_stakeholders || '',
         negative_stakeholder: apiDetails.negative_stakeholder || '',
         succession_risk: apiDetails.succession_risk || '',
+
+        // Strategic fields
         key_competitors: apiDetails.key_competitors || '',
-        our_positioning: apiDetails.our_positioning_vs_competition || '',
-        incumbency_strength: apiDetails.incumbency_strength as any,
+        our_positioning_vs_competition: apiDetails.our_positioning_vs_competition || '',
+        incumbency_strength: apiDetails.incumbency_strength || '',
         areas_competition_stronger: apiDetails.areas_competition_stronger || '',
         white_spaces_we_own: apiDetails.white_spaces_we_own || '',
-        account_review_cadence: apiDetails.account_review_cadence_frequency || '',
-        qbr_happening: apiDetails.qbr_happening ? 'Yes' : 'No',
+        account_review_cadence_frequency: apiDetails.account_review_cadence_frequency || '',
+        qbr_happening: apiDetails.qbr_happening || false,
         technical_audit_frequency: apiDetails.technical_audit_frequency || '',
+
         created_at: apiDetails.created_at,
         updated_at: apiDetails.updated_at
     };
 };
+
+const mapProfileToApi = (accountId: string, accountName: string, profile: any, formData?: any) => ({
+    account_id: accountId,
+    account_name: accountName,
+    executive_sponsor: profile.executive_sponsor,
+    technical_decision_maker: profile.technical_decision_maker,
+    influencers: profile.influencer,
+    neutral_stakeholders: profile.neutral_stakeholders,
+    negative_stakeholder: profile.negative_stakeholder,
+    succession_risk: profile.succession_risk,
+
+    key_competitors: formData?.key_competitors || profile.key_competitors,
+    our_positioning_vs_competition: formData?.our_positioning_vs_competition || profile.our_positioning_vs_competition,
+    incumbency_strength: formData?.incumbency_strength || profile.incumbency_strength,
+    areas_competition_stronger: formData?.areas_competition_stronger || profile.areas_competition_stronger,
+    white_spaces_we_own: formData?.white_spaces_we_own || profile.white_spaces_we_own,
+    account_review_cadence_frequency: formData?.account_review_cadence_frequency || profile.account_review_cadence_frequency,
+    qbr_happening: formData?.qbr_happening !== undefined ? formData.qbr_happening : profile.qbr_happening,
+    technical_audit_frequency: formData?.technical_audit_frequency || profile.technical_audit_frequency,
+});
 
 export const AccountProvider = ({ children }: { children: ReactNode }) => {
     const [accounts, setAccounts] = useState<AccountWithProjects[]>([]);
@@ -121,6 +145,18 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
             const accountData = await api.getAccountById(accountId);
             const mappedAccount = mapApiToAccount(accountData);
 
+            try {
+                const stakeholders = await api.getStakeholderDetailsByAccount(accountId);
+                if (stakeholders && stakeholders.length > 0) {
+                    mappedAccount.strategic_profiles = stakeholders.map(mapApiToStrategicProfile);
+                } else {
+                    mappedAccount.strategic_profiles = [];
+                }
+            } catch (e) {
+                console.warn(`Failed to fetch stakeholder details for account ${accountId}`, e);
+                mappedAccount.strategic_profiles = [];
+            }
+
             setAccounts(prevAccounts => {
                 const existingIndex = prevAccounts.findIndex(acc => acc.account_id === accountId);
                 if (existingIndex >= 0) {
@@ -141,21 +177,29 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
     const fetchAccountStakeholders = useCallback(async (accountId: string) => {
         try {
             const stakeholders = await api.getStakeholderDetailsByAccount(accountId);
+            let profiles: any[] = [];
             if (stakeholders && stakeholders.length > 0) {
-                const profile = mapApiToStrategicProfile(stakeholders[0]);
-
-                setAccounts(prevAccounts => prevAccounts.map(acc => {
-                    if (acc.account_id === accountId) {
-                        return {
-                            ...acc,
-                            strategic_profiles: [profile],
-                        };
-                    }
-                    return acc;
-                }));
+                profiles = stakeholders.map(mapApiToStrategicProfile);
             }
+
+            setAccounts(prevAccounts => prevAccounts.map(acc => {
+                if (acc.account_id === accountId) {
+                    return {
+                        ...acc,
+                        strategic_profiles: profiles,
+                    };
+                }
+                return acc;
+            }));
         } catch (e) {
             console.warn(`Failed to fetch stakeholder details for account ${accountId}`, e);
+            // Clear on error too
+            setAccounts(prevAccounts => prevAccounts.map(acc => {
+                if (acc.account_id === accountId) {
+                    return { ...acc, strategic_profiles: [] };
+                }
+                return acc;
+            }));
         }
     }, []);
 
@@ -204,6 +248,19 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
 
             const createdAccount = await api.createAccount(apiPayload);
 
+            // Handle stakeholder profiles creation
+            if (newAccount.strategic_profiles && newAccount.strategic_profiles.length > 0) {
+                try {
+                    await Promise.all(
+                        newAccount.strategic_profiles.map((profile) =>
+                            api.createStakeholderDetails(mapProfileToApi(createdAccount.account_id, createdAccount.account_name, profile, newAccount))
+                        )
+                    );
+                } catch (shErr) {
+                    console.error("Failed to create stakeholder details", shErr);
+                }
+            }
+
             await fetchAccounts(); // Refresh list
             toast({
                 title: 'Success',
@@ -231,6 +288,31 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
             });
 
             await api.updateAccount(accountId, apiPayload);
+
+            try {
+                if (updates.strategic_profiles !== undefined) {
+                    const existingProfiles = await api.getStakeholderDetailsByAccount(accountId);
+                    const existingIds = existingProfiles.map((p: any) => p.id);
+                    const updatedIds = updates.strategic_profiles.map(p => p.id).filter(id => id);
+
+                    // Delete removed profiles
+                    const toDelete = existingIds.filter(id => !updatedIds.includes(id));
+                    await Promise.all(toDelete.map((id: string) => api.deleteStakeholderDetails(id)));
+
+                    // Create or update profiles
+                    await Promise.all(updates.strategic_profiles.map(profile => {
+                        const payload = mapProfileToApi(accountId, updates.account_name || '', profile, updates);
+                        if (profile.id && profile.id.length > 10 && existingIds.includes(profile.id)) {
+                            // Valid UUID length hack logic
+                            return api.updateStakeholderDetails(profile.id, payload);
+                        } else {
+                            return api.createStakeholderDetails(payload);
+                        }
+                    }));
+                }
+            } catch (shErr) {
+                console.error("Failed to update stakeholder details", shErr);
+            }
 
             await fetchAccounts();
             toast({
