@@ -8,7 +8,13 @@ import {
     Edit2,
     Trash2,
     X,
+    Check,
+    ChevronsUpDown,
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
+import { AccountDashboardResponse } from '@/types/dashboard-api';
 import {
     format,
     addMonths,
@@ -45,6 +51,10 @@ export default function MyCalendar() {
 
     const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
 
+    const [accounts, setAccounts] = useState<AccountDashboardResponse[]>([]);
+    const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
+    const [isAccountFilterOpen, setIsAccountFilterOpen] = useState(false);
+
     const fetchEvents = async () => {
         try {
             setIsFetching(true);
@@ -57,8 +67,18 @@ export default function MyCalendar() {
         }
     };
 
+    const fetchAccounts = async () => {
+        try {
+            const data = await api.getAccounts();
+            setAccounts(data);
+        } catch (error) {
+            console.error("Failed to fetch accounts", error);
+        }
+    };
+
     useEffect(() => {
         fetchEvents();
+        fetchAccounts();
     }, []);
 
     // Refresh when dialog closes
@@ -71,6 +91,13 @@ export default function MyCalendar() {
     const eventsByDate = React.useMemo(() => {
         const map = new Map<string, CalendarEventResponse[]>();
         events.forEach(event => {
+            if (selectedAccountIds.length > 0) {
+                const accountId = event.details?.account_id || event.details?.project_id;
+                if (!accountId || !selectedAccountIds.includes(accountId)) {
+                    return;
+                }
+            }
+
             let dateStr: string | null = null;
             if (event.event_type === 'TASK' && event.details?.start_date) {
                 dateStr = format(new Date(event.details.start_date), 'yyyy-MM-dd');
@@ -86,7 +113,7 @@ export default function MyCalendar() {
             }
         });
         return map;
-    }, [events]);
+    }, [events, selectedAccountIds]);
 
     const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
     const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
@@ -178,6 +205,75 @@ export default function MyCalendar() {
                             <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())} className="h-8 px-3 ml-2">
                                 Today
                             </Button>
+
+                            <Popover open={isAccountFilterOpen} onOpenChange={setIsAccountFilterOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={isAccountFilterOpen}
+                                        className="h-8 px-3 ml-2 min-w-[150px] justify-between text-sm font-normal"
+                                    >
+                                        {selectedAccountIds.length === 0
+                                            ? "All Accounts"
+                                            : selectedAccountIds.length === 1
+                                                ? accounts.find(a => a.account_id === selectedAccountIds[0])?.account_name || "1 Selected"
+                                                : `${selectedAccountIds.length} Selected`
+                                        }
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[250px] p-0" align="start">
+                                    <Command>
+                                        <CommandInput placeholder="Search accounts..." />
+                                        <CommandList>
+                                            <CommandEmpty>No account found.</CommandEmpty>
+                                            <CommandGroup>
+                                                <CommandItem
+                                                    onSelect={() => {
+                                                        setSelectedAccountIds([]);
+                                                    }}
+                                                >
+                                                    <div className={cn(
+                                                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                                        selectedAccountIds.length === 0
+                                                            ? "bg-primary text-primary-foreground"
+                                                            : "opacity-50 [&_svg]:invisible"
+                                                    )}>
+                                                        <Check className={cn("h-4 w-4")} />
+                                                    </div>
+                                                    <span>All Accounts</span>
+                                                </CommandItem>
+                                                {accounts.map((account) => {
+                                                    const isSelected = selectedAccountIds.includes(account.account_id);
+                                                    return (
+                                                        <CommandItem
+                                                            key={account.account_id}
+                                                            onSelect={() => {
+                                                                setSelectedAccountIds(prev =>
+                                                                    isSelected
+                                                                        ? prev.filter(id => id !== account.account_id)
+                                                                        : [...prev, account.account_id]
+                                                                );
+                                                            }}
+                                                        >
+                                                            <div className={cn(
+                                                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                                                isSelected
+                                                                    ? "bg-primary text-primary-foreground"
+                                                                    : "opacity-50 [&_svg]:invisible"
+                                                            )}>
+                                                                <Check className={cn("h-4 w-4")} />
+                                                            </div>
+                                                            <span>{account.account_name}</span>
+                                                        </CommandItem>
+                                                    );
+                                                })}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
                         </div>
                     </div>
 

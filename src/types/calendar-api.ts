@@ -16,6 +16,7 @@ export interface CalendarTaskResponse extends CalendarTaskCreate {
 }
 
 export interface CalendarMilestoneCreate {
+    account_id?: string | null;
     project_id?: string | null;
     target_date?: string | null;
     owner_id?: string | null;
@@ -32,6 +33,7 @@ export interface CalendarMilestoneResponse extends CalendarMilestoneCreate {
 }
 
 export interface CalendarReminderCreate {
+    account_id?: string | null;
     project_id?: string | null;
     reminder_date?: string | null;
     reminder_time?: string | null;

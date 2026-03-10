@@ -33,8 +33,19 @@ export interface Account {
     growth_action_plan_30days_ready?: boolean;
     account_research_link?: string;
 
-    // Removed legacy/incorrect fields: ai_summary, leadership_comments, and strategic profile fields
-    // Strategic fields should be accessed via StrategicStakeholderProfile objects
+    // Strategic fields migrated to Account level
+    key_competitors?: string;
+    our_positioning_vs_competition?: string;
+    incumbency_strength?: 'High' | 'Medium' | 'Low';
+    areas_competition_stronger?: string;
+    white_spaces_we_own?: string;
+    account_review_cadence_frequency?: string;
+    qbr_happening?: boolean;
+    technical_audit_frequency?: string;
+
+    // Strategic profile fields
+    strategic_profiles?: StrategicStakeholderProfile[];
+    stakeholder_profile_id?: string;
 
     created_at: string;
     updated_at: string;

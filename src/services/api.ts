@@ -115,13 +115,13 @@ export const api = {
 
     // Calendar Events
     getCalendarEvents: async (): Promise<CalendarEventResponse[]> => {
-        const response = await fetch(`/api/v1/calendar/events/`);
+        const response = await fetch(`${API_BASE_URL}/calendar/events/`);
         return handleResponse<CalendarEventResponse[]>(response);
     },
 
     // Calendar Task
     createCalendarTask: async (task: CalendarTaskCreate): Promise<CalendarTaskResponse> => {
-        const response = await fetch(`/api/v1/calendar/tasks/`, {
+        const response = await fetch(`${API_BASE_URL}/calendar/tasks/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -131,7 +131,7 @@ export const api = {
         return handleResponse<CalendarTaskResponse>(response);
     },
     updateCalendarTask: async (id: string, task: CalendarTaskUpdate): Promise<CalendarTaskResponse> => {
-        const response = await fetch(`/api/v1/calendar/tasks/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/calendar/tasks/${id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -141,7 +141,7 @@ export const api = {
         return handleResponse<CalendarTaskResponse>(response);
     },
     deleteCalendarTask: async (id: string): Promise<void> => {
-        const response = await fetch(`/api/v1/calendar/tasks/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/calendar/tasks/${id}`, {
             method: "DELETE",
         });
         return handleResponse<void>(response);
@@ -149,7 +149,7 @@ export const api = {
 
     // Calendar Milestone
     createCalendarMilestone: async (milestone: CalendarMilestoneCreate): Promise<CalendarMilestoneResponse> => {
-        const response = await fetch(`/api/v1/calendar/milestones/`, {
+        const response = await fetch(`${API_BASE_URL}/calendar/milestones/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -159,7 +159,7 @@ export const api = {
         return handleResponse<CalendarMilestoneResponse>(response);
     },
     updateCalendarMilestone: async (id: string, milestone: CalendarMilestoneUpdate): Promise<CalendarMilestoneResponse> => {
-        const response = await fetch(`/api/v1/calendar/milestones/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/calendar/milestones/${id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -169,7 +169,7 @@ export const api = {
         return handleResponse<CalendarMilestoneResponse>(response);
     },
     deleteCalendarMilestone: async (id: string): Promise<void> => {
-        const response = await fetch(`/api/v1/calendar/milestones/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/calendar/milestones/${id}`, {
             method: "DELETE",
         });
         return handleResponse<void>(response);
@@ -177,7 +177,7 @@ export const api = {
 
     // Calendar Reminder
     createCalendarReminder: async (reminder: CalendarReminderCreate): Promise<CalendarReminderResponse> => {
-        const response = await fetch(`/api/v1/calendar/reminders/`, {
+        const response = await fetch(`${API_BASE_URL}/calendar/reminders/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -187,7 +187,7 @@ export const api = {
         return handleResponse<CalendarReminderResponse>(response);
     },
     updateCalendarReminder: async (id: string, reminder: CalendarReminderUpdate): Promise<CalendarReminderResponse> => {
-        const response = await fetch(`/api/v1/calendar/reminders/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/calendar/reminders/${id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -197,7 +197,7 @@ export const api = {
         return handleResponse<CalendarReminderResponse>(response);
     },
     deleteCalendarReminder: async (id: string): Promise<void> => {
-        const response = await fetch(`/api/v1/calendar/reminders/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/calendar/reminders/${id}`, {
             method: "DELETE",
         });
         return handleResponse<void>(response);

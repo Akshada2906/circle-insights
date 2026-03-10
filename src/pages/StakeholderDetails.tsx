@@ -168,10 +168,8 @@ const StakeholderDetails = () => {
                 </div>
 
                 <Tabs defaultValue="mapping" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 gap-4">
+                    <TabsList className="grid w-full grid-cols-1 gap-4">
                         <TabsTrigger value="mapping" className="tab-purple">Stakeholder Mapping</TabsTrigger>
-                        <TabsTrigger value="competition" className="tab-rose">Competition & Positioning</TabsTrigger>
-                        <TabsTrigger value="readiness" className="tab-emerald">Internal Readiness</TabsTrigger>
                     </TabsList>
 
                     {/* Stakeholder Mapping Tab */}
@@ -219,78 +217,7 @@ const StakeholderDetails = () => {
                         </Card>
                     </TabsContent>
 
-                    {/* Competition & Positioning Tab */}
-                    <TabsContent value="competition" className="mt-6 space-y-6">
-                        <Card className="border-t-4 border-t-rose-500 shadow-sm">
-                            <CardHeader className="bg-gradient-to-r from-rose-50/80 to-transparent border-b border-rose-100 pb-4">
-                                <CardTitle className="flex items-center gap-2 text-rose-950">
-                                    <div className="p-2 bg-rose-100/50 rounded-lg text-rose-600">
-                                        <Shield className="h-5 w-5" />
-                                    </div>
-                                    Competitive Analysis
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-1">
-                                        <span className="text-sm text-muted-foreground">Key Competitors</span>
-                                        <p className="font-medium">{stakeholder.key_competitors || '-'}</p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <span className="text-sm text-muted-foreground">Incumbency Strength</span>
-                                        <p className="font-medium">{stakeholder.incumbency_strength || '-'}</p>
-                                    </div>
-                                </div>
 
-                                <div className="grid grid-cols-1 gap-6 pt-4 border-t">
-                                    <div className="space-y-1">
-                                        <span className="text-sm text-muted-foreground">Our Positioning vs Competition</span>
-                                        <p className="text-sm leading-relaxed">{stakeholder.our_positioning_vs_competition || '-'}</p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <span className="text-sm text-muted-foreground">Areas Where Competition is Stronger</span>
-                                        <p className="text-sm leading-relaxed">{stakeholder.areas_competition_stronger || '-'}</p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <span className="text-sm text-muted-foreground">White Spaces We Own</span>
-                                        <p className="text-sm leading-relaxed">{stakeholder.white_spaces_we_own || '-'}</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    {/* Internal Readiness Tab */}
-                    <TabsContent value="readiness" className="mt-6 space-y-6">
-                        <Card className="border-t-4 border-t-emerald-500 shadow-sm">
-                            <CardHeader className="bg-gradient-to-r from-emerald-50/80 to-transparent border-b border-emerald-100 pb-4">
-                                <CardTitle className="flex items-center gap-2 text-emerald-950">
-                                    <div className="p-2 bg-emerald-100/50 rounded-lg text-emerald-600">
-                                        <Target className="h-5 w-5" />
-                                    </div>
-                                    Internal Readiness & Cadence
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-1">
-                                    <span className="text-sm text-muted-foreground">Account Review Cadence</span>
-                                    <p className="font-medium">{stakeholder.account_review_cadence_frequency || '-'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <span className="text-sm text-muted-foreground">Technical Audit Frequency</span>
-                                    <p className="font-medium">{stakeholder.technical_audit_frequency || '-'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <span className="text-sm text-muted-foreground">QBR Happening?</span>
-                                    <div className="mt-1">
-                                        <Badge variant={stakeholder.qbr_happening ? "default" : "secondary"}>
-                                            {stakeholder.qbr_happening ? "Yes" : "No"}
-                                        </Badge>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
                 </Tabs>
             </div>
         </MainLayout>
