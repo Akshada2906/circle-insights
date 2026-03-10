@@ -24,17 +24,17 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 export const api = {
     getAccounts: async (): Promise<AccountDashboardResponse[]> => {
-        const response = await fetch(`${API_BASE_URL}/account-dashboard/`);
+        const response = await fetch(`${API_BASE_URL}/`);
         return handleResponse<AccountDashboardResponse[]>(response);
     },
 
     getAccountById: async (id: string): Promise<AccountDashboardResponse> => {
-        const response = await fetch(`${API_BASE_URL}/account-dashboard/${id}`);
+        const response = await fetch(`${API_BASE_URL}/${id}`);
         return handleResponse<AccountDashboardResponse>(response);
     },
 
     createAccount: async (account: AccountDashboardCreate): Promise<AccountDashboardResponse> => {
-        const response = await fetch(`${API_BASE_URL}/account-dashboard/`, {
+        const response = await fetch(`${API_BASE_URL}/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -45,7 +45,7 @@ export const api = {
     },
 
     updateAccount: async (id: string, account: AccountDashboardUpdate): Promise<AccountDashboardResponse> => {
-        const response = await fetch(`${API_BASE_URL}/account-dashboard/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/${id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -56,7 +56,7 @@ export const api = {
     },
 
     deleteAccount: async (id: string): Promise<void> => {
-        const response = await fetch(`${API_BASE_URL}/account-dashboard/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/${id}`, {
             method: "DELETE",
         });
         return handleResponse<void>(response);
@@ -64,7 +64,7 @@ export const api = {
 
     // Search
     searchAccountsByUnit: async (deliveryUnit: string): Promise<AccountDashboardResponse[]> => {
-        const response = await fetch(`${API_BASE_URL}/account-dashboard/search/unit/${deliveryUnit}`);
+        const response = await fetch(`${API_BASE_URL}/search/unit/${deliveryUnit}`);
         return handleResponse<AccountDashboardResponse[]>(response);
     },
 
