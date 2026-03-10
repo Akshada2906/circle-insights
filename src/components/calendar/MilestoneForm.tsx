@@ -16,6 +16,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { CalendarMilestoneCreate, CalendarMilestoneUpdate, CalendarEventResponse } from '@/types/calendar-api';
 import { Loader2, Trash2 } from 'lucide-react';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
+import { SearchableAccountSelect } from './SearchableAccountSelect';
+import { useAccounts } from '@/contexts/AccountContext';
 
 interface Props {
     selectedDate: Date | null;
@@ -34,16 +36,41 @@ export function MilestoneForm({ selectedDate, onClose, initialData }: Props) {
     const [progress, setProgress] = useState([initialDetails?.progress_percent || 0]);
 
     const [name, setName] = useState(initialDetails?.milestone_name || "");
-    const [project, setProject] = useState("marketing");
+    const [accountId, setAccountId] = useState(initialDetails?.account_id || "");
     const [description, setDescription] = useState(initialDetails?.description || "");
     const [owner, setOwner] = useState("alex");
     const [impact, setImpact] = useState(initialDetails?.impact_level || "HIGH");
 
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
+    const { accounts } = useAccounts();
 
     const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+    const handleAccountSelect = (newAccountId: string) => {
+        const oldAccount = accounts.find(a => a.account_id === accountId);
+        const newAccount = accounts.find(a => a.account_id === newAccountId);
+
+        setName(prevName => {
+            let newName = prevName;
+            if (oldAccount && newName.endsWith(` - (${oldAccount.account_name})`)) {
+                newName = newName.slice(0, newName.lastIndexOf(` - (${oldAccount.account_name})`)).trim();
+            }
+            if (newAccount && newName && !newName.endsWith(` - (${newAccount.account_name})`)) {
+                newName = `${newName} - (${newAccount.account_name})`;
+            }
+            return newName;
+        });
+        setAccountId(newAccountId);
+    };
+
+    const handleNameBlur = () => {
+        const account = accounts.find(a => a.account_id === accountId);
+        if (account && name && !name.endsWith(` - (${account.account_name})`)) {
+            setName(`${name.trim()} - (${account.account_name})`);
+        }
+    };
 
     const handleSubmitClick = () => {
         if (!name.trim()) {
@@ -66,23 +93,32 @@ export function MilestoneForm({ selectedDate, onClose, initialData }: Props) {
         try {
             setIsLoading(true);
 
+            const account = accounts.find(a => a.account_id === accountId);
+            const accountSuffix = account ? ` - (${account.account_name})` : "";
+            let finalName = name;
+            if (accountSuffix && !finalName.includes(`- (${account.account_name})`)) {
+                finalName = finalName.trim() + accountSuffix;
+            }
+
             if (isEditing && initialData?.details?.id) {
                 const milestoneUpdate: CalendarMilestoneUpdate = {
-                    milestone_name: name,
+                    milestone_name: finalName,
                     description: description,
                     target_date: targetDate ? format(targetDate, "yyyy-MM-dd'T'00:00:00.000'Z'") : null,
                     impact_level: impact,
                     progress_percent: progress[0],
+                    account_id: accountId || null,
                 };
                 await api.updateCalendarMilestone(initialData.details.id, milestoneUpdate);
                 toast({ title: "Success", description: "Milestone updated successfully." });
             } else {
                 const milestone: CalendarMilestoneCreate = {
-                    milestone_name: name,
+                    milestone_name: finalName,
                     description: description,
                     target_date: targetDate ? format(targetDate, "yyyy-MM-dd'T'00:00:00.000'Z'") : null,
                     impact_level: impact,
                     progress_percent: progress[0],
+                    account_id: accountId || null,
                 };
                 await api.createCalendarMilestone(milestone);
                 toast({ title: "Success", description: "Milestone created successfully." });
@@ -130,23 +166,14 @@ export function MilestoneForm({ selectedDate, onClose, initialData }: Props) {
                     <Label htmlFor="name" className="text-sm font-medium text-gray-700">Milestone Name</Label>
                     <div className="relative">
                         <Trophy className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                        <Input id="name" placeholder="e.g., Beta Release, Security Audit Complete" className="pl-9 shadow-sm" value={name} onChange={(e) => setName(e.target.value)} />
+                        <Input id="name" placeholder="e.g., Beta Release, Security Audit Complete" className="pl-9 shadow-sm" value={name} onChange={(e) => setName(e.target.value)} onBlur={handleNameBlur} />
                     </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-gray-700">Project</Label>
-                        <Select value={project} onValueChange={setProject}>
-                            <SelectTrigger className="shadow-sm">
-                                <SelectValue placeholder="Select project" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="ecommerce">E-Commerce Redesign</SelectItem>
-                                <SelectItem value="marketing">Marketing Q4 Campaign</SelectItem>
-                                <SelectItem value="internal">Internal Tools</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Label className="text-sm font-medium text-gray-700">Related Account</Label>
+                        <SearchableAccountSelect value={accountId} onSelect={handleAccountSelect} placeholder="Search accounts..." />
                     </div>
                     <div className="space-y-1.5">
                         <Label className="text-sm font-medium text-gray-700">Target Date</Label>

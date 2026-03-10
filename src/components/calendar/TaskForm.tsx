@@ -16,6 +16,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { CalendarTaskCreate, CalendarTaskUpdate, CalendarEventResponse } from '@/types/calendar-api';
 import { Loader2 } from 'lucide-react';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
+import { useAccounts } from '@/contexts/AccountContext';
 
 interface Props {
     selectedDate: Date | null;
@@ -49,6 +50,7 @@ export function TaskForm({ selectedDate, onClose, initialData }: Props) {
 
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
+    const { accounts } = useAccounts();
 
     const [datePopoverOpen, setDatePopoverOpen] = useState(false);
     const [duePopoverOpen, setDuePopoverOpen] = useState(false);
@@ -58,6 +60,30 @@ export function TaskForm({ selectedDate, onClose, initialData }: Props) {
 
     const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+    const handleAccountSelect = (newAccountId: string) => {
+        const oldAccount = accounts.find(a => a.account_id === accountId);
+        const newAccount = accounts.find(a => a.account_id === newAccountId);
+
+        setTitle(prevTitle => {
+            let newTitle = prevTitle;
+            if (oldAccount && newTitle.endsWith(` - (${oldAccount.account_name})`)) {
+                newTitle = newTitle.slice(0, newTitle.lastIndexOf(` - (${oldAccount.account_name})`)).trim();
+            }
+            if (newAccount && newTitle && !newTitle.endsWith(` - (${newAccount.account_name})`)) {
+                newTitle = `${newTitle} - (${newAccount.account_name})`;
+            }
+            return newTitle;
+        });
+        setAccountId(newAccountId);
+    };
+
+    const handleTitleBlur = () => {
+        const account = accounts.find(a => a.account_id === accountId);
+        if (account && title && !title.endsWith(` - (${account.account_name})`)) {
+            setTitle(`${title.trim()} - (${account.account_name})`);
+        }
+    };
 
     useEffect(() => {
         if (startDate && dueDate) {
@@ -125,6 +151,13 @@ export function TaskForm({ selectedDate, onClose, initialData }: Props) {
             // Simple hour difference estimation
             const estimatedHours = combinedDue ? Math.max(0, Math.round((combinedDue.getTime() - combinedStart.getTime()) / (1000 * 60 * 60))) : 0;
 
+            const account = accounts.find(a => a.account_id === accountId);
+            const accountSuffix = account ? ` - (${account.account_name})` : "";
+            let finalTitle = title;
+            if (accountSuffix && !finalTitle.includes(`- (${account.account_name})`)) {
+                finalTitle = finalTitle.trim() + accountSuffix;
+            }
+
             if (isEditing && initialData?.details?.id) {
                 const taskUpdate: CalendarTaskUpdate = {
                     account_id: accountId || null,
@@ -133,7 +166,7 @@ export function TaskForm({ selectedDate, onClose, initialData }: Props) {
                     start_date: combinedStart.toISOString(),
                     due_date: combinedDue ? combinedDue.toISOString() : null,
                     estimated_hours: estimatedHours,
-                    task_title: title,
+                    task_title: finalTitle,
                     description,
                 };
                 await api.updateCalendarTask(initialData.details.id, taskUpdate);
@@ -146,7 +179,7 @@ export function TaskForm({ selectedDate, onClose, initialData }: Props) {
                     start_date: combinedStart.toISOString(),
                     due_date: combinedDue ? combinedDue.toISOString() : null,
                     estimated_hours: estimatedHours,
-                    task_title: title,
+                    task_title: finalTitle,
                     description,
                 };
                 await api.createCalendarTask(task);
@@ -195,7 +228,7 @@ export function TaskForm({ selectedDate, onClose, initialData }: Props) {
                 <div className="flex-1 space-y-4">
                     <div className="space-y-1.5">
                         <Label htmlFor="title" className="text-sm font-medium text-gray-700">Task Title</Label>
-                        <Input id="title" placeholder="Enter a concise title for the task" className="shadow-sm" value={title} onChange={(e) => setTitle(e.target.value)} />
+                        <Input id="title" placeholder="Enter a concise title for the task" className="shadow-sm" value={title} onChange={(e) => setTitle(e.target.value)} onBlur={handleTitleBlur} />
                     </div>
 
                     <div className="space-y-1.5">
@@ -220,7 +253,7 @@ export function TaskForm({ selectedDate, onClose, initialData }: Props) {
 
 
                     <div className="space-y-1.5">
-                        <SearchableAccountSelect value={accountId} onSelect={setAccountId} placeholder="Search accounts..." />
+                        <SearchableAccountSelect value={accountId} onSelect={handleAccountSelect} placeholder="Search accounts..." />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">

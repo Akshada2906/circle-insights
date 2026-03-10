@@ -23,6 +23,7 @@ import {
     DropdownMenuTrigger,
     DropdownMenu,
 } from '@/components/ui/dropdown-menu';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { api } from '@/services/api';
 import { StrategicStakeholderProfile } from '@/types/account';
@@ -32,6 +33,8 @@ const AccountDetails = () => {
     const navigate = useNavigate();
     const { getAccountById, fetchAccount } = useAccounts();
     const [stakeholders, setStakeholders] = useState<StrategicStakeholderProfile[]>([]);
+    const [stakeholderPage, setStakeholderPage] = useState(1);
+    const stakeholdersPerPage = 5;
 
     useEffect(() => {
         if (id) {
@@ -103,9 +106,11 @@ const AccountDetails = () => {
         return 'bg-red-100 text-red-700 border-red-300';
     };
 
-
-
-
+    const paginatedStakeholders = stakeholders.slice(
+        (stakeholderPage - 1) * stakeholdersPerPage,
+        stakeholderPage * stakeholdersPerPage
+    );
+    const totalStakeholderPages = Math.ceil(stakeholders.length / stakeholdersPerPage);
 
     return (
         <MainLayout>
@@ -137,11 +142,14 @@ const AccountDetails = () => {
 
                 {/* Account Info Tabs */}
                 <Tabs defaultValue="general" className="w-full">
-                    <TabsList className="grid grid-cols-4 w-full gap-4">
-                        <TabsTrigger value="general" className="tab-blue">General</TabsTrigger>
-                        <TabsTrigger value="financials" className="tab-green">Financials</TabsTrigger>
-                        <TabsTrigger value="delivery" className="tab-orange">Delivery</TabsTrigger>
-                        <TabsTrigger value="strategy" className="tab-purple">Strategy & Relationships</TabsTrigger>
+                    <TabsList className="grid grid-cols-7 w-full gap-2 h-auto">
+                        <TabsTrigger value="general" className="tab-blue h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight">General</TabsTrigger>
+                        <TabsTrigger value="financials" className="tab-green h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight">Financials</TabsTrigger>
+                        <TabsTrigger value="delivery" className="tab-orange h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight">Delivery</TabsTrigger>
+                        <TabsTrigger value="strategy" className="tab-purple h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight">Strategy</TabsTrigger>
+                        <TabsTrigger value="stakeholders" className="tab-indigo h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight">Stakeholders</TabsTrigger>
+                        <TabsTrigger value="competition" className="tab-rose h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight">Competition</TabsTrigger>
+                        <TabsTrigger value="readiness" className="tab-emerald h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight">Readiness</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="general" className="mt-6 space-y-6">
@@ -331,6 +339,145 @@ const AccountDetails = () => {
                                 <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">NPS</span><p className="font-medium text-lg text-violet-600">{account.current_nps || '-'}</p></div>
                                 <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Decision Maker Connect</span><p className="font-medium">{account.connect_with_decision_maker ? 'Yes' : 'No'}</p></div>
                                 <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Active Connects</span><p className="font-medium text-lg">{account.total_active_connects || '-'}</p></div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* STAKEHOLDERS TabsContent */}
+                    <TabsContent value="stakeholders" className="mt-6 space-y-6">
+                        <Card className="border-t-4 border-t-indigo-500 shadow-sm hover:shadow-md transition-shadow">
+                            <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-transparent border-b border-indigo-100">
+                                <CardTitle className="flex items-center gap-2 text-indigo-950">
+                                    <Users className="w-5 h-5 text-indigo-600" />
+                                    Strategic Stakeholders
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-6 overflow-x-auto">
+                                {!stakeholders || stakeholders.length === 0 ? (
+                                    <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                                        <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                        <p>No stakeholders defined.</p>
+                                    </div>
+                                ) : (
+                                    <div className="border rounded-md min-w-[800px]">
+                                        <Table>
+                                            <TableHeader className="bg-slate-50">
+                                                <TableRow>
+                                                    <TableHead>Executive Sponsor</TableHead>
+                                                    <TableHead>Technical Decision Maker</TableHead>
+                                                    <TableHead>Influencers</TableHead>
+                                                    <TableHead>Neutral Stakeholders</TableHead>
+                                                    <TableHead>Negative Stakeholder</TableHead>
+                                                    <TableHead>Succession Risk</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {paginatedStakeholders.map((person, idx) => (
+                                                    <TableRow key={person.id || idx}>
+                                                        <TableCell className="font-medium">{person.executive_sponsor || '-'}</TableCell>
+                                                        <TableCell>{person.technical_decision_maker || '-'}</TableCell>
+                                                        <TableCell>{person.influencer || '-'}</TableCell>
+                                                        <TableCell>{person.neutral_stakeholders || '-'}</TableCell>
+                                                        <TableCell>{person.negative_stakeholder || '-'}</TableCell>
+                                                        <TableCell className={person.succession_risk ? 'text-amber-700 font-medium' : ''}>{person.succession_risk || '-'}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                        {totalStakeholderPages > 1 && (
+                                            <div className="flex items-center justify-center space-x-2 py-4">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setStakeholderPage(p => Math.max(1, p - 1))}
+                                                    disabled={stakeholderPage === 1}
+                                                >
+                                                    Previous
+                                                </Button>
+                                                <span className="text-sm text-muted-foreground">
+                                                    Page {stakeholderPage} of {totalStakeholderPages}
+                                                </span>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setStakeholderPage(p => Math.min(totalStakeholderPages, p + 1))}
+                                                    disabled={stakeholderPage === totalStakeholderPages}
+                                                >
+                                                    Next
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* COMPETITION & POSITIONING TabsContent */}
+                    <TabsContent value="competition" className="mt-6 space-y-6">
+                        <Card className="border-t-4 border-t-rose-500 shadow-sm hover:shadow-md transition-shadow">
+                            <CardHeader className="bg-gradient-to-r from-rose-50/50 to-transparent border-b border-rose-100">
+                                <CardTitle className="flex items-center gap-2 text-rose-950">
+                                    <Target className="w-5 h-5 text-rose-600" />
+                                    Competitive Analysis
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-6 pt-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-1">
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Key Competitors</span>
+                                        <p className="font-medium">{stakeholders[0]?.key_competitors || account.key_competitors || '-'}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Incumbency Strength</span>
+                                        <p className="font-medium">{stakeholders[0]?.incumbency_strength || account.incumbency_strength || '-'}</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-6 pt-4 border-t">
+                                    <div className="space-y-1">
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Our Positioning vs Competition</span>
+                                        <p className="text-sm leading-relaxed">{stakeholders[0]?.our_positioning || account.our_positioning_vs_competition || '-'}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Areas Where Competition is Stronger</span>
+                                        <p className="text-sm leading-relaxed">{stakeholders[0]?.areas_competition_stronger || account.areas_competition_stronger || '-'}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">White Spaces We Own</span>
+                                        <p className="text-sm leading-relaxed">{stakeholders[0]?.white_spaces_we_own || account.white_spaces_we_own || '-'}</p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* INTERNAL READINESS TabsContent */}
+                    <TabsContent value="readiness" className="mt-6 space-y-6">
+                        <Card className="border-t-4 border-t-emerald-500 shadow-sm hover:shadow-md transition-shadow">
+                            <CardHeader className="bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-emerald-100">
+                                <CardTitle className="flex items-center gap-2 text-emerald-950">
+                                    <Target className="w-5 h-5 text-emerald-600" />
+                                    Internal Readiness & Cadence
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                                <div className="space-y-1">
+                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Account Review Cadence</span>
+                                    <p className="font-medium">{stakeholders[0]?.account_review_cadence || account.account_review_cadence_frequency || '-'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Technical Audit Frequency</span>
+                                    <p className="font-medium">{stakeholders[0]?.technical_audit_frequency || account.technical_audit_frequency || '-'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">QBR Happening?</span>
+                                    <div className="mt-1">
+                                        <Badge variant={stakeholders[0]?.qbr_happening === 'Yes' || account.qbr_happening ? "default" : "secondary"}>
+                                            {stakeholders[0]?.qbr_happening === 'Yes' || account.qbr_happening ? "Yes" : "No"}
+                                        </Badge>
+                                    </div>
+                                </div>
                             </CardContent>
                         </Card>
                     </TabsContent>

@@ -15,6 +15,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { CalendarReminderCreate, CalendarReminderUpdate, CalendarEventResponse } from '@/types/calendar-api';
 import { Loader2, Trash2 } from 'lucide-react';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
+import { SearchableAccountSelect } from './SearchableAccountSelect';
+import { useAccounts } from '@/contexts/AccountContext';
 
 interface Props {
     selectedDate: Date | null;
@@ -32,18 +34,42 @@ export function ReminderForm({ selectedDate, onClose, initialData }: Props) {
     const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
     const [title, setTitle] = useState(initialDetails?.reminder_title || "");
-    const [project, setProject] = useState("marketing");
+    const [accountId, setAccountId] = useState(initialDetails?.account_id || "");
 
-    // Parse time if it exists (e.g. "09:00:00" -> "09:00")
     const [time, setTime] = useState(initialDetails?.reminder_time ? initialDetails.reminder_time.substring(0, 5) : "09:00");
     const [repeat, setRepeat] = useState("none");
     const [notes, setNotes] = useState(initialDetails?.notes || "");
 
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
+    const { accounts } = useAccounts();
 
     const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+    const handleAccountSelect = (newAccountId: string) => {
+        const oldAccount = accounts.find(a => a.account_id === accountId);
+        const newAccount = accounts.find(a => a.account_id === newAccountId);
+
+        setTitle(prevTitle => {
+            let newTitle = prevTitle;
+            if (oldAccount && newTitle.endsWith(` - (${oldAccount.account_name})`)) {
+                newTitle = newTitle.slice(0, newTitle.lastIndexOf(` - (${oldAccount.account_name})`)).trim();
+            }
+            if (newAccount && newTitle && !newTitle.endsWith(` - (${newAccount.account_name})`)) {
+                newTitle = `${newTitle} - (${newAccount.account_name})`;
+            }
+            return newTitle;
+        });
+        setAccountId(newAccountId);
+    };
+
+    const handleTitleBlur = () => {
+        const account = accounts.find(a => a.account_id === accountId);
+        if (account && title && !title.endsWith(` - (${account.account_name})`)) {
+            setTitle(`${title.trim()} - (${account.account_name})`);
+        }
+    };
 
     const handleSubmitClick = () => {
         if (!title.trim()) {
@@ -66,21 +92,30 @@ export function ReminderForm({ selectedDate, onClose, initialData }: Props) {
         try {
             setIsLoading(true);
 
+            const account = accounts.find(a => a.account_id === accountId);
+            const accountSuffix = account ? ` - (${account.account_name})` : "";
+            let finalTitle = title;
+            if (accountSuffix && !finalTitle.includes(`- (${account.account_name})`)) {
+                finalTitle = finalTitle.trim() + accountSuffix;
+            }
+
             if (isEditing && initialData?.details?.id) {
                 const reminderUpdate: CalendarReminderUpdate = {
-                    reminder_title: title,
+                    reminder_title: finalTitle,
                     notes: notes,
                     reminder_date: reminderDate ? format(reminderDate, "yyyy-MM-dd") : null,
                     reminder_time: time ? `${time}:00` : null,
+                    account_id: accountId || null,
                 };
                 await api.updateCalendarReminder(initialData.details.id, reminderUpdate);
                 toast({ title: "Success", description: "Reminder updated successfully." });
             } else {
                 const reminder: CalendarReminderCreate = {
-                    reminder_title: title,
+                    reminder_title: finalTitle,
                     notes: notes,
                     reminder_date: reminderDate ? format(reminderDate, "yyyy-MM-dd") : null,
                     reminder_time: time ? `${time}:00` : null,
+                    account_id: accountId || null,
                 };
                 await api.createCalendarReminder(reminder);
                 toast({ title: "Success", description: "Reminder created successfully." });
@@ -126,21 +161,12 @@ export function ReminderForm({ selectedDate, onClose, initialData }: Props) {
             <div className="space-y-4 max-w-xl mx-auto">
                 <div className="space-y-1.5">
                     <Label htmlFor="title" className="text-sm font-medium text-gray-700">Reminder Title</Label>
-                    <Input id="title" placeholder="e.g., Follow up on Design Specs" className="shadow-sm" value={title} onChange={(e) => setTitle(e.target.value)} />
+                    <Input id="title" placeholder="e.g., Follow up on Design Specs" className="shadow-sm" value={title} onChange={(e) => setTitle(e.target.value)} onBlur={handleTitleBlur} />
                 </div>
 
                 <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">Related Project</Label>
-                    <Select value={project} onValueChange={setProject}>
-                        <SelectTrigger className="shadow-sm">
-                            <SelectValue placeholder="Select project" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="ecommerce">E-Commerce Redesign</SelectItem>
-                            <SelectItem value="marketing">Q4 Marketing Campaign</SelectItem>
-                            <SelectItem value="internal">Internal Tools</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <Label className="text-sm font-medium text-gray-700">Related Account</Label>
+                    <SearchableAccountSelect value={accountId} onSelect={handleAccountSelect} placeholder="Search accounts..." />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
