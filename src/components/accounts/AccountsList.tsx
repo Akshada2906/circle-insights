@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AccountWithProjects } from '@/types/account';
+import { AccountWithProjects, StrategicStakeholderProfile } from '@/types/account';
 import { AccountCard } from './AccountCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,8 @@ import {
 } from '@/components/ui/select';
 import { Plus, Search, Briefcase, FileSpreadsheet, FileText, Download } from 'lucide-react';
 import { deliveryUnits } from '@/constants';
-import { exportToExcel, exportMultipleTablesToPDF, exportFormattedAoAToExcel } from '@/lib/exportUtils';
+import { exportMultipleTablesToPDF, exportMultipleSheetsFormattedAoAToExcel } from '@/lib/exportUtils';
+import { api } from '@/services/api';
 import * as XLSX from 'xlsx-js-style';
 import {
     DropdownMenu,
@@ -41,32 +42,58 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
         return matchesSearch;
     });
 
-    const handleExportExcel = () => {
-        // Headers (Account Names)
-        const headerRow = ['Account Name', ...filteredAccounts.map(acc => acc.account_name)];
+    const handleExportExcel = async () => {
+        if (filteredAccounts.length === 0) return;
 
-        // Helper to get safe string value
+        // Fetch all stakeholders to include in the export
+        let allStakeholders: StrategicStakeholderProfile[] = [];
+        try {
+            const data = await api.getAllStakeholders();
+            allStakeholders = data.map((apiDetails: any) => ({
+                id: apiDetails.id,
+                account_id: apiDetails.account_id,
+                account_name: apiDetails.account_name,
+                executive_sponsor: apiDetails.executive_sponsor || '',
+                technical_decision_maker: apiDetails.technical_decision_maker || '',
+                influencer: apiDetails.influencers || '',
+                neutral_stakeholders: apiDetails.neutral_stakeholders || '',
+                negative_stakeholder: apiDetails.negative_stakeholder || '',
+                succession_risk: apiDetails.succession_risk || '',
+                key_competitors: apiDetails.key_competitors || '',
+                our_positioning: apiDetails.our_positioning_vs_competition || '',
+                incumbency_strength: apiDetails.incumbency_strength as any,
+                areas_competition_stronger: apiDetails.areas_competition_stronger || '',
+                white_spaces_we_own: apiDetails.white_spaces_we_own || '',
+                account_review_cadence: apiDetails.account_review_cadence_frequency || '',
+                qbr_happening: apiDetails.qbr_happening ? 'Yes' : 'No',
+                technical_audit_frequency: apiDetails.technical_audit_frequency || '',
+                created_at: apiDetails.created_at,
+                updated_at: apiDetails.updated_at
+            }));
+        } catch (error) {
+            console.error("Failed to fetch stakeholders for export", error);
+        }
+
+        // Filter stakeholders to only include those from the filtered accounts
+        const filteredAccountIds = new Set(filteredAccounts.map(acc => acc.account_id));
+        const profiles = allStakeholders.filter(p => p.account_id && filteredAccountIds.has(p.account_id));
+
+        // --- SHEET 1: Account Dashboard ---
+        const accountHeaderRow = ['Account Name', ...filteredAccounts.map(acc => acc.account_name)];
         const val = (v: any) => v !== null && v !== undefined ? v : '';
         const boolVal = (v: any) => v ? 'Yes' : 'No';
 
-        // Data Rows
-        const dataRows = [
-            // --- General Information ---
+        const accountDataRows = [
             ['Domain', ...filteredAccounts.map(acc => val(acc.domain))],
             ['Account Focus (Platinum/Gold/Silver)', ...filteredAccounts.map(acc => val(acc.account_focus))],
             ['Engagement Age (As of Jan 2026)', ...filteredAccounts.map(acc => val(acc.engagement_age))],
             ['Account Research Link', ...filteredAccounts.map(acc => val(acc.account_research_link))],
-
-            // --- Financials ---
             ['Company Revenue (USD)', ...filteredAccounts.map(acc => val(acc.company_revenue))],
             ['Last Year Business Done (USD)', ...filteredAccounts.map(acc => val(acc.last_year_business_done))],
             ['Target Projection 2026 (Accounts Team)', ...filteredAccounts.map(acc => val(acc.target_projection_2026_accounts))],
             ['Target Projection 2026 (Delivery)', ...filteredAccounts.map(acc => val(acc.target_projection_2026_delivery))],
             ['Current Pipeline Value (Next 6-12 Months)', ...filteredAccounts.map(acc => val(acc.current_pipeline_value))],
             ['Revenue Attrition / Leakage Possibility', ...filteredAccounts.map(acc => val(acc.revenue_attrition_possibility))],
-
-            // --- Delivery & Operations ---
-            // Removed: Delivery Unit
             ['Delivery Owner', ...filteredAccounts.map(acc => val(acc.delivery_owner))],
             ['Team Size', ...filteredAccounts.map(acc => val(acc.team_size))],
             ['Overall Delivery Health', ...filteredAccounts.map(acc => val(acc.overall_delivery_health))],
@@ -74,15 +101,11 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
             ['Number of Active Projects', ...filteredAccounts.map(acc => val(acc.number_of_active_projects))],
             ['Engagement Models', ...filteredAccounts.map(acc => val(acc.engagement_models))],
             ['Current Engagement Areas', ...filteredAccounts.map(acc => val(acc.current_engagement_areas))],
-
-            // --- Strategy & Value Chain ---
             ['Do We Know Customer Value Chain?', ...filteredAccounts.map(acc => boolVal(acc.know_customer_value_chain))],
             ['Where We Fit in Value Chain', ...filteredAccounts.map(acc => val(acc.where_we_fit_in_value_chain))],
             ['Visibility of Client Roadmap 2026', ...filteredAccounts.map(acc => val(acc.visibility_client_roadmap_2026))],
             ['Identified Cross/Up Selling Areas', ...filteredAccounts.map(acc => val(acc.identified_areas_cross_up_selling))],
             ['30 Days Growth Action Plan Ready?', ...filteredAccounts.map(acc => boolVal(acc.growth_action_plan_30days_ready))],
-
-            // --- Stakeholders & Relationships (Account Level) ---
             ['Client Partner', ...filteredAccounts.map(acc => val(acc.client_partner))],
             ['Champion @ Customer Side', ...filteredAccounts.map(acc => val(acc.champion_customer_side))],
             ['Champion Profile', ...filteredAccounts.map(acc => val(acc.champion_profile))],
@@ -92,25 +115,19 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
             ['Connect with Decision Maker?', ...filteredAccounts.map(acc => boolVal(acc.connect_with_decision_maker))],
         ];
 
-        const exportData = [headerRow, ...dataRows];
+        const accountExportData = [accountHeaderRow, ...accountDataRows];
+        const accountCols = [{ wch: 40 }, ...filteredAccounts.map(() => ({ wch: 25 }))];
+        const accountStyles: Record<string, any> = {};
 
-        const cols = [
-            { wch: 40 },
-            ...filteredAccounts.map(() => ({ wch: 25 }))
-        ];
-
-        const styles: Record<string, any> = {};
-
-        const accountHeaderStyle = {
+        const headerStyle = {
             font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
-            fill: { fgColor: { rgb: "595959" } }, // Dark gray background (matching template)
+            fill: { fgColor: { rgb: "595959" } },
             alignment: { horizontal: "center", vertical: "center", wrapText: true }
         };
 
-        // Style for Field Labels (Column A - all rows including A1)
         const fieldLabelStyle = {
             font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
-            fill: { fgColor: { rgb: "595959" } }, // Dark gray background (matching template)
+            fill: { fgColor: { rgb: "595959" } },
             alignment: { horizontal: "left", vertical: "center", wrapText: true },
             border: {
                 top: { style: "thin", color: { rgb: "FFFFFF" } },
@@ -120,21 +137,112 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
             }
         };
 
-        // Apply style to account name headers (B1, C1, D1... - starting from column 1)
-        const totalCols = headerRow.length;
-        for (let c = 1; c < totalCols; c++) {
-            const cellAddress = XLSX.utils.encode_cell({ r: 0, c });
-            styles[cellAddress] = accountHeaderStyle;
+        for (let c = 1; c < accountHeaderRow.length; c++) {
+            accountStyles[XLSX.utils.encode_cell({ r: 0, c })] = headerStyle;
         }
 
-        // Apply style to all field labels in Column A (starting from row 0 - includes A1)
-        const totalRows = exportData.length;
-        for (let r = 0; r < totalRows; r++) {
-            const cellAddress = XLSX.utils.encode_cell({ r, c: 0 });
-            styles[cellAddress] = fieldLabelStyle;
+        for (let r = 0; r < accountExportData.length; r++) {
+            accountStyles[XLSX.utils.encode_cell({ r, c: 0 })] = fieldLabelStyle;
         }
 
-        exportFormattedAoAToExcel(exportData, 'Account_Dashboard_Transposed', undefined, styles, cols);
+        // --- SHEET 2: Stakeholder Matrix ---
+        const stakeholderHeaderRow = ['Account Name', ...profiles.map(p => p.account_name)];
+        const totalSHCols = stakeholderHeaderRow.length;
+
+        const getSHVal = (p: StrategicStakeholderProfile, field: keyof StrategicStakeholderProfile) => {
+            const val = p[field];
+            return val !== null && val !== undefined ? val : '';
+        };
+
+        const stakeholderMappingRows = [
+            ['Executive Sponsor', ...profiles.map(p => getSHVal(p, 'executive_sponsor'))],
+            ['Technical Decision Maker', ...profiles.map(p => getSHVal(p, 'technical_decision_maker'))],
+            ['Influencer/s', ...profiles.map(p => getSHVal(p, 'influencer'))],
+            ['Neutral Stakeholders', ...profiles.map(p => getSHVal(p, 'neutral_stakeholders'))],
+            ['Negative Stakeholder', ...profiles.map(p => getSHVal(p, 'negative_stakeholder'))],
+            ['Succession Risk (Champion Leaving?)', ...profiles.map(p => getSHVal(p, 'succession_risk'))],
+        ];
+
+        const competitionRows = [
+            ['Key Competitors in Account', ...profiles.map(p => getSHVal(p, 'key_competitors'))],
+            ['Our Positioning vs Competition', ...profiles.map(p => getSHVal(p, 'our_positioning'))],
+            ['Incumbency Strength', ...profiles.map(p => getSHVal(p, 'incumbency_strength'))],
+            ['Areas Where Competition Is Stronger', ...profiles.map(p => getSHVal(p, 'areas_competition_stronger'))],
+            ['White Spaces We Own Clearly', ...profiles.map(p => getSHVal(p, 'white_spaces_we_own'))],
+        ];
+
+        const readinessRows = [
+            ['Account Review Cadence', ...profiles.map(p => getSHVal(p, 'account_review_cadence'))],
+            ['QBR Happening?', ...profiles.map(p => getSHVal(p, 'qbr_happening'))],
+            ['Technical Audit Frequency', ...profiles.map(p => getSHVal(p, 'technical_audit_frequency'))],
+        ];
+
+        const stakeholderData: any[][] = [];
+        const stakeholderMerges: XLSX.Range[] = [];
+        const stakeholderStyles: Record<string, any> = {};
+
+        const stakeholderCols = [{ wch: 30 }, ...profiles.map(() => ({ wch: 20 }))];
+
+        const sectionHeaderStyle = {
+            font: { bold: true, sz: 14 },
+            fill: { fgColor: { rgb: "FFC000" } }, // Orange-Gold background
+            alignment: { horizontal: "center", vertical: "center", wrapText: true }
+        };
+
+        stakeholderData.push(stakeholderHeaderRow);
+
+        stakeholderStyles[XLSX.utils.encode_cell({ r: 0, c: 0 })] = fieldLabelStyle;
+        for (let c = 1; c < totalSHCols; c++) {
+            stakeholderStyles[XLSX.utils.encode_cell({ r: 0, c })] = headerStyle;
+        }
+
+        if (profiles.length > 0) {
+            const mappingHeaderRowIndex = stakeholderData.length;
+            stakeholderData.push(['Stakeholder Mapping']);
+            stakeholderMerges.push({ s: { r: mappingHeaderRowIndex, c: 0 }, e: { r: mappingHeaderRowIndex, c: totalSHCols - 1 } });
+            stakeholderStyles[XLSX.utils.encode_cell({ r: mappingHeaderRowIndex, c: 0 })] = sectionHeaderStyle;
+
+            for (let i = 0; i < stakeholderMappingRows.length; i++) {
+                stakeholderStyles[XLSX.utils.encode_cell({ r: mappingHeaderRowIndex + 1 + i, c: 0 })] = fieldLabelStyle;
+            }
+            stakeholderData.push(...stakeholderMappingRows);
+
+            const competitionHeaderRowIndex = stakeholderData.length;
+            stakeholderData.push(['Competition & Positioning']);
+            stakeholderMerges.push({ s: { r: competitionHeaderRowIndex, c: 0 }, e: { r: competitionHeaderRowIndex, c: totalSHCols - 1 } });
+            stakeholderStyles[XLSX.utils.encode_cell({ r: competitionHeaderRowIndex, c: 0 })] = sectionHeaderStyle;
+
+            for (let i = 0; i < competitionRows.length; i++) {
+                stakeholderStyles[XLSX.utils.encode_cell({ r: competitionHeaderRowIndex + 1 + i, c: 0 })] = fieldLabelStyle;
+            }
+            stakeholderData.push(...competitionRows);
+
+            const readinessHeaderRowIndex = stakeholderData.length;
+            stakeholderData.push(['Internal Readiness']);
+            stakeholderMerges.push({ s: { r: readinessHeaderRowIndex, c: 0 }, e: { r: readinessHeaderRowIndex, c: totalSHCols - 1 } });
+            stakeholderStyles[XLSX.utils.encode_cell({ r: readinessHeaderRowIndex, c: 0 })] = sectionHeaderStyle;
+
+            for (let i = 0; i < readinessRows.length; i++) {
+                stakeholderStyles[XLSX.utils.encode_cell({ r: readinessHeaderRowIndex + 1 + i, c: 0 })] = fieldLabelStyle;
+            }
+            stakeholderData.push(...readinessRows);
+        }
+
+        exportMultipleSheetsFormattedAoAToExcel([
+            {
+                sheetName: 'Account Dashboard',
+                data: accountExportData,
+                cols: accountCols,
+                styles: accountStyles
+            },
+            {
+                sheetName: 'Stakeholder Matrix',
+                data: stakeholderData,
+                merges: stakeholderMerges,
+                cols: stakeholderCols,
+                styles: stakeholderStyles
+            }
+        ], 'Accounts_and_Stakeholders_Export');
     };
 
     const handleExportPDF = () => {
