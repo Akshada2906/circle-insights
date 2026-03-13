@@ -242,7 +242,7 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
                 cols: stakeholderCols,
                 styles: stakeholderStyles
             }
-        ], 'Accounts_and_Stakeholders_Export');
+        ], 'Accounts_and_Stakeholders_Data');
     };
 
     const handleExportPDF = () => {

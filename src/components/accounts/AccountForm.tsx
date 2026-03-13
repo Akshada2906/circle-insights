@@ -139,13 +139,13 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
         <form onSubmit={handleSubmit} className="space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid grid-cols-7 w-full gap-2 h-auto">
-                    <TabsTrigger value="general" className="tab-blue h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={0 > currentTabIndex}>General</TabsTrigger>
-                    <TabsTrigger value="financials" className="tab-green h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={1 > currentTabIndex}>Financials</TabsTrigger>
-                    <TabsTrigger value="delivery" className="tab-orange h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={2 > currentTabIndex}>Delivery</TabsTrigger>
-                    <TabsTrigger value="strategy" className="tab-purple h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={3 > currentTabIndex}>Strategy</TabsTrigger>
-                    <TabsTrigger value="stakeholders" className="tab-indigo h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={4 > currentTabIndex}>Stakeholders</TabsTrigger>
-                    <TabsTrigger value="competition" className="tab-rose h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={5 > currentTabIndex}>Competition</TabsTrigger>
-                    <TabsTrigger value="readiness" className="tab-emerald h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={6 > currentTabIndex}>Readiness</TabsTrigger>
+                    <TabsTrigger value="general" className="tab-blue h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={!account && 0 > currentTabIndex}>General</TabsTrigger>
+                    <TabsTrigger value="financials" className="tab-green h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={!account && 1 > currentTabIndex}>Financials</TabsTrigger>
+                    <TabsTrigger value="delivery" className="tab-orange h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={!account && 2 > currentTabIndex}>Delivery</TabsTrigger>
+                    <TabsTrigger value="strategy" className="tab-purple h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={!account && 3 > currentTabIndex}>Strategy</TabsTrigger>
+                    <TabsTrigger value="stakeholders" className="tab-indigo h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={!account && 4 > currentTabIndex}>Stakeholders</TabsTrigger>
+                    <TabsTrigger value="competition" className="tab-rose h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={!account && 5 > currentTabIndex}>Competition</TabsTrigger>
+                    <TabsTrigger value="readiness" className="tab-emerald h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight" disabled={!account && 6 > currentTabIndex}>Readiness</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="general" className="space-y-4 py-4">
@@ -590,7 +590,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                         type="button"
                         variant="outline"
                         onClick={handlePrevious}
-                        disabled={isFirstTab || isLoading}
+                        disabled={(!account && isFirstTab) || isLoading}
                     >
                         Previous
                     </Button>
@@ -598,7 +598,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                     <Button
                         type="button"
                         onClick={handleNext}
-                        disabled={isLoading || isLastTab}
+                        disabled={isLoading || (!account && isLastTab)}
                     >
                         Next
                     </Button>
@@ -611,8 +611,8 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
 
                     <Button
                         type="submit"
-                        disabled={isLoading || !isLastTab}
-                        className={!isLastTab ? "opacity-50 cursor-not-allowed" : ""}
+                        disabled={isLoading || (!account && !isLastTab)}
+                        className={(!account && !isLastTab) ? "opacity-50 cursor-not-allowed" : ""}
                     >
                         {isLoading ? 'Saving...' : account ? 'Update Account' : 'Create Account'}
                     </Button>
