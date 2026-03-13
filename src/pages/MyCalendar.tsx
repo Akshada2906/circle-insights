@@ -413,7 +413,12 @@ export default function MyCalendar() {
                                                                 {(event.details?.estimated_hours > 0 || event.details?.estimated_hours === 0) && (
                                                                     <div>
                                                                         <span className="block text-gray-400 font-medium mb-1 uppercase tracking-wider text-[10px]">Duration</span>
-                                                                        <span className="text-gray-900 font-medium">{event.details.estimated_hours} Hours</span>
+                                                                        <span className="text-gray-900 font-medium">
+                                                                            {event.details.estimated_hours >= 24
+                                                                                ? `${(event.details.estimated_hours / 24).toFixed(1).replace(/\.0$/, '')} ${event.details.estimated_hours / 24 === 1 ? 'Day' : 'Days'}`
+                                                                                : `${event.details.estimated_hours} ${event.details.estimated_hours === 1 ? 'Hour' : 'Hours'}`
+                                                                            }
+                                                                        </span>
                                                                     </div>
                                                                 )}
                                                             </div>
