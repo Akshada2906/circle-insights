@@ -55,8 +55,18 @@ export function TaskForm({ selectedDate, onClose, initialData }: Props) {
     const [datePopoverOpen, setDatePopoverOpen] = useState(false);
     const [duePopoverOpen, setDuePopoverOpen] = useState(false);
 
-    const [estimatedValue, setEstimatedValue] = useState(initialDetails?.estimated_hours ? initialDetails.estimated_hours.toString() : "0");
-    const [estimatedUnit, setEstimatedUnit] = useState("Hours");
+    const [estimatedValue, setEstimatedValue] = useState(() => {
+        if (!initialDetails?.estimated_hours) return "0";
+        const hours = initialDetails.estimated_hours;
+        if (hours >= 24) {
+            return (hours / 24).toFixed(1).replace(/\.0$/, '');
+        }
+        return hours.toString();
+    });
+    const [estimatedUnit, setEstimatedUnit] = useState(() => {
+        if (!initialDetails?.estimated_hours) return "Hours";
+        return initialDetails.estimated_hours >= 24 ? "Days" : "Hours";
+    });
 
     const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
