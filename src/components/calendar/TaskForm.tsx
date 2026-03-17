@@ -52,7 +52,6 @@ export function TaskForm({ selectedDate, onClose, initialData }: Props) {
     const { toast } = useToast();
     const { accounts } = useAccounts();
 
-    const [datePopoverOpen, setDatePopoverOpen] = useState(false);
     const [duePopoverOpen, setDuePopoverOpen] = useState(false);
 
     const [estimatedValue, setEstimatedValue] = useState(() => {
@@ -307,39 +306,6 @@ export function TaskForm({ selectedDate, onClose, initialData }: Props) {
                         </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-gray-700">Start Date</Label>
-                        <div className="flex gap-2">
-                            <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        className={cn(
-                                            "w-full justify-start text-left font-normal shadow-sm flex-1",
-                                            !startDate && "text-muted-foreground"
-                                        )}
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {startDate ? format(startDate, "MMM d, yyyy") : <span>Select date</span>}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={startDate}
-                                        onSelect={(d) => { if (d) setStartDate(d); setDatePopoverOpen(false); }}
-                                        initialFocus
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                            <Input
-                                type="time"
-                                value={startTime}
-                                onChange={(e) => setStartTime(e.target.value)}
-                                className="w-[120px] shadow-sm"
-                            />
-                        </div>
-                    </div>
 
                     <div className="space-y-1.5">
                         <Label className="text-sm font-medium text-gray-700">Due Date</Label>
@@ -363,6 +329,11 @@ export function TaskForm({ selectedDate, onClose, initialData }: Props) {
                                         selected={dueDate}
                                         onSelect={(d) => { if (d) setDueDate(d); setDuePopoverOpen(false); }}
                                         initialFocus
+                                        disabled={(date) => {
+                                            const minDate = new Date(startDate || new Date());
+                                            minDate.setHours(0, 0, 0, 0);
+                                            return date < minDate;
+                                        }}
                                     />
                                 </PopoverContent>
                             </Popover>
@@ -375,30 +346,6 @@ export function TaskForm({ selectedDate, onClose, initialData }: Props) {
                         </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-gray-700">Estimated Time</Label>
-                        <div className="relative">
-                            <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                            <Input
-                                type="number"
-                                value={estimatedValue}
-                                onChange={(e) => setEstimatedValue(e.target.value)}
-                                min="0"
-                                className="pl-9 pr-[84px] shadow-sm"
-                            />
-                            <div className="absolute right-1 top-1 text-gray-500">
-                                <Select value={estimatedUnit} onValueChange={setEstimatedUnit}>
-                                    <SelectTrigger className="h-8 border-0 shadow-none bg-transparent focus:ring-0 w-[80px]">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Hours">Hours</SelectItem>
-                                        <SelectItem value="Days">Days</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                    </div>
 
 
 

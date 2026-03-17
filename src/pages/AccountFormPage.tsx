@@ -73,7 +73,7 @@ const AccountFormPage = () => {
 
     return (
         <MainLayout>
-            <div className="max-w-[900px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
                 {/* Back Button */}
                 <Button variant="ghost" onClick={handleCancel} className="gap-2">
                     <ArrowLeft className="w-4 h-4" />
