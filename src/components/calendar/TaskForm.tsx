@@ -315,7 +315,7 @@ export function TaskForm({ selectedDate, onClose, initialData }: Props) {
                                     <Button
                                         variant="outline"
                                         className={cn(
-                                            "w-full justify-start text-left font-normal shadow-sm flex-1",
+                                            "w-full justify-start text-left font-normal shadow-sm flex-[2]",
                                             !dueDate && "text-muted-foreground"
                                         )}
                                     >
@@ -341,7 +341,7 @@ export function TaskForm({ selectedDate, onClose, initialData }: Props) {
                                 type="time"
                                 value={dueTime}
                                 onChange={(e) => setDueTime(e.target.value)}
-                                className="w-[120px] shadow-sm"
+                                className="w-[140px] shadow-sm flex-1"
                             />
                         </div>
                     </div>

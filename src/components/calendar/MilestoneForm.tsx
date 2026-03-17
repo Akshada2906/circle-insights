@@ -30,7 +30,10 @@ export function MilestoneForm({ selectedDate, onClose, initialData }: Props) {
     const initialDetails = initialData?.details;
 
     const [targetDate, setTargetDate] = useState<Date | undefined>(
-        initialDetails?.target_date ? new Date(initialDetails?.target_date) : (selectedDate || new Date())
+        initialDetails?.target_date ? new Date(initialDetails?.target_date) : undefined
+    );
+    const [targetTime, setTargetTime] = useState(
+        initialDetails?.target_date ? format(new Date(initialDetails.target_date), "HH:mm") : "17:00"
     );
     const [datePopoverOpen, setDatePopoverOpen] = useState(false);
     const [progress, setProgress] = useState([initialDetails?.progress_percent || 0]);
@@ -100,11 +103,19 @@ export function MilestoneForm({ selectedDate, onClose, initialData }: Props) {
                 finalName = finalName.trim() + accountSuffix;
             }
 
+            const combinedTarget = targetDate ? new Date(
+                targetDate.getFullYear(),
+                targetDate.getMonth(),
+                targetDate.getDate(),
+                parseInt(targetTime.split(':')[0]),
+                parseInt(targetTime.split(':')[1])
+            ) : null;
+
             if (isEditing && initialData?.details?.id) {
                 const milestoneUpdate: CalendarMilestoneUpdate = {
                     milestone_name: finalName,
                     description: description,
-                    target_date: targetDate ? format(targetDate, "yyyy-MM-dd'T'00:00:00.000'Z'") : null,
+                    target_date: combinedTarget ? combinedTarget.toISOString() : null,
                     impact_level: impact,
                     progress_percent: progress[0],
                     account_id: accountId || null,
@@ -115,7 +126,7 @@ export function MilestoneForm({ selectedDate, onClose, initialData }: Props) {
                 const milestone: CalendarMilestoneCreate = {
                     milestone_name: finalName,
                     description: description,
-                    target_date: targetDate ? format(targetDate, "yyyy-MM-dd'T'00:00:00.000'Z'") : null,
+                    target_date: combinedTarget ? combinedTarget.toISOString() : null,
                     impact_level: impact,
                     progress_percent: progress[0],
                     account_id: accountId || null,
@@ -170,40 +181,47 @@ export function MilestoneForm({ selectedDate, onClose, initialData }: Props) {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-gray-700">Related Account</Label>
-                        <SearchableAccountSelect value={accountId} onSelect={handleAccountSelect} placeholder="Search accounts..." />
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-gray-700">Target Date</Label>
+                <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Related Account</Label>
+                    <SearchableAccountSelect value={accountId} onSelect={handleAccountSelect} placeholder="Search accounts..." />
+                </div>
+
+                <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Target Date</Label>
+                    <div className="flex gap-2">
                         <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                             <PopoverTrigger asChild>
                                 <Button
                                     variant="outline"
                                     className={cn(
-                                        "w-full justify-start text-left font-normal shadow-sm",
+                                        "w-full justify-start text-left font-normal shadow-sm flex-[2]",
                                         !targetDate && "text-muted-foreground"
                                     )}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {targetDate ? format(targetDate, "yyyy-MM-dd") : <span>Select date</span>}
+                                    {targetDate ? format(targetDate, "MMM d, yyyy") : <span>Select date</span>}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                     mode="single"
                                     selected={targetDate}
-                                    onSelect={(d) => { setTargetDate(d); setDatePopoverOpen(false); }}
+                                    onSelect={(d) => { if (d) setTargetDate(d); setDatePopoverOpen(false); }}
                                     initialFocus
                                     disabled={(date) => {
-                                        const today = new Date();
-                                        today.setHours(0, 0, 0, 0);
-                                        return date < today;
+                                        const minDate = new Date(selectedDate || new Date());
+                                        minDate.setHours(0, 0, 0, 0);
+                                        return date < minDate;
                                     }}
                                 />
                             </PopoverContent>
                         </Popover>
+                        <Input
+                            type="time"
+                            value={targetTime}
+                            onChange={(e) => setTargetTime(e.target.value)}
+                            className="w-[140px] shadow-sm flex-1"
+                        />
                     </div>
                 </div>
 
