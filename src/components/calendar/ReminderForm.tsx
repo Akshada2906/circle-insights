@@ -29,7 +29,7 @@ export function ReminderForm({ selectedDate, onClose, initialData }: Props) {
     const initialDetails = initialData?.details;
 
     const [reminderDate, setReminderDate] = useState<Date | undefined>(
-        initialDetails?.reminder_date ? new Date(initialDetails?.reminder_date) : (selectedDate || new Date())
+        initialDetails?.reminder_date ? new Date(initialDetails?.reminder_date) : undefined
     );
     const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
@@ -169,43 +169,42 @@ export function ReminderForm({ selectedDate, onClose, initialData }: Props) {
                     <SearchableAccountSelect value={accountId} onSelect={handleAccountSelect} placeholder="Search accounts..." />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-gray-700">Reminder Date</Label>
+                <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Reminder Date</Label>
+                    <div className="flex gap-2">
                         <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                             <PopoverTrigger asChild>
                                 <Button
                                     variant="outline"
                                     className={cn(
-                                        "w-full justify-start text-left font-normal shadow-sm",
+                                        "w-full justify-start text-left font-normal shadow-sm flex-[2]",
                                         !reminderDate && "text-muted-foreground"
                                     )}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {reminderDate ? format(reminderDate, "yyyy-MM-dd") : <span>Select date</span>}
+                                    {reminderDate ? format(reminderDate, "MMM d, yyyy") : <span>Select date</span>}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                     mode="single"
                                     selected={reminderDate}
-                                    onSelect={(d) => { setReminderDate(d); setDatePopoverOpen(false); }}
+                                    onSelect={(d) => { if (d) setReminderDate(d); setDatePopoverOpen(false); }}
                                     initialFocus
                                     disabled={(date) => {
-                                        const today = new Date();
-                                        today.setHours(0, 0, 0, 0);
-                                        return date < today;
+                                        const minDate = new Date(selectedDate || new Date());
+                                        minDate.setHours(0, 0, 0, 0);
+                                        return date < minDate;
                                     }}
                                 />
                             </PopoverContent>
                         </Popover>
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-gray-700">Reminder Time</Label>
-                        <div className="relative">
-                            <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="pl-9 shadow-sm" />
-                        </div>
+                        <Input 
+                            type="time" 
+                            value={time} 
+                            onChange={(e) => setTime(e.target.value)} 
+                            className="w-[140px] shadow-sm flex-1" 
+                        />
                     </div>
                 </div>
 
