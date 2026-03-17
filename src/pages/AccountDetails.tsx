@@ -10,13 +10,14 @@ import { useAccounts } from '@/contexts/AccountContext';
 import {
     ArrowLeft,
     Pencil,
-    Activity,
     Building2,
     Target,
     Users,
     Award,
     ShieldAlert,
-    Swords
+    Swords,
+    FileText,
+    Activity
 } from 'lucide-react';
 import {
     DropdownMenuItem,
@@ -27,6 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils';
 import { api } from '@/services/api';
 import { StrategicStakeholderProfile } from '@/types/account';
+import { AccountDocuments } from '@/components/accounts/AccountDocuments';
 
 const AccountDetails = () => {
     const { id } = useParams<{ id: string }>();
@@ -141,18 +143,32 @@ const AccountDetails = () => {
                 </div>
 
                 {/* Account Info Tabs */}
-                <Tabs defaultValue="general" className="w-full">
-                    <TabsList className="grid grid-cols-7 w-full gap-2 h-auto">
-                        <TabsTrigger value="general" className="tab-blue h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight">General</TabsTrigger>
-                        <TabsTrigger value="financials" className="tab-green h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight">Financials</TabsTrigger>
-                        <TabsTrigger value="delivery" className="tab-orange h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight">Delivery</TabsTrigger>
-                        <TabsTrigger value="strategy" className="tab-purple h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight">Strategy</TabsTrigger>
-                        <TabsTrigger value="stakeholders" className="tab-indigo h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight">Stakeholders</TabsTrigger>
-                        <TabsTrigger value="competition" className="tab-rose h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight">Competition</TabsTrigger>
-                        <TabsTrigger value="readiness" className="tab-emerald h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight">Readiness</TabsTrigger>
+                <Tabs defaultValue="summary" className="w-full">
+                    <TabsList className="grid grid-cols-5 w-full gap-2 h-auto">
+                        <TabsTrigger value="summary" className="tab-blue h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center gap-2">
+                            <Building2 className="w-4 h-4" />
+                            Summary
+                        </TabsTrigger>
+                        <TabsTrigger value="strategy" className="tab-purple h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center gap-2">
+                            <Target className="w-4 h-4" />
+                            Strategy
+                        </TabsTrigger>
+                        <TabsTrigger value="stakeholders" className="tab-indigo h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center gap-2">
+                            <Users className="w-4 h-4" />
+                            Stakeholders
+                        </TabsTrigger>
+                        <TabsTrigger value="competition-readiness" className="tab-rose h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center gap-2">
+                            <Swords className="w-4 h-4" />
+                            Competition + Readiness
+                        </TabsTrigger>
+                        <TabsTrigger value="documents" className="tab-amber h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center gap-2">
+                            <FileText className="w-4 h-4" />
+                            Documents
+                        </TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="general" className="mt-6 space-y-6">
+                    <TabsContent value="summary" className="mt-6 space-y-6">
+                        {/* Basic Information (First) */}
                         <Card className="border-t-4 border-t-blue-500 shadow-sm hover:shadow-md transition-shadow">
                             <CardHeader className="bg-gradient-to-r from-blue-50/50 to-transparent border-b border-blue-100">
                                 <CardTitle className="flex items-center gap-2 text-blue-950">
@@ -183,164 +199,166 @@ const AccountDetails = () => {
                                 </div>
                             </CardContent>
                         </Card>
-                    </TabsContent>
 
-                    <TabsContent value="financials" className="mt-6">
-                        <Card className="border-t-4 border-t-emerald-500 shadow-sm hover:shadow-md transition-shadow">
-                            <CardHeader className="bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-emerald-100">
-                                <CardTitle className="flex items-center gap-2 text-emerald-950">
-                                    <Target className="w-5 h-5 text-emerald-600" />
-                                    Financial Metrics
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
-                                <div className="space-y-1.5 p-3 rounded-lg bg-emerald-50/30 border border-emerald-100/50">
-                                    <span className="text-xs font-medium text-emerald-700/80 uppercase tracking-wider">Company Revenue</span>
-                                    <p className="text-xl font-bold text-emerald-900">{account.company_revenue || '-'}</p>
-                                </div>
-                                <div className="space-y-1.5 p-3 rounded-lg bg-emerald-50/30 border border-emerald-100/50">
-                                    <span className="text-xs font-medium text-emerald-700/80 uppercase tracking-wider">Last Year Business</span>
-                                    <p className="text-xl font-bold text-emerald-900">{account.last_year_business_done || '-'}</p>
-                                </div>
-                                <div className="space-y-1.5 p-3 rounded-lg bg-emerald-50/30 border border-emerald-100/50">
-                                    <span className="text-xs font-medium text-emerald-700/80 uppercase tracking-wider">Current Pipeline</span>
-                                    <p className="text-xl font-bold text-emerald-900">{account.current_pipeline_value || '-'}</p>
-                                </div>
-                                <div className="space-y-1.5 p-3 rounded-lg bg-white border border-slate-100">
-                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Target 2026 (Accounts)</span>
-                                    <p className="text-lg font-semibold text-foreground">{account.target_projection_2026_accounts || '-'}</p>
-                                </div>
-                                <div className="space-y-1.5 p-3 rounded-lg bg-white border border-slate-100">
-                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Target 2026 (Delivery)</span>
-                                    <p className="text-lg font-semibold text-foreground">{account.target_projection_2026_delivery || '-'}</p>
-                                </div>
-                                <div className="space-y-1.5 p-3 rounded-lg bg-white border border-slate-100">
-                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Revenue Attrition Risk</span>
-                                    <div className="flex items-center gap-2">
-                                        <span className={cn(
-                                            "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
-                                            account.revenue_attrition_possibility === 'Yes'
-                                                ? "bg-red-100 text-red-700"
-                                                : "bg-green-100 text-green-700"
-                                        )}>
-                                            {account.revenue_attrition_possibility || 'No'}
-                                        </span>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                            {/* Delivery & Operations */}
+                            <Card className="border-t-4 border-t-amber-500 shadow-sm hover:shadow-md transition-shadow h-full">
+                                <CardHeader className="bg-gradient-to-r from-amber-50/50 to-transparent border-b border-amber-100">
+                                    <CardTitle className="flex items-center gap-2 text-amber-950">
+                                        <Activity className="w-5 h-5 text-amber-600" />
+                                        Delivery & Operations
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                                    <div className="space-y-1">
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Delivery Owner</span>
+                                        <p className="font-medium text-lg text-foreground">{account.delivery_owner || '-'}</p>
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
 
-                    <TabsContent value="delivery" className="mt-6">
-                        <Card className="border-t-4 border-t-amber-500 shadow-sm hover:shadow-md transition-shadow">
-                            <CardHeader className="bg-gradient-to-r from-amber-50/50 to-transparent border-b border-amber-100">
-                                <CardTitle className="flex items-center gap-2 text-amber-950">
-                                    <Activity className="w-5 h-5 text-amber-600" />
-                                    Delivery & Operations
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                                <div className="space-y-1">
-                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Delivery Owner</span>
-                                    <p className="font-medium text-lg text-foreground">{account.delivery_owner || '-'}</p>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4 md:col-span-2">
-                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">Team Size</span>
-                                        <p className="text-2xl font-bold text-slate-800">{account.team_size || '-'}</p>
+                                    <div className="grid grid-cols-2 gap-4 md:col-span-2">
+                                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">Team Size</span>
+                                            <p className="text-2xl font-bold text-slate-800">{account.team_size || '-'}</p>
+                                        </div>
+                                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">Active Projects</span>
+                                            <p className="text-2xl font-bold text-slate-800">{account.number_of_active_projects || '-'}</p>
+                                        </div>
                                     </div>
-                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">Active Projects</span>
-                                        <p className="text-2xl font-bold text-slate-800">{account.number_of_active_projects || '-'}</p>
-                                    </div>
-                                </div>
 
-                                <div className="space-y-1">
-                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Overall Health</span>
-                                    <Badge
-                                        variant="outline"
-                                        className={cn(
-                                            "mt-1 border",
-                                            account.overall_delivery_health === 'Green' ? "bg-green-100 text-green-700 border-green-200 hover:bg-green-100" :
-                                                account.overall_delivery_health === 'Red' ? "bg-red-100 text-red-700 border-red-200 hover:bg-red-100" :
-                                                    account.overall_delivery_health === 'Amber' ? "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100" :
-                                                        "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-100"
-                                        )}
-                                    >
-                                        {account.overall_delivery_health || '-'}
-                                    </Badge>
-                                </div>
-                                <div className="space-y-1">
-                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Rate Card Health</span>
-                                    <p className="font-medium">{account.current_rate_card_health || '-'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Engagement Model</span>
-                                    <p className="font-medium bg-slate-50 p-2 rounded border border-slate-100 inline-block">{account.engagement_models || '-'}</p>
-                                </div>
-                                <div className="space-y-1 md:col-span-2">
-                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Current Engagement Areas</span>
-                                    <p className="font-medium bg-slate-50 p-3 rounded-md border border-slate-100 text-sm leading-relaxed">{account.current_engagement_areas || '-'}</p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                    <div className="space-y-1">
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Overall Health</span>
+                                        <Badge
+                                            variant="outline"
+                                            className={cn(
+                                                "mt-1 border",
+                                                account.overall_delivery_health === 'Green' ? "bg-green-100 text-green-700 border-green-200 hover:bg-green-100" :
+                                                    account.overall_delivery_health === 'Red' ? "bg-red-100 text-red-700 border-red-200 hover:bg-red-100" :
+                                                        account.overall_delivery_health === 'Amber' ? "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100" :
+                                                            "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-100"
+                                            )}
+                                        >
+                                            {account.overall_delivery_health || '-'}
+                                        </Badge>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Rate Card Health</span>
+                                        <p className="font-medium">{account.current_rate_card_health || '-'}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Engagement Model</span>
+                                        <p className="font-medium bg-slate-50 p-2 rounded border border-slate-100 inline-block">{account.engagement_models || '-'}</p>
+                                    </div>
+                                    <div className="space-y-1 md:col-span-2">
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Current Engagement Areas</span>
+                                        <p className="font-medium bg-slate-50 p-3 rounded-md border border-slate-100 text-sm leading-relaxed">{account.current_engagement_areas || '-'}</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Financial Metrics */}
+                            <Card className="border-t-4 border-t-emerald-500 shadow-sm hover:shadow-md transition-shadow h-full">
+                                <CardHeader className="bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-emerald-100">
+                                    <CardTitle className="flex items-center gap-2 text-emerald-950">
+                                        <Target className="w-5 h-5 text-emerald-600" />
+                                        Financial Metrics
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                                    <div className="space-y-1.5 p-3 rounded-lg bg-emerald-50/30 border border-emerald-100/50">
+                                        <span className="text-xs font-medium text-emerald-700/80 uppercase tracking-wider">Company Revenue</span>
+                                        <p className="text-xl font-bold text-emerald-900">{account.company_revenue || '-'}</p>
+                                    </div>
+                                    <div className="space-y-1.5 p-3 rounded-lg bg-emerald-50/30 border border-emerald-100/50">
+                                        <span className="text-xs font-medium text-emerald-700/80 uppercase tracking-wider">Last Year Business</span>
+                                        <p className="text-xl font-bold text-emerald-900">{account.last_year_business_done || '-'}</p>
+                                    </div>
+                                    <div className="space-y-1.5 p-3 rounded-lg bg-emerald-50/30 border border-emerald-100/50">
+                                        <span className="text-xs font-medium text-emerald-700/80 uppercase tracking-wider">Current Pipeline</span>
+                                        <p className="text-xl font-bold text-emerald-900">{account.current_pipeline_value || '-'}</p>
+                                    </div>
+                                    <div className="space-y-1.5 p-3 rounded-lg bg-white border border-slate-100">
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Target 2026 (Accounts)</span>
+                                        <p className="text-lg font-semibold text-foreground">{account.target_projection_2026_accounts || '-'}</p>
+                                    </div>
+                                    <div className="space-y-1.5 p-3 rounded-lg bg-white border border-slate-100">
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Target 2026 (Delivery)</span>
+                                        <p className="text-lg font-semibold text-foreground">{account.target_projection_2026_delivery || '-'}</p>
+                                    </div>
+                                    <div className="space-y-1.5 p-3 rounded-lg bg-white border border-slate-100">
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Revenue Attrition Risk</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className={cn(
+                                                "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
+                                                account.revenue_attrition_possibility === 'Yes'
+                                                    ? "bg-red-100 text-red-700"
+                                                    : "bg-green-100 text-green-700"
+                                            )}>
+                                                {account.revenue_attrition_possibility || 'No'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
                     </TabsContent>
 
                     <TabsContent value="strategy" className="mt-6 space-y-6">
-                        <Card className="border-t-4 border-t-indigo-500 shadow-sm hover:shadow-md transition-shadow">
-                            <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-transparent border-b border-indigo-100">
-                                <CardTitle className="flex items-center gap-2 text-indigo-950">
-                                    <Target className="w-5 h-5 text-indigo-600" />
-                                    Strategy & Growth
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-6 pt-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="bg-indigo-50/30 p-4 rounded-lg border border-indigo-100/50">
-                                        <span className="text-xs font-semibold uppercase tracking-wider text-indigo-800 block mb-2">Customer Value Chain Known?</span>
-                                        <Badge variant={account.know_customer_value_chain ? 'default' : 'secondary'} className="bg-indigo-600 hover:bg-indigo-700">
-                                            {account.know_customer_value_chain ? 'Yes' : 'No'}
-                                        </Badge>
-                                    </div>
-                                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-2">Value Chain Fit</span>
-                                        <p className="text-sm text-foreground">{account.where_we_fit_in_value_chain || 'Not detailed.'}</p>
-                                    </div>
-                                </div>
-                                <div className="pt-4 border-t border-dashed">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                            <Card className="border-t-4 border-t-indigo-500 shadow-sm hover:shadow-md transition-shadow h-full">
+                                <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-transparent border-b border-indigo-100">
+                                    <CardTitle className="flex items-center gap-2 text-indigo-950">
+                                        <Target className="w-5 h-5 text-indigo-600" />
+                                        Strategy & Growth
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-6 pt-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div><span className="text-sm font-semibold block mb-1 text-muted-foreground">Cross-Sell Areas</span><p className="text-sm text-foreground font-medium">{account.identified_areas_cross_up_selling || 'None identified.'}</p></div>
-                                        <div><span className="text-sm font-semibold block mb-1 text-muted-foreground">Roadmap Visibility (2026)</span><p className="text-sm text-foreground font-medium">{account.visibility_client_roadmap_2026 || 'No visibility.'}</p></div>
+                                        <div className="bg-indigo-50/30 p-4 rounded-lg border border-indigo-100/50">
+                                            <span className="text-xs font-semibold uppercase tracking-wider text-indigo-800 block mb-2">Customer Value Chain Known?</span>
+                                            <Badge variant={account.know_customer_value_chain ? 'default' : 'secondary'} className="bg-indigo-600 hover:bg-indigo-700">
+                                                {account.know_customer_value_chain ? 'Yes' : 'No'}
+                                            </Badge>
+                                        </div>
+                                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-2">Value Chain Fit</span>
+                                            <p className="text-sm text-foreground">{account.where_we_fit_in_value_chain || 'Not detailed.'}</p>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-3 mt-4 bg-yellow-50 p-3 rounded-md border border-yellow-100 inline-flex">
-                                        <span className="text-sm font-semibold text-yellow-800">30 Days Growth Action Plan Ready?</span>
-                                        <Badge variant={account.growth_action_plan_30days_ready ? 'default' : 'outline'} className={account.growth_action_plan_30days_ready ? "bg-green-600" : "text-yellow-700 border-yellow-300"}>
-                                            {account.growth_action_plan_30days_ready ? 'Yes' : 'No'}
-                                        </Badge>
+                                    <div className="pt-4 border-t border-dashed">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div><span className="text-sm font-semibold block mb-1 text-muted-foreground">Cross-Sell Areas</span><p className="text-sm text-foreground font-medium">{account.identified_areas_cross_up_selling || 'None identified.'}</p></div>
+                                            <div><span className="text-sm font-semibold block mb-1 text-muted-foreground">Roadmap Visibility (2026)</span><p className="text-sm text-foreground font-medium">{account.visibility_client_roadmap_2026 || 'No visibility.'}</p></div>
+                                        </div>
+                                        <div className="flex items-center gap-3 mt-4 bg-yellow-50 p-3 rounded-md border border-yellow-100 inline-flex">
+                                            <span className="text-sm font-semibold text-yellow-800">30 Days Growth Action Plan Ready?</span>
+                                            <Badge variant={account.growth_action_plan_30days_ready ? 'default' : 'outline'} className={account.growth_action_plan_30days_ready ? "bg-green-600" : "text-yellow-700 border-yellow-300"}>
+                                                {account.growth_action_plan_30days_ready ? 'Yes' : 'No'}
+                                            </Badge>
+                                        </div>
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                </CardContent>
+                            </Card>
 
-                        <Card className="border-t-4 border-t-violet-500 shadow-sm hover:shadow-md transition-shadow">
-                            <CardHeader className="bg-gradient-to-r from-violet-50/50 to-transparent border-b border-violet-100">
-                                <CardTitle className="flex items-center gap-2 text-violet-950">
-                                    <Users className="w-5 h-5 text-violet-600" />
-                                    Relationships
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                                {/* Removed: Account Leader */}
-                                <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Client Partner</span><p className="font-medium text-lg">{account.client_partner || '-'}</p></div>
-                                <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Champion</span><p className="font-medium text-lg">{account.champion_customer_side || '-'}</p></div>
-                                <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Champion Profile</span><p className="font-medium">{account.champion_profile || '-'}</p></div>
-                                <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Exec Connect Frequency</span><p className="font-medium">{account.nitor_executive_connect_frequency || '-'}</p></div>
-                                <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">NPS</span><p className="font-medium text-lg text-violet-600">{account.current_nps || '-'}</p></div>
-                                <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Decision Maker Connect</span><p className="font-medium">{account.connect_with_decision_maker ? 'Yes' : 'No'}</p></div>
-                                <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Active Connects</span><p className="font-medium text-lg">{account.total_active_connects || '-'}</p></div>
-                            </CardContent>
-                        </Card>
+                            <Card className="border-t-4 border-t-violet-500 shadow-sm hover:shadow-md transition-shadow h-full">
+                                <CardHeader className="bg-gradient-to-r from-violet-50/50 to-transparent border-b border-violet-100">
+                                    <CardTitle className="flex items-center gap-2 text-violet-950">
+                                        <Users className="w-5 h-5 text-violet-600" />
+                                        Relationships
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                                    {/* Removed: Account Leader */}
+                                    <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Client Partner</span><p className="font-medium text-lg">{account.client_partner || '-'}</p></div>
+                                    <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Champion</span><p className="font-medium text-lg">{account.champion_customer_side || '-'}</p></div>
+                                    <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Champion Profile</span><p className="font-medium">{account.champion_profile || '-'}</p></div>
+                                    <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Exec Connect Frequency</span><p className="font-medium">{account.nitor_executive_connect_frequency || '-'}</p></div>
+                                    <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">NPS</span><p className="font-medium text-lg text-violet-600">{account.current_nps || '-'}</p></div>
+                                    <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Decision Maker Connect</span><p className="font-medium">{account.connect_with_decision_maker ? 'Yes' : 'No'}</p></div>
+                                    <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Active Connects</span><p className="font-medium text-lg">{account.total_active_connects || '-'}</p></div>
+                                </CardContent>
+                            </Card>
+                        </div>
                     </TabsContent>
 
                     {/* STAKEHOLDERS TabsContent */}
@@ -413,73 +431,77 @@ const AccountDetails = () => {
                         </Card>
                     </TabsContent>
 
-                    {/* COMPETITION & POSITIONING TabsContent */}
-                    <TabsContent value="competition" className="mt-6 space-y-6">
-                        <Card className="border-t-4 border-t-rose-500 shadow-sm hover:shadow-md transition-shadow">
-                            <CardHeader className="bg-gradient-to-r from-rose-50/50 to-transparent border-b border-rose-100">
-                                <CardTitle className="flex items-center gap-2 text-rose-950">
-                                    <Target className="w-5 h-5 text-rose-600" />
-                                    Competitive Analysis
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-6 pt-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-1">
-                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Key Competitors</span>
-                                        <p className="font-medium">{stakeholders[0]?.key_competitors || account.key_competitors || '-'}</p>
+                    {/* COMPETITION & READINESS Combined */}
+                    <TabsContent value="competition-readiness" className="mt-6 space-y-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                            <Card className="border-t-4 border-t-rose-500 shadow-sm hover:shadow-md transition-shadow h-full">
+                                <CardHeader className="bg-gradient-to-r from-rose-50/50 to-transparent border-b border-rose-100">
+                                    <CardTitle className="flex items-center gap-2 text-rose-950">
+                                        <Swords className="w-5 h-5 text-rose-600" />
+                                        Competitive Analysis
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-6 pt-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-1">
+                                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Key Competitors</span>
+                                            <p className="font-medium">{stakeholders[0]?.key_competitors || account.key_competitors || '-'}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Incumbency Strength</span>
+                                            <p className="font-medium">{stakeholders[0]?.incumbency_strength || account.incumbency_strength || '-'}</p>
+                                        </div>
                                     </div>
-                                    <div className="space-y-1">
-                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Incumbency Strength</span>
-                                        <p className="font-medium">{stakeholders[0]?.incumbency_strength || account.incumbency_strength || '-'}</p>
-                                    </div>
-                                </div>
 
-                                <div className="grid grid-cols-1 gap-6 pt-4 border-t">
+                                    <div className="grid grid-cols-1 gap-6 pt-4 border-t">
+                                        <div className="space-y-1">
+                                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Our Positioning vs Competition</span>
+                                            <p className="text-sm leading-relaxed">{stakeholders[0]?.our_positioning || account.our_positioning_vs_competition || '-'}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Areas Where Competition is Stronger</span>
+                                            <p className="text-sm leading-relaxed">{stakeholders[0]?.areas_competition_stronger || account.areas_competition_stronger || '-'}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">White Spaces We Own</span>
+                                            <p className="text-sm leading-relaxed">{stakeholders[0]?.white_spaces_we_own || account.white_spaces_we_own || '-'}</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border-t-4 border-t-emerald-500 shadow-sm hover:shadow-md transition-shadow h-full">
+                                <CardHeader className="bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-emerald-100">
+                                    <CardTitle className="flex items-center gap-2 text-emerald-950">
+                                        <Award className="w-5 h-5 text-emerald-600" />
+                                        Internal Readiness & Cadence
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
                                     <div className="space-y-1">
-                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Our Positioning vs Competition</span>
-                                        <p className="text-sm leading-relaxed">{stakeholders[0]?.our_positioning || account.our_positioning_vs_competition || '-'}</p>
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Account Review Cadence</span>
+                                        <p className="font-medium">{stakeholders[0]?.account_review_cadence || account.account_review_cadence_frequency || '-'}</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Areas Where Competition is Stronger</span>
-                                        <p className="text-sm leading-relaxed">{stakeholders[0]?.areas_competition_stronger || account.areas_competition_stronger || '-'}</p>
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Technical Audit Frequency</span>
+                                        <p className="font-medium">{stakeholders[0]?.technical_audit_frequency || account.technical_audit_frequency || '-'}</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">White Spaces We Own</span>
-                                        <p className="text-sm leading-relaxed">{stakeholders[0]?.white_spaces_we_own || account.white_spaces_we_own || '-'}</p>
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">QBR Happening?</span>
+                                        <div className="mt-1">
+                                            <Badge variant={stakeholders[0]?.qbr_happening === 'Yes' || account.qbr_happening ? "default" : "secondary"}>
+                                                {stakeholders[0]?.qbr_happening === 'Yes' || account.qbr_happening ? "Yes" : "No"}
+                                            </Badge>
+                                        </div>
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                </CardContent>
+                            </Card>
+                        </div>
                     </TabsContent>
 
-                    {/* INTERNAL READINESS TabsContent */}
-                    <TabsContent value="readiness" className="mt-6 space-y-6">
-                        <Card className="border-t-4 border-t-emerald-500 shadow-sm hover:shadow-md transition-shadow">
-                            <CardHeader className="bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-emerald-100">
-                                <CardTitle className="flex items-center gap-2 text-emerald-950">
-                                    <Target className="w-5 h-5 text-emerald-600" />
-                                    Internal Readiness & Cadence
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                                <div className="space-y-1">
-                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Account Review Cadence</span>
-                                    <p className="font-medium">{stakeholders[0]?.account_review_cadence || account.account_review_cadence_frequency || '-'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Technical Audit Frequency</span>
-                                    <p className="font-medium">{stakeholders[0]?.technical_audit_frequency || account.technical_audit_frequency || '-'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">QBR Happening?</span>
-                                    <div className="mt-1">
-                                        <Badge variant={stakeholders[0]?.qbr_happening === 'Yes' || account.qbr_happening ? "default" : "secondary"}>
-                                            {stakeholders[0]?.qbr_happening === 'Yes' || account.qbr_happening ? "Yes" : "No"}
-                                        </Badge>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                    {/* DOCUMENTS TabContent */}
+                    <TabsContent value="documents" className="mt-6">
+                        <AccountDocuments accountId={id} />
                     </TabsContent>
                 </Tabs>
             </div>

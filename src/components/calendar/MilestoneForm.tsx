@@ -196,6 +196,11 @@ export function MilestoneForm({ selectedDate, onClose, initialData }: Props) {
                                     selected={targetDate}
                                     onSelect={(d) => { setTargetDate(d); setDatePopoverOpen(false); }}
                                     initialFocus
+                                    disabled={(date) => {
+                                        const today = new Date();
+                                        today.setHours(0, 0, 0, 0);
+                                        return date < today;
+                                    }}
                                 />
                             </PopoverContent>
                         </Popover>
