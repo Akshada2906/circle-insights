@@ -501,7 +501,7 @@ const AccountDetails = () => {
 
                     {/* DOCUMENTS TabContent */}
                     <TabsContent value="documents" className="mt-6">
-                        <AccountDocuments accountId={id} />
+                        <AccountDocuments accountId={id} readOnly={true} />
                     </TabsContent>
                 </Tabs>
             </div>
