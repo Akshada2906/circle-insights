@@ -67,6 +67,7 @@ interface Document {
 
 interface AccountDocumentsProps {
   accountId?: string;
+  readOnly?: boolean;
 }
 
 const CATEGORIES = [
@@ -77,7 +78,7 @@ const CATEGORIES = [
   { id: 'sow-documents', label: 'SOW Documents', icon: FileCheck, title: 'Statement of Work Documents' }
 ];
 
-export function AccountDocuments({ accountId }: AccountDocumentsProps) {
+export function AccountDocuments({ accountId, readOnly = false }: AccountDocumentsProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [activeTab, setActiveTab] = useState('wsr-reports');
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
@@ -343,53 +344,54 @@ export function AccountDocuments({ accountId }: AccountDocumentsProps) {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col gap-6">
-        {/* Top: Premium Drag & Drop Upload Zone */}
-        <div
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
-          onClick={() => document.getElementById('file-upload-input')?.click()}
-          className={cn(
-            "relative group overflow-hidden rounded-[2.5rem] border-2 border-dashed transition-all duration-300 cursor-pointer",
-            isDragging
-              ? "border-blue-500 bg-blue-50/50 scale-[0.99]"
-              : "border-slate-200 bg-white hover:border-blue-400 hover:bg-slate-50/30"
-          )}
-        >
-          <input
-            type="file"
-            id="file-upload-input"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFileUpload(file);
-            }}
-          />
-          <div className="p-12 flex flex-col items-center text-center gap-4">
-            <div className={cn(
-              "p-6 rounded-[2rem] transition-all duration-500",
-              isDragging ? "bg-blue-600 text-white rotate-12 scale-110" : "bg-blue-50 text-blue-600 group-hover:scale-110"
-            )}>
-              <Upload className="w-10 h-10" />
+        {!readOnly && (
+          <div
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+            onClick={() => document.getElementById('file-upload-input')?.click()}
+            className={cn(
+              "relative group overflow-hidden rounded-[2.5rem] border-2 border-dashed transition-all duration-300 cursor-pointer",
+              isDragging
+                ? "border-blue-500 bg-blue-50/50 scale-[0.99]"
+                : "border-slate-200 bg-white hover:border-blue-400 hover:bg-slate-50/30"
+            )}
+          >
+            <input
+              type="file"
+              id="file-upload-input"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(file);
+              }}
+            />
+            <div className="p-12 flex flex-col items-center text-center gap-4">
+              <div className={cn(
+                "p-6 rounded-[2rem] transition-all duration-500",
+                isDragging ? "bg-blue-600 text-white rotate-12 scale-110" : "bg-blue-50 text-blue-600 group-hover:scale-110"
+              )}>
+                <Upload className="w-10 h-10" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 mb-1">
+                  Upload {CATEGORIES.find(c => c.id === activeTab)?.label}
+                </h3>
+                <p className="text-slate-500 font-medium">
+                  Drag and drop your file here, or <span className="text-blue-600 font-bold underline decoration-2 underline-offset-4">browse files</span>
+                </p>
+              </div>
+              <div className="flex gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-2">
+                <span className="bg-slate-100 px-3 py-1 rounded-full">PDF</span>
+                <span className="bg-slate-100 px-3 py-1 rounded-full">DOCX</span>
+                <span className="bg-slate-100 px-3 py-1 rounded-full">TXT</span>
+              </div>
             </div>
-            <div>
-              <h3 className="text-2xl font-black text-slate-900 mb-1">
-                Upload {CATEGORIES.find(c => c.id === activeTab)?.label}
-              </h3>
-              <p className="text-slate-500 font-medium">
-                Drag and drop your file here, or <span className="text-blue-600 font-bold underline decoration-2 underline-offset-4">browse files</span>
-              </p>
-            </div>
-            <div className="flex gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-2">
-              <span className="bg-slate-100 px-3 py-1 rounded-full">PDF</span>
-              <span className="bg-slate-100 px-3 py-1 rounded-full">DOCX</span>
-              <span className="bg-slate-100 px-3 py-1 rounded-full">TXT</span>
-            </div>
-          </div>
 
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-blue-100/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-indigo-100/20 rounded-full blur-3xl pointer-events-none" />
-        </div>
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-blue-100/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-indigo-100/20 rounded-full blur-3xl pointer-events-none" />
+          </div>
+        )}
 
         {/* Bottom: Files & Analysis Details */}
         <div className="flex-1 bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm overflow-hidden flex flex-col">
@@ -465,14 +467,16 @@ export function AccountDocuments({ accountId }: AccountDocumentsProps) {
                           <p className="text-sm text-slate-500 font-medium">AI Intelligence Analysis • {activeDoc.date}</p>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleDelete}
-                        className="text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </Button>
+                      {!readOnly && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleDelete}
+                          className="text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </Button>
+                      )}
                     </div>
 
                     <div className="space-y-6">
@@ -668,7 +672,9 @@ export function AccountDocuments({ accountId }: AccountDocumentsProps) {
               </div>
               <h4 className="text-2xl font-black text-slate-800 mb-3">No {CATEGORIES.find(c => c.id === activeTab)?.label} Found</h4>
               <p className="text-slate-500 max-w-sm font-medium leading-relaxed">
-                Start by uploading a document above to see the AI-powered analysis and deep insights.
+                {readOnly
+                  ? `No documents have been uploaded for this category yet. Click 'Edit Account' to upload and analyze documents.`
+                  : "Start by uploading a document above to see the AI-powered analysis and deep insights."}
               </p>
             </div>
           )}
