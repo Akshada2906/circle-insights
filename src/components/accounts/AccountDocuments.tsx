@@ -25,7 +25,11 @@ import {
   AlertTriangle,
   Clock,
   Zap,
-  ShieldAlert
+  ShieldAlert,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/services/api';
@@ -84,6 +88,8 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCategorySidebarCollapsed, setIsCategorySidebarCollapsed] = useState(false);
+  const [isFileSidebarCollapsed, setIsFileSidebarCollapsed] = useState(false);
   const { toast } = useToast();
 
   const filteredDocs = documents.filter(d => d.category === activeTab);
@@ -151,7 +157,13 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
           if ('description' in v) return String(v.description);
           if ('finding' in v) return String(v.finding);
           if ('value' in v) return String(v.value);
-          return Object.values(v).map(item => formatValue(item)).join('. ');
+          if ('name' in v) return String(v.name);
+
+          const values = Object.values(v)
+            .map(item => formatValue(item))
+            .filter(val => val.length > 2 && !/^\d+$/.test(val.replace(/[.\s]/g, '')));
+
+          return values.join('. ');
         }
         return String(v);
       };
@@ -165,7 +177,8 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
           icon: Info,
           text: `${key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim()}: ${formatValue(value)}`,
           color: 'text-indigo-600 bg-indigo-50/50'
-        }));
+        }))
+        .filter(insight => insight.text.length > insight.text.split(':')[0].length + 5); // Filter out insights with virtually no content
 
       const doc: Document = {
         id: data.document_id,
@@ -174,8 +187,10 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
         type: data.document_type || 'AI Analyzed',
         date: new Date(data.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         summary: formatValue(summary),
-        objectives: Array.isArray(objectives) ? objectives.map(o => formatValue(o)) : [formatValue(objectives)],
-        stakeholders: Array.isArray(stakeholders) ? stakeholders.map(s => formatValue(s)) : [formatValue(stakeholders)],
+        objectives: (Array.isArray(objectives) ? objectives.map(o => formatValue(o)) : [formatValue(objectives)])
+          .filter(o => o.length > 5 && !/^\d+$/.test(o.replace(/[.\s]/g, ''))),
+        stakeholders: (Array.isArray(stakeholders) ? stakeholders.map(s => formatValue(s)) : [formatValue(stakeholders)])
+          .filter(s => s.length > 2 && !/^\d+$/.test(s.replace(/[.\s]/g, ''))),
         insights: filteredInsights.slice(0, 6)
       };
 
@@ -302,26 +317,46 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 min-h-[800px] animate-in fade-in duration-500">
+    <div className="flex flex-col lg:flex-row gap-8 min-h-[800px] animate-in fade-in duration-500 relative">
       {/* Left Sidebar: Vertical Category Tabs */}
-      <div className="w-full lg:w-72 flex flex-col gap-6">
-        <div className="bg-white/40 backdrop-blur-sm p-4 rounded-3xl border border-slate-200/60 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest px-2 mb-4">Categories</h3>
+      <div className={cn(
+        "flex flex-col gap-6 transition-all duration-300",
+        isCategorySidebarCollapsed ? "w-16" : "w-full lg:w-60"
+      )}>
+        <div className={cn(
+          "bg-white/40 backdrop-blur-sm p-4 rounded-3xl border border-slate-200/60 shadow-sm transition-all h-full",
+          isCategorySidebarCollapsed && "items-center overflow-hidden"
+        )}>
+          <div className="flex items-center justify-between mb-4">
+            {!isCategorySidebarCollapsed && (
+              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest px-2">Categories</h3>
+            )}
+            <button
+              type="button"
+              onClick={() => setIsCategorySidebarCollapsed(!isCategorySidebarCollapsed)}
+              className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400"
+            >
+              {isCategorySidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+            </button>
+          </div>
           <div className="flex flex-col gap-1.5">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
+                type="button"
                 onClick={() => setActiveTab(cat.id)}
+                title={cat.label}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all text-sm font-bold group relative",
                   activeTab === cat.id
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-200 ring-1 ring-blue-500"
-                    : "text-slate-500 hover:text-slate-900 hover:bg-white hover:shadow-sm"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-white hover:shadow-sm",
+                  isCategorySidebarCollapsed && "justify-center px-0"
                 )}
               >
-                <cat.icon className={cn("w-4.5 h-4.5 transition-colors", activeTab === cat.id ? "text-white" : "text-slate-400 group-hover:text-blue-500")} />
-                {cat.label}
-                {activeTab === cat.id && (
+                <cat.icon className={cn("w-4.5 h-4.5 transition-colors shrink-0", activeTab === cat.id ? "text-white" : "text-slate-400 group-hover:text-blue-500")} />
+                {!isCategorySidebarCollapsed && cat.label}
+                {activeTab === cat.id && !isCategorySidebarCollapsed && (
                   <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-blue-100" />
                 )}
               </button>
@@ -329,17 +364,19 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
           </div>
         </div>
 
-        <div className="p-6 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-xl">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-white/10 rounded-xl">
-              <FileSearch className="w-5 h-5 text-blue-400" />
+        {!isCategorySidebarCollapsed && (
+          <div className="p-6 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-white/10 rounded-xl">
+                <FileSearch className="w-5 h-5 text-blue-400" />
+              </div>
+              <h4 className="font-bold text-sm">AI Processing</h4>
             </div>
-            <h4 className="font-bold text-sm">AI Processing</h4>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              All uploaded documents are instantly analyzed to extract key insights, objectives, and stakeholders.
+            </p>
           </div>
-          <p className="text-xs text-slate-300 leading-relaxed">
-            All uploaded documents are instantly analyzed to extract key insights, objectives, and stakeholders.
-          </p>
-        </div>
+        )}
       </div>
 
       {/* Main Content Area */}
@@ -398,47 +435,64 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
           {filteredDocs.length > 0 ? (
             <div className="flex flex-col md:flex-row h-full">
               {/* Internal File Sidebar */}
-              <div className="w-full md:w-80 border-r border-slate-100 bg-slate-50/30 flex flex-col">
-                <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                  <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                    {CATEGORIES.find(c => c.id === activeTab)?.label}
-                    <Badge variant="secondary" className="bg-white border-slate-200 text-slate-500">
-                      {filteredDocs.length}
-                    </Badge>
-                  </h4>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                  {filteredDocs.map((doc) => (
-                    <button
-                      key={doc.id}
-                      onClick={() => setActiveDocId(doc.id)}
-                      className={cn(
-                        "w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group",
-                        activeDocId === doc.id
-                          ? "bg-white border-blue-200 shadow-md ring-1 ring-blue-50"
-                          : "bg-transparent border-transparent hover:bg-white hover:border-slate-200"
-                      )}
-                    >
-                      <div className="overflow-hidden">
-                        <div className="flex items-center gap-2 mb-1">
-                          <FileText className={cn("w-4 h-4", activeDocId === doc.id ? "text-blue-600" : "text-slate-400")} />
-                          <span className={cn(
-                            "text-sm font-bold truncate",
-                            activeDocId === doc.id ? "text-blue-700" : "text-slate-700"
-                          )}>
-                            {doc.name}
-                          </span>
+              <div className={cn(
+                "border-r border-slate-100 bg-slate-50/30 flex flex-col transition-all duration-300 relative",
+                isFileSidebarCollapsed ? "w-12" : "w-full md:w-64"
+              )}>
+                <button
+                  type="button"
+                  onClick={() => setIsFileSidebarCollapsed(!isFileSidebarCollapsed)}
+                  className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 bg-white border border-slate-200 rounded-full flex items-center justify-center shadow-sm z-20 hover:text-blue-600 transition-all"
+                >
+                  {isFileSidebarCollapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
+                </button>
+                
+                <div className={cn(
+                  "flex-1 overflow-hidden transition-all h-full",
+                  isFileSidebarCollapsed && "opacity-0 invisible w-0"
+                )}>
+                  <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                    <h4 className="font-bold text-slate-800 flex items-center gap-2 whitespace-nowrap">
+                      {CATEGORIES.find(c => c.id === activeTab)?.label}
+                      <Badge variant="secondary" className="bg-white border-slate-200 text-slate-500">
+                        {filteredDocs.length}
+                      </Badge>
+                    </h4>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                    {filteredDocs.map((doc) => (
+                      <button
+                        key={doc.id}
+                        type="button"
+                        onClick={() => setActiveDocId(doc.id)}
+                        className={cn(
+                          "w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group",
+                          activeDocId === doc.id
+                            ? "bg-white border-blue-200 shadow-md ring-1 ring-blue-50"
+                            : "bg-transparent border-transparent hover:bg-white hover:border-slate-200"
+                        )}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="flex items-center gap-2 mb-1">
+                            <FileText className={cn("w-4 h-4", activeDocId === doc.id ? "text-blue-600" : "text-slate-400")} />
+                            <span className={cn(
+                              "text-sm font-bold truncate",
+                              activeDocId === doc.id ? "text-blue-700" : "text-slate-700"
+                            )}>
+                              {doc.name}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider pl-6">{doc.date}</p>
                         </div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider pl-6">{doc.date}</p>
-                      </div>
-                      {activeDocId === doc.id && <ChevronRight className="w-4 h-4 text-blue-500" />}
-                    </button>
-                  ))}
+                        {activeDocId === doc.id && <ChevronRight className="w-4 h-4 text-blue-500" />}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
               {/* Analysis Content View */}
-              <div className="flex-1 p-8 overflow-y-auto max-h-[600px] scrollbar-thin scrollbar-thumb-slate-200 relative">
+              <div className="flex-1 p-10 overflow-y-auto max-h-[850px] scrollbar-thin scrollbar-thumb-slate-200 relative">
                 {isLoading && (
                   <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
                     <div className="flex flex-col items-center gap-3">
@@ -467,16 +521,15 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
                           <p className="text-sm text-slate-500 font-medium">AI Intelligence Analysis • {activeDoc.date}</p>
                         </div>
                       </div>
-                      {!readOnly && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={handleDelete}
-                          className="text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        type="button"
+                        onClick={handleDelete}
+                        className="text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </Button>
                     </div>
 
                     <div className="space-y-6">
@@ -488,7 +541,7 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
                           <Activity className="w-4 h-4" />
                           Executive Intelligence Summary
                         </h4>
-                        <p className="text-slate-700 leading-relaxed font-semibold text-base relative z-10">{activeDoc.summary}</p>
+                        <p className="text-slate-700 leading-relaxed font-bold text-lg relative z-10">{activeDoc.summary}</p>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
