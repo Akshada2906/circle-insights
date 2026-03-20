@@ -386,12 +386,13 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
             onDrop={onDrop}
-            onClick={() => document.getElementById('file-upload-input')?.click()}
+            onClick={() => !isLoading && document.getElementById('file-upload-input')?.click()}
             className={cn(
               "relative group overflow-hidden rounded-[2.5rem] border-2 border-dashed transition-all duration-300 cursor-pointer",
               isDragging
                 ? "border-blue-500 bg-blue-50/50 scale-[0.99]"
-                : "border-slate-200 bg-white hover:border-blue-400 hover:bg-slate-50/30"
+                : "border-slate-200 bg-white hover:border-blue-400 hover:bg-slate-50/30",
+              isLoading && "pointer-events-none opacity-80"
             )}
           >
             <input
@@ -404,25 +405,44 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
               }}
             />
             <div className="p-12 flex flex-col items-center text-center gap-4">
-              <div className={cn(
-                "p-6 rounded-[2rem] transition-all duration-500",
-                isDragging ? "bg-blue-600 text-white rotate-12 scale-110" : "bg-blue-50 text-blue-600 group-hover:scale-110"
-              )}>
-                <Upload className="w-10 h-10" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-black text-slate-900 mb-1">
-                  Upload {CATEGORIES.find(c => c.id === activeTab)?.label}
-                </h3>
-                <p className="text-slate-500 font-medium">
-                  Drag and drop your file here, or <span className="text-blue-600 font-bold underline decoration-2 underline-offset-4">browse files</span>
-                </p>
-              </div>
-              <div className="flex gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-2">
-                <span className="bg-slate-100 px-3 py-1 rounded-full">PDF</span>
-                <span className="bg-slate-100 px-3 py-1 rounded-full">DOCX</span>
-                <span className="bg-slate-100 px-3 py-1 rounded-full">TXT</span>
-              </div>
+              {isLoading ? (
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative">
+                    <Loader2 className="w-16 h-16 text-blue-600 animate-spin" />
+                    <div className="absolute inset-0 bg-blue-400 blur-2xl opacity-20 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-900 mb-1">
+                      Processing Document...
+                    </h3>
+                    <p className="text-slate-500 font-medium animate-pulse">
+                      Our AI is analyzing your {CATEGORIES.find(c => c.id === activeTab)?.label}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className={cn(
+                    "p-6 rounded-[2rem] transition-all duration-500",
+                    isDragging ? "bg-blue-600 text-white rotate-12 scale-110" : "bg-blue-50 text-blue-600 group-hover:scale-110"
+                  )}>
+                    <Upload className="w-10 h-10" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-900 mb-1">
+                      Upload {CATEGORIES.find(c => c.id === activeTab)?.label}
+                    </h3>
+                    <p className="text-slate-500 font-medium">
+                      Drag and drop your file here, or <span className="text-blue-600 font-bold underline decoration-2 underline-offset-4">browse files</span>
+                    </p>
+                  </div>
+                  <div className="flex gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-2">
+                    <span className="bg-slate-100 px-3 py-1 rounded-full">PDF</span>
+                    <span className="bg-slate-100 px-3 py-1 rounded-full">DOCX</span>
+                    <span className="bg-slate-100 px-3 py-1 rounded-full">TXT</span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-blue-100/20 rounded-full blur-3xl pointer-events-none" />
@@ -717,18 +737,31 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
             </div>
           ) : (
             <div className="h-[500px] flex flex-col items-center justify-center text-center p-12 bg-slate-50/20">
-              <div className="w-32 h-32 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 flex items-center justify-center mb-8 animate-bounce duration-1000">
-                {(() => {
-                  const CatIcon = CATEGORIES.find(c => c.id === activeTab)?.icon || LayoutGrid;
-                  return <CatIcon className="w-16 h-16 text-slate-200" />;
-                })()}
-              </div>
-              <h4 className="text-2xl font-black text-slate-800 mb-3">No {CATEGORIES.find(c => c.id === activeTab)?.label} Found</h4>
-              <p className="text-slate-500 max-w-sm font-medium leading-relaxed">
-                {readOnly
-                  ? `No documents have been uploaded for this category yet. Click 'Edit Account' to upload and analyze documents.`
-                  : "Start by uploading a document above to see the AI-powered analysis and deep insights."}
-              </p>
+              {isLoading ? (
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative">
+                    <Loader2 className="w-16 h-16 text-blue-600 animate-spin" />
+                    <div className="absolute inset-0 bg-blue-400 blur-2xl opacity-20 animate-pulse" />
+                  </div>
+                  <p className="text-lg font-black text-slate-700 animate-pulse">Running AI Analysis...</p>
+                  <p className="text-sm text-slate-500 max-w-xs font-medium">Extracting insights, stakeholders, and objectives from your document.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="w-32 h-32 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 flex items-center justify-center mb-8 animate-bounce duration-1000">
+                    {(() => {
+                      const CatIcon = CATEGORIES.find(c => c.id === activeTab)?.icon || LayoutGrid;
+                      return <CatIcon className="w-16 h-16 text-slate-200" />;
+                    })()}
+                  </div>
+                  <h4 className="text-2xl font-black text-slate-800 mb-3">No {CATEGORIES.find(c => c.id === activeTab)?.label} Found</h4>
+                  <p className="text-slate-500 max-w-sm font-medium leading-relaxed">
+                    {readOnly
+                      ? `No documents have been uploaded for this category yet. Click 'Edit Account' to upload and analyze documents.`
+                      : "Start by uploading a document above to see the AI-powered analysis and deep insights."}
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>
