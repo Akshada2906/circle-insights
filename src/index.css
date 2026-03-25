@@ -171,7 +171,16 @@
     color: white !important;
   }
 
-  /* Ensure gap spacing works on TabsList */
+  .tab-indigo[data-state="active"] {
+    background-color: rgb(79 70 229) !important;
+    color: white !important;
+  }
+
+  .tab-amber[data-state="active"] {
+    background-color: rgb(245 158 11) !important;
+    color: white !important;
+  }
+
   [role="tablist"].grid {
     gap: 1rem !important;
   }

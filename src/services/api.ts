@@ -201,5 +201,56 @@ export const api = {
             method: "DELETE",
         });
         return handleResponse<void>(response);
+    },
+
+    // Documents
+    importDocument: async (accountId: string, type: string, file: File): Promise<any> => {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const typeMap: Record<string, string> = {
+            'wsr-reports': 'wsr',
+            'sow-documents': 'sow',
+            'best-practices': 'best_practices',
+            'code-quality': 'code_quality',
+            'tech-reviews': 'tech_review'
+        };
+
+        const backendType = typeMap[type] || type;
+        const response = await fetch(`${BASE_API_PATH}/document/import_${backendType}/${accountId}`, {
+            method: "POST",
+            body: formData,
+        });
+        return handleResponse<any>(response);
+    },
+
+    getDocument: async (accountId: string, type: string): Promise<any> => {
+        const typeMap: Record<string, string> = {
+            'wsr-reports': 'wsr',
+            'sow-documents': 'sow',
+            'best-practices': 'best_practices',
+            'code-quality': 'code_quality',
+            'tech-reviews': 'tech_review'
+        };
+
+        const backendType = typeMap[type] || type;
+        const response = await fetch(`${BASE_API_PATH}/document/${backendType}/${accountId}`);
+        return handleResponse<any>(response);
+    },
+
+    deleteDocument: async (accountId: string, type: string): Promise<void> => {
+        const typeMap: Record<string, string> = {
+            'wsr-reports': 'wsr',
+            'sow-documents': 'sow',
+            'best-practices': 'best_practices',
+            'code-quality': 'code_quality',
+            'tech-reviews': 'tech_review'
+        };
+
+        const backendType = typeMap[type] || type;
+        const response = await fetch(`${BASE_API_PATH}/document/${backendType}/${accountId}`, {
+            method: "DELETE",
+        });
+        return handleResponse<void>(response);
     }
 };
