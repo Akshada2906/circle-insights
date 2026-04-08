@@ -56,6 +56,8 @@ const mapApiToAccount = (apiAccount: AccountDashboardResponse): AccountWithProje
         nitor_executive_connect_frequency: apiAccount.nitor_executive_connect_frequency,
         growth_action_plan_30days_ready: apiAccount.growth_action_plan_30days_ready,
         account_research_link: apiAccount.account_research_link,
+        technical_roadmap: apiAccount.technical_roadmap,
+        product_roadmap: apiAccount.product_roadmap,
 
         created_at: apiAccount.created_at,
         updated_at: apiAccount.updated_at,
@@ -243,6 +245,8 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
                 nitor_executive_connect_frequency: newAccount.nitor_executive_connect_frequency,
                 growth_action_plan_30days_ready: newAccount.growth_action_plan_30days_ready,
                 account_research_link: newAccount.account_research_link,
+                technical_roadmap: newAccount.technical_roadmap,
+                product_roadmap: newAccount.product_roadmap,
 
             };
 

@@ -1,44 +1,47 @@
-import { useState, useEffect } from 'react';
-import { useAccounts } from '@/contexts/AccountContext';
-import { api } from '@/services/api';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Users, Building2, ArrowRight } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { PieChart, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
-  const { accounts, refreshAccounts } = useAccounts();
   const navigate = useNavigate();
-  const totalAccounts = accounts.length;
-
-  useEffect(() => {
-    refreshAccounts();
-  }, [refreshAccounts]);
 
   return (
     <MainLayout>
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Overview of your strategic landscape</p>
+      <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">
+        {/* Header Section */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-[#0A2647] mb-3">Select Dashboard</h1>
+          <p className="text-[#64748B] text-lg">Choose which dashboard you would like to view</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Accounts Summary */}
-          <Card className="border-t-4 border-t-blue-600 bg-gradient-to-br from-white to-blue-50/50 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-blue-50/50 to-transparent">
-              <CardTitle className="text-sm font-medium text-blue-950">Total Accounts</CardTitle>
-              <Building2 className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-900">{totalAccounts}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Active strategic accounts
-              </p>
-              <Button variant="link" className="px-0 mt-4 text-blue-600 hover:text-blue-700" onClick={() => navigate('/accounts')}>
-                View Accounts <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
+        {/* Cards Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl mx-auto">
+          {/* Sales Dashboard Card */}
+          <Card
+            className="group cursor-pointer border-t-[6px] border-t-blue-500 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-white"
+            onClick={() => navigate('/accounts')}
+          >
+            <CardContent className="flex flex-col items-center text-center p-10 pt-12">
+              <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-300">
+                <PieChart className="w-10 h-10 text-blue-500" strokeWidth={1.5} />
+              </div>
+              <h2 className="text-2xl font-semibold text-[#0A2647] mb-3">Sales Dashboard</h2>
+              <p className="text-[#64748B]">View your strategic accounts and sales metrics</p>
+            </CardContent>
+          </Card>
+
+          {/* Finance Dashboard Card */}
+          <Card
+            className="group cursor-pointer border-t-[6px] border-t-emerald-400 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-white"
+            onClick={() => navigate('/finance-dashboard')}
+          >
+            <CardContent className="flex flex-col items-center text-center p-10 pt-12">
+              <div className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-300">
+                <TrendingUp className="w-10 h-10 text-emerald-500" strokeWidth={1.5} />
+              </div>
+              <h2 className="text-2xl font-semibold text-[#0A2647] mb-3">Accounts Dashboard</h2>
+              <p className="text-[#64748B]">View comprehensive financial performance</p>
             </CardContent>
           </Card>
         </div>

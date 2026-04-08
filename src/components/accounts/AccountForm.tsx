@@ -15,9 +15,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, DollarSign, Target, Users, Plus, Trash2, Activity, Swords, Award, FileText } from 'lucide-react';
+import { Building2, DollarSign, Target, Users, Plus, Trash2, Activity, Swords, Award, FileText, Map } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AccountDocuments } from './AccountDocuments';
+import { RoadmapEditor } from './RoadmapEditor';
 
 interface AccountFormProps {
     account?: Account;
@@ -58,6 +59,9 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
         nitor_executive_connect_frequency: account?.nitor_executive_connect_frequency || '',
         growth_action_plan_30days_ready: account?.growth_action_plan_30days_ready || false,
         account_research_link: account?.account_research_link || '',
+        technical_roadmap: account?.technical_roadmap || '',
+        product_roadmap: account?.product_roadmap || '',
+        ai_roadmap: account?.ai_roadmap || '',
         stakeholder_profile_id: account?.stakeholder_profile_id || '',
     });
 
@@ -108,7 +112,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
         onSubmit(submissionData);
     };
 
-    const TABS = ['summary', 'strategy', 'stakeholders', 'competition-readiness', 'documents'];
+    const TABS = ['summary', 'strategy', 'stakeholders', 'competition-readiness', 'roadmaps', 'documents'];
     const [activeTab, setActiveTab] = useState('summary');
 
     const handleNext = () => {
@@ -132,7 +136,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full relative">
-                <TabsList className="grid grid-cols-5 w-full gap-2 h-auto sticky top-0 z-50 bg-slate-50 py-4 border-b rounded-none shadow-sm">
+                <TabsList className="grid grid-cols-6 w-full gap-2 h-auto sticky top-0 z-50 bg-slate-50 py-4 border-b rounded-none shadow-sm">
                     <TabsTrigger
                         value="summary"
                         className="tab-blue py-3 text-sm font-semibold transition-all rounded-lg flex items-center justify-center gap-2"
@@ -166,9 +170,17 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                         Competition & Readiness
                     </TabsTrigger>
                     <TabsTrigger
+                        value="roadmaps"
+                        className="tab-emerald py-3 text-sm font-semibold transition-all rounded-lg flex items-center justify-center gap-2"
+                        disabled={!account && 4 > currentTabIndex}
+                    >
+                        <Map className="w-4 h-4" />
+                        Roadmaps
+                    </TabsTrigger>
+                    <TabsTrigger
                         value="documents"
                         className="tab-amber py-3 text-sm font-semibold transition-all rounded-lg flex items-center justify-center gap-2"
-                        disabled={!account && 4 > currentTabIndex}
+                        disabled={!account && 5 > currentTabIndex}
                     >
                         <FileText className="w-4 h-4" />
                         Documents
@@ -578,6 +590,39 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
 
                             </Card>
                         </div>
+                    </TabsContent>
+
+                    <TabsContent value="roadmaps" className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <Card className="shadow-sm border border-slate-200/60 overflow-hidden">
+                            <CardHeader className="bg-gradient-to-r from-emerald-50/80 to-transparent border-b border-emerald-100 pb-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 bg-emerald-100/50 rounded-lg text-emerald-600">
+                                        <Map className="w-5 h-5" />
+                                    </div>
+                                    <CardTitle className="text-lg text-emerald-950">Account Roadmaps</CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-6 pt-6">
+                                <RoadmapEditor 
+                                    label="Technical Roadmap" 
+                                    value={formData.technical_roadmap} 
+                                    onChange={(val) => setFormData({ ...formData, technical_roadmap: val })} 
+                                    placeholder="Enter technical roadmap details..." 
+                                />
+                                <RoadmapEditor 
+                                    label="Product Roadmap" 
+                                    value={formData.product_roadmap} 
+                                    onChange={(val) => setFormData({ ...formData, product_roadmap: val })} 
+                                    placeholder="Enter product roadmap details..." 
+                                />
+                                <RoadmapEditor 
+                                    label="AI Roadmap" 
+                                    value={formData.ai_roadmap} 
+                                    onChange={(val) => setFormData({ ...formData, ai_roadmap: val })} 
+                                    placeholder="Enter AI roadmap details..." 
+                                />
+                            </CardContent>
+                        </Card>
                     </TabsContent>
 
                     <TabsContent value="documents" className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">

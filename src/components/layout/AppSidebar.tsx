@@ -15,7 +15,9 @@ import {
   Bell,
   Briefcase,
   Calendar,
+  LogOut,
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -35,9 +37,10 @@ interface NavItem {
 
 const mainNavItems: NavItem[] = [
   { title: 'Dashboard', icon: LayoutDashboard, href: '/' },
-  { title: 'Accounts', icon: Briefcase, href: '/accounts' },
+  { title: 'Sales', icon: Briefcase, href: '/accounts' },
+  { title: 'Accounts', icon: DollarSign, href: '/financials' },
   { title: 'My Calendar', icon: Calendar, href: '/calendar' },
-  { title: 'Financials', icon: DollarSign, href: '/financials' },
+  { title: 'Users', icon: Users, href: '/users' },
   { title: 'Circles', icon: Target, href: '/circles' },
   { title: 'Value Chain', icon: GitBranch, href: '/value-chain' },
   { title: 'Opportunities', icon: Lightbulb, href: '/opportunities', badge: 3 },
@@ -58,6 +61,7 @@ interface AppSidebarProps {
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const currentPath = location.pathname;
 
   const NavButton = ({ item }: { item: NavItem }) => {
@@ -171,13 +175,20 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
 
       {/* Account Section */}
       <div className="border-t border-sidebar-border p-3">
-        <div
+        <Button
+          variant="ghost"
+          onClick={() => {
+            logout();
+            navigate('/auth');
+          }}
           className={cn(
-            'flex items-center gap-3 p-2 rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer',
-            collapsed && 'justify-center p-2'
+            'w-full justify-start gap-3 h-11 px-3 text-red-400 hover:text-red-300 hover:bg-red-400/10',
+            collapsed && 'justify-center px-0'
           )}
         >
-        </div>
+          <LogOut className="h-5 w-5" />
+          {!collapsed && <span className="font-medium">Sign Out</span>}
+        </Button>
       </div>
 
       {/* Collapse Toggle */}

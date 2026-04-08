@@ -33,14 +33,28 @@ interface AccountsListProps {
 export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
+    const [showAll, setShowAll] = useState(false);
 
-    const filteredAccounts = accounts.filter((account) => {
+    const parseCurrency = (val: string | undefined) => {
+        if (!val) return 0;
+        return parseFloat(val.replace(/[$,]/g, '')) || 0;
+    };
+
+    const sortedAccounts = [...accounts].sort((a, b) => 
+        parseCurrency(b.last_year_business_done) - parseCurrency(a.last_year_business_done)
+    );
+
+    const filteredAccounts = sortedAccounts.filter((account) => {
         const matchesSearch =
             account.account_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             account.account_id.toLowerCase().includes(searchQuery.toLowerCase());
 
         return matchesSearch;
     });
+
+    const displayedAccounts = (showAll || searchQuery !== '') 
+        ? filteredAccounts 
+        : filteredAccounts.slice(0, 10);
 
     const handleExportExcel = async () => {
         if (filteredAccounts.length === 0) return;
@@ -322,9 +336,10 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground">
-                        Accounts
+                    <h1 className="text-3xl font-extrabold tracking-tight text-slate-950">
+                        Sales Accounts
                     </h1>
+                    <p className="text-slate-500 mt-1">Manage your sales accounts and strategic customer relationships</p>
                 </div>
                 <div className="flex gap-2">
                     <Button onClick={() => navigate('/accounts/new')} className="gap-2">
@@ -353,22 +368,31 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+                <div className="relative flex-1 animate-in fade-in duration-300 w-full">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input
                         placeholder="Search accounts by name..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9"
+                        className="pl-10 h-11 border-slate-200 bg-white"
                     />
                 </div>
+                {filteredAccounts.length > 10 && searchQuery === "" && (
+                    <Button 
+                        variant="outline" 
+                        onClick={() => setShowAll(!showAll)}
+                        className="h-11 px-6 font-semibold border-slate-200 hover:border-blue-300 hover:bg-white text-blue-600 transition-all whitespace-nowrap shadow-sm"
+                    >
+                        {showAll ? "Show Top 10 Only" : `View All Sales Accounts (${filteredAccounts.length})`}
+                    </Button>
+                )}
             </div>
 
             {/* Accounts Grid */}
-            {filteredAccounts.length > 0 ? (
+            {displayedAccounts.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredAccounts.map((account) => (
+                    {displayedAccounts.map((account) => (
                         <AccountCard
                             key={account.account_id}
                             account={account}

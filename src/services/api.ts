@@ -252,5 +252,227 @@ export const api = {
             method: "DELETE",
         });
         return handleResponse<void>(response);
+    },
+
+    // Finance Documents
+    importFinanceDocument: async (projectId: string, type: string, file: File): Promise<any> => {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const typeMap: Record<string, string> = {
+            'wsr-reports': 'wsr',
+            'sow-documents': 'sow',
+            'best-practices': 'best_practices',
+            'code-quality': 'code_quality',
+            'tech-reports': 'tech_review'
+        };
+
+        const backendType = typeMap[type] || type;
+        const response = await fetch(`${BASE_API_PATH}/finance/document/import_${backendType}/${projectId}`, {
+            method: "POST",
+            body: formData,
+        });
+        return handleResponse<any>(response);
+    },
+
+    getFinanceDocument: async (projectId: string, type: string): Promise<any> => {
+        const typeMap: Record<string, string> = {
+            'wsr-reports': 'wsr',
+            'sow-documents': 'sow',
+            'best-practices': 'best_practices',
+            'code-quality': 'code_quality',
+            'tech-reviews': 'tech_review'
+        };
+
+        const backendType = typeMap[type] || type;
+        const response = await fetch(`${BASE_API_PATH}/finance/document/${backendType}/${projectId}`);
+        return handleResponse<any>(response);
+    },
+
+    deleteFinanceDocument: async (projectId: string, type: string): Promise<void> => {
+        const typeMap: Record<string, string> = {
+            'wsr-reports': 'wsr',
+            'sow-documents': 'sow',
+            'best-practices': 'best_practices',
+            'code-quality': 'code_quality',
+            'tech-reviews': 'tech_review'
+        };
+
+        const backendType = typeMap[type] || type;
+        const response = await fetch(`${BASE_API_PATH}/finance/document/${backendType}/${projectId}`, {
+            method: "DELETE",
+        });
+        return handleResponse<void>(response);
     }
+};
+
+// Import Data Export & Files
+export const uploadImportProjectFile = async (file: File, dryRun = false) => {
+  const form = new FormData();
+  form.append("file", file);
+  const response = await fetch(`${BASE_API_PATH}/import/project?dry_run=${dryRun ? 'true' : 'false'}`, {
+    method: "POST",
+    body: form,
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to import Project file");
+  }
+  return response.json();
+};
+
+export const uploadImportRevenueFile = async (file: File, dryRun = false) => {
+  const form = new FormData();
+  form.append("file", file);
+  const response = await fetch(`${BASE_API_PATH}/import/revenue?dry_run=${dryRun ? 'true' : 'false'}`, {
+    method: "POST",
+    body: form,
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to import Revenue file");
+  }
+  return response.json();
+};
+
+export const exportAllProjectsAPI = async () => {
+  const response = await fetch(`${BASE_API_PATH}/export_data/all_projects`);
+  if (!response.ok) {
+    throw new Error("Failed to export all projects");
+  }
+  return response.json();
+};
+
+export const exportAllRevenuesAPI = async () => {
+  const response = await fetch(`${BASE_API_PATH}/export_data/all_revenues`);
+  if (!response.ok) {
+    throw new Error("Failed to export all revenues");
+  }
+  return response.json();
+};
+
+export const getPmoFiles = async () => {
+  const response = await fetch(`${BASE_API_PATH}/pmo/pmo-files`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch PMO files");
+  }
+  return response.json();
+};
+
+export const getRevenueFiles = async () => {
+  const response = await fetch(`${BASE_API_PATH}/pmo/revenue-files`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch Revenue files");
+  }
+  return response.json();
+};
+
+// --- Financial Accounts ---
+export const getFinanceAccounts = async (limit: number | null = null) => {
+  const url = limit !== null ? `${BASE_API_PATH}/accounts/?limit=${limit}` : `${BASE_API_PATH}/accounts/`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("Failed to fetch accounts");
+  }
+  return response.json();
+};
+
+export const getFinanceAccountById = async (accountId: string) => {
+  const response = await fetch(`${BASE_API_PATH}/accounts/${accountId}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch finance account");
+  }
+  return response.json();
+};
+
+export const deleteFinanceAccount = async (accountId: string) => {
+  const response = await fetch(`${BASE_API_PATH}/accounts/${accountId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to delete account");
+  }
+  return response.json();
+};
+
+export const createFinanceAccount = async (accountData: any) => {
+  const response = await fetch(`${BASE_API_PATH}/accounts/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(accountData),
+  });
+  if (!response.ok) throw new Error("Failed to create account");
+  return response.json();
+};
+
+export const updateFinanceAccount = async (id: string, accountData: any) => {
+  const response = await fetch(`${BASE_API_PATH}/accounts/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(accountData),
+  });
+  if (!response.ok) throw new Error("Failed to update account");
+  return response.json();
+};
+
+export const getFinanceDeliveryUnits = async () => {
+  const response = await fetch(`${BASE_API_PATH}/delivery_units/`);
+  if (!response.ok) throw new Error("Failed to fetch delivery units");
+  return response.json();
+};
+
+export const getFinanceProjectById = async (id: string) => {
+  const response = await fetch(`${BASE_API_PATH}/projects/${id}`);
+  if (!response.ok) throw new Error("Failed to fetch project");
+  return response.json();
+};
+
+export const createFinanceProject = async (projectData: any) => {
+  const response = await fetch(`${BASE_API_PATH}/projects/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(projectData),
+  });
+  if (!response.ok) throw new Error("Failed to create project");
+  return response.json();
+};
+
+export const updateFinanceProject = async (id: string, projectData: any) => {
+  const response = await fetch(`${BASE_API_PATH}/projects/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(projectData),
+  });
+  if (!response.ok) throw new Error("Failed to update project");
+  return response.json();
+};
+
+export const deleteFinanceProject = async (id: string) => {
+  const response = await fetch(`${BASE_API_PATH}/projects/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) throw new Error("Failed to delete project");
+  return response.json();
+};
+
+export const getFinanceDashboardStats = async (filters: any = {}) => {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.append(key, value.toString());
+  });
+  const url = `${BASE_API_PATH}/dashboard/get_data?${params.toString()}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Failed to fetch dashboard data");
+  return response.json(); // Returns ProjectSummary[]
+};
+
+export const getFinanceAccountSummary = async (filters: any = {}) => {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.append(key, value.toString());
+  });
+  const url = `${BASE_API_PATH}/dashboard/account_summary?${params.toString()}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Failed to fetch account summary");
+  return response.json();
 };

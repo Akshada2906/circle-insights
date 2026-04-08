@@ -1,4 +1,10 @@
 // Account and Project type definitions
+export interface RoadmapVersion {
+    version: number;
+    content: string;
+    date: string;
+    label?: string;
+}
 
 export interface Account {
     account_id: string;
@@ -32,6 +38,9 @@ export interface Account {
     nitor_executive_connect_frequency?: string;
     growth_action_plan_30days_ready?: boolean;
     account_research_link?: string;
+    technical_roadmap?: string;
+    product_roadmap?: string;
+    ai_roadmap?: string;
 
     // Strategic fields migrated to Account level
     key_competitors?: string;
