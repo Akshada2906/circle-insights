@@ -11,13 +11,32 @@ import AccountDetails from "./pages/AccountDetails";
 import AccountFormPage from "./pages/AccountFormPage";
 import StakeholderFormPage from "./pages/StakeholderFormPage";
 import StakeholderDetails from "./pages/StakeholderDetails";
+import ImportFinanceData from "./pages/ImportFinanceData";
+import FinancialAccountDetails from "./pages/FinancialAccountDetails";
+import FinancialAccountForm from "./pages/FinancialAccountForm";
+import FinancialProjectForm from "./pages/FinancialProjectForm";
+import FinancialProjectDetails from "./pages/FinancialProjectDetails";
 
 import Financials from "./pages/Financials";
+import FinanceDashboard from "./pages/FinanceDashboard";
 import Circles from "./pages/Circles";
 import ValueChain from "./pages/ValueChain";
 import Opportunities from "./pages/Opportunities";
 import MyCalendar from "./pages/MyCalendar";
+import Users from "./pages/Users";
 import NotFound from "./pages/NotFound";
+
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import Auth from "./pages/Auth";
+import { Navigate } from "react-router-dom";
+
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  // const { isAuthenticated } = useAuth();
+  // if (!isAuthenticated) {
+  //   return <Navigate to="/auth" replace />;
+  // }
+  return <>{children}</>;
+};
 
 const queryClient = new QueryClient();
 
@@ -26,26 +45,37 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <AccountProvider>
-        <StakeholderProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/accounts" element={<Accounts />} />
-              <Route path="/accounts/new" element={<AccountFormPage />} />
-              <Route path="/accounts/:id" element={<AccountDetails />} />
-              <Route path="/accounts/:id/edit" element={<AccountFormPage />} />
-              <Route path="/financials" element={<Financials />} />
-              <Route path="/circles" element={<Circles />} />
-              <Route path="/value-chain" element={<ValueChain />} />
-              <Route path="/opportunities" element={<Opportunities />} />
-              <Route path="/calendar" element={<MyCalendar />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </StakeholderProvider>
-      </AccountProvider>
+      <AuthProvider>
+        <AccountProvider>
+          <StakeholderProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                <Route path="/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
+                <Route path="/accounts/new" element={<ProtectedRoute><AccountFormPage /></ProtectedRoute>} />
+                <Route path="/accounts/:id" element={<ProtectedRoute><AccountDetails /></ProtectedRoute>} />
+                <Route path="/accounts/:id/edit" element={<ProtectedRoute><AccountFormPage /></ProtectedRoute>} />
+                <Route path="/finance-dashboard" element={<ProtectedRoute><FinanceDashboard /></ProtectedRoute>} />
+                <Route path="/financials" element={<ProtectedRoute><Financials /></ProtectedRoute>} />
+                <Route path="/financials/import" element={<ProtectedRoute><ImportFinanceData /></ProtectedRoute>} />
+                <Route path="/financials/new" element={<ProtectedRoute><FinancialAccountForm /></ProtectedRoute>} />
+                <Route path="/financials/:id" element={<ProtectedRoute><FinancialAccountDetails /></ProtectedRoute>} />
+                <Route path="/financials/:id/edit" element={<ProtectedRoute><FinancialAccountForm /></ProtectedRoute>} />
+                <Route path="/financials/:accountId/projects/new" element={<ProtectedRoute><FinancialProjectForm /></ProtectedRoute>} />
+                <Route path="/financials/:accountId/projects/:projectId" element={<ProtectedRoute><FinancialProjectDetails /></ProtectedRoute>} />
+                <Route path="/financials/:accountId/projects/:projectId/edit" element={<ProtectedRoute><FinancialProjectForm /></ProtectedRoute>} />
+                <Route path="/circles" element={<ProtectedRoute><Circles /></ProtectedRoute>} />
+                <Route path="/value-chain" element={<ProtectedRoute><ValueChain /></ProtectedRoute>} />
+                <Route path="/opportunities" element={<ProtectedRoute><Opportunities /></ProtectedRoute>} />
+                <Route path="/calendar" element={<ProtectedRoute><MyCalendar /></ProtectedRoute>} />
+                <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+                <Route path="*" element={<ProtectedRoute><NotFound /></ProtectedRoute>} />
+              </Routes>
+            </BrowserRouter>
+          </StakeholderProvider>
+        </AccountProvider>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

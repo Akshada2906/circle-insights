@@ -36,6 +36,8 @@ export interface AccountDashboardResponse {
     nitor_executive_connect_frequency?: string;
     growth_action_plan_30days_ready?: boolean;
     account_research_link?: string;
+    technical_roadmap?: string;
+    product_roadmap?: string;
     created_at: string;
     updated_at: string;
 }
@@ -77,6 +79,8 @@ export interface AccountDashboardCreate {
     nitor_executive_connect_frequency?: string;
     growth_action_plan_30days_ready?: boolean;
     account_research_link?: string;
+    technical_roadmap?: string;
+    product_roadmap?: string;
 }
 
 export interface AccountDashboardUpdate extends Partial<AccountDashboardCreate> { }

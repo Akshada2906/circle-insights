@@ -25,10 +25,11 @@ export function AccountFinancialsTracker({ financials, onUpdate }: AccountFinanc
     const newValues = { ...editValues, [field]: value };
     
     // Auto-calculate shortfall
-    if (field === 'target_2026' || field === 'forecast') {
+    if (field === 'target_2026' || field === 'forecast' || field === 'current') {
       const target = field === 'target_2026' ? value : (editValues.target_2026 ?? 0);
       const forecast = field === 'forecast' ? value : (editValues.forecast ?? 0);
-      newValues.shortfall = target - forecast;
+      const current = field === 'current' ? value : (editValues.current ?? 0);
+      newValues.shortfall = target - current - forecast;
     }
     
     setEditValues(newValues);

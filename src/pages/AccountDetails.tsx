@@ -17,8 +17,10 @@ import {
     ShieldAlert,
     Swords,
     FileText,
-    Activity
+    Activity,
+    Map
 } from 'lucide-react';
+import { RoadmapViewer } from '@/components/accounts/RoadmapViewer';
 import {
     DropdownMenuItem,
     DropdownMenuTrigger,
@@ -29,6 +31,8 @@ import { cn } from '@/lib/utils';
 import { api } from '@/services/api';
 import { StrategicStakeholderProfile } from '@/types/account';
 import { AccountDocuments } from '@/components/accounts/AccountDocuments';
+import { FinanceTab } from '@/components/accounts/FinanceTab';
+import { DollarSign } from 'lucide-react';
 
 const AccountDetails = () => {
     const { id } = useParams<{ id: string }>();
@@ -144,7 +148,7 @@ const AccountDetails = () => {
 
                 {/* Account Info Tabs */}
                 <Tabs defaultValue="summary" className="w-full">
-                    <TabsList className="grid grid-cols-5 w-full gap-2 h-auto">
+                    <TabsList className="grid grid-cols-6 w-full gap-2 h-auto">
                         <TabsTrigger value="summary" className="tab-blue h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center gap-2">
                             <Building2 className="w-4 h-4" />
                             Summary
@@ -161,11 +165,19 @@ const AccountDetails = () => {
                             <Swords className="w-4 h-4" />
                             Competition + Readiness
                         </TabsTrigger>
+                        <TabsTrigger value="roadmaps" className="tab-emerald h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center gap-2">
+                            <Map className="w-4 h-4" />
+                            Roadmaps
+                        </TabsTrigger>
                         <TabsTrigger value="documents" className="tab-amber h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center gap-2">
                             <FileText className="w-4 h-4" />
                             Documents
                         </TabsTrigger>
                     </TabsList>
+
+                    <TabsContent value="finance" className="mt-6">
+                        <FinanceTab accountId={id!} />
+                    </TabsContent>
 
                     <TabsContent value="summary" className="mt-6 space-y-6">
                         {/* Basic Information (First) */}
@@ -502,6 +514,35 @@ const AccountDetails = () => {
                     {/* DOCUMENTS TabContent */}
                     <TabsContent value="documents" className="mt-6">
                         <AccountDocuments accountId={id} readOnly={true} />
+                    </TabsContent>
+
+                    {/* ROADMAPS TabContent */}
+                    <TabsContent value="roadmaps" className="mt-6 space-y-6">
+                        <Card className="border-t-4 border-t-emerald-500 shadow-sm hover:shadow-md transition-shadow">
+                            <CardHeader className="bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-emerald-100">
+                                <CardTitle className="flex items-center gap-2 text-emerald-950">
+                                    <Map className="w-5 h-5 text-emerald-600" />
+                                    Account Roadmaps
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
+                                <RoadmapViewer 
+                                    title="Technical Roadmap" 
+                                    content={account.technical_roadmap} 
+                                    icon={Map}
+                                />
+                                <RoadmapViewer 
+                                    title="Product Roadmap" 
+                                    content={account.product_roadmap} 
+                                    icon={Map}
+                                />
+                                <RoadmapViewer 
+                                    title="AI Roadmap" 
+                                    content={account.ai_roadmap} 
+                                    icon={Map}
+                                />
+                            </CardContent>
+                        </Card>
                     </TabsContent>
                 </Tabs>
             </div>
