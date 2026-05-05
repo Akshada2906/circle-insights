@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, Pencil, Trash2, Calendar, DollarSign, Bot, Code, UploadCloud, FileText, CheckCircle, ShieldCheck, ClipboardList, Loader2, Building2, LayoutGrid, ClipboardCheck, BookOpen, FileCheck, Info, Trash2 as TrashIcon, FileSearch, Activity, Target, Users, ChevronRight, CheckCircle2, AlertTriangle, TrendingUp, Zap, ShieldAlert, Clock, TrendingDown, Flag, PanelLeftClose, PanelLeftOpen, ChevronsLeft, ChevronsRight, Map } from 'lucide-react';
+import { Menu, ArrowLeft, Pencil, Calendar, DollarSign, Bot, Code, UploadCloud, FileText, CheckCircle, ShieldCheck, ClipboardList, Loader2, Building2, LayoutGrid, ClipboardCheck, BookOpen, FileCheck, Info, Trash2 as TrashIcon, FileSearch, Activity, Target, Users, ChevronRight, CheckCircle2, AlertTriangle, TrendingUp, Zap, ShieldAlert, Clock, TrendingDown, Flag, PanelLeftClose, PanelLeftOpen, ChevronsLeft, ChevronsRight, Map, Brain } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getFinanceProjectById, getFinanceAccountById, deleteFinanceProject, api } from '@/services/api';
 import { RoadmapViewer } from '@/components/accounts/RoadmapViewer';
@@ -22,6 +22,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface Document {
   id: string;
@@ -63,6 +70,9 @@ const CATEGORIES = [
 const FinancialProjectDetails = () => {
   const { accountId, projectId } = useParams<{ accountId: string, projectId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const backUrl = location.state?.backUrl || '/financials';
+  const isFromPE = backUrl.includes('private-equity');
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -76,6 +86,11 @@ const FinancialProjectDetails = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isDocLoading, setIsDocLoading] = useState(false);
   const [isFileSidebarCollapsed, setIsFileSidebarCollapsed] = useState(false);
+
+  // Insights state
+  const [insights, setInsights] = useState<any>(null);
+  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
+  const [isInsightsDialogOpen, setIsInsightsDialogOpen] = useState(false);
 
   const filteredDocs = documents.filter(d => d.category === activeTab);
   const activeDoc = filteredDocs.find(d => d.id === activeDocId) || (filteredDocs.length > 0 ? filteredDocs[0] : null);
@@ -173,21 +188,21 @@ const FinancialProjectDetails = () => {
           .filter(o => o.length > 5 && !/^\d+$/.test(o.replace(/[.\s]/g, ''))),
         stakeholders: (Array.isArray(stakeholders) ? stakeholders.map(s => formatValue(s)) : [formatValue(stakeholders)])
           .filter(s => s.length > 2 && !/^\d+$/.test(s.replace(/[.\s]/g, ''))),
-        insights: filteredInsights.slice(0, 6)
+        insights: filteredInsights
       };
 
       if (category === 'wsr-reports' || data.document_type === 'WSR') {
         doc.wsrData = {
-          projectName: formatValue(content.project_overview_and_reporting_period?.project_name),
-          client: formatValue(content.project_overview_and_reporting_period?.client),
-          reportingPeriod: formatValue(content.project_overview_and_reporting_period?.reporting_period),
+          projectName: formatValue(content.project_overview?.project_name || content.project_overview_and_reporting_period?.project_name),
+          client: formatValue(content.project_overview?.client || content.project_overview_and_reporting_period?.client),
+          reportingPeriod: formatValue(content.project_overview?.reporting_period || content.project_overview_and_reporting_period?.reporting_period),
           status: formatValue(content.overall_project_status),
-          accomplishments: Array.isArray(content.key_accomplishments_and_milestones_achieved_this_week)
-            ? content.key_accomplishments_and_milestones_achieved_this_week.map((v: any) => formatValue(v))
-            : [formatValue(content.key_accomplishments_and_milestones_achieved_this_week)],
-          upcomingTasks: Array.isArray(content.upcoming_tasks_and_planned_activities_for_next_week)
-            ? content.upcoming_tasks_and_planned_activities_for_next_week.map((v: any) => formatValue(v))
-            : [formatValue(content.upcoming_tasks_and_planned_activities_for_next_week)],
+          accomplishments: Array.isArray(content.key_accomplishments_and_milestones || content.key_accomplishments_and_milestones_achieved_this_week)
+            ? (content.key_accomplishments_and_milestones || content.key_accomplishments_and_milestones_achieved_this_week).map((v: any) => formatValue(v))
+            : [formatValue(content.key_accomplishments_and_milestones || content.key_accomplishments_and_milestones_achieved_this_week)],
+          upcomingTasks: Array.isArray(content.upcoming_tasks_and_planned_activities || content.upcoming_tasks_and_planned_activities_for_next_week)
+            ? (content.upcoming_tasks_and_planned_activities || content.upcoming_tasks_and_planned_activities_for_next_week).map((v: any) => formatValue(v))
+            : [formatValue(content.upcoming_tasks_and_planned_activities || content.upcoming_tasks_and_planned_activities_for_next_week)],
           risks: Array.isArray(content.risks_and_issues_identified)
             ? content.risks_and_issues_identified.map((v: any) => formatValue(v))
             : [formatValue(content.risks_and_issues_identified)],
@@ -302,6 +317,10 @@ const FinancialProjectDetails = () => {
         
         setProject(projData);
         setAccount(accData);
+        
+        if (projData.overall_insights) {
+          setInsights(projData.overall_insights);
+        }
       } catch (error: any) {
         toast({
           title: "Error fetching project details",
@@ -315,6 +334,42 @@ const FinancialProjectDetails = () => {
     };
     fetchDetails();
   }, [accountId, projectId, navigate, toast]);
+
+
+  const handleGenerateInsights = async () => {
+    if (!projectId) return;
+    
+    setIsGeneratingInsights(true);
+    toast({
+      title: "Generating Insights",
+      description: "Our AI agents are analyzing project documents and data...",
+    });
+    
+    try {
+      const result = await api.generateProjectInsights(projectId);
+      if (result.status === 'success') {
+        setInsights(result.insights);
+        toast({
+          title: "Insights Generated",
+          description: "Project analysis completed successfully.",
+        });
+        // Optionally refresh project data to get updated timestamps
+        const projData = await getFinanceProjectById(projectId);
+        setProject(projData);
+      } else {
+        throw new Error(result.error || "Failed to generate insights");
+      }
+    } catch (err: any) {
+      console.error("Failed to generate insights:", err);
+      toast({
+        title: "Generation Failed",
+        description: err.message || "An unexpected error occurred during analysis.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingInsights(false);
+    }
+  };
 
   const handleDelete = async () => {
     try {
@@ -363,18 +418,37 @@ const FinancialProjectDetails = () => {
     <MainLayout>
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         
-        {/* Top Page Header */}
-        <div className="border-b border-gray-200 pb-4">
-          <h1 className="text-xl font-bold text-gray-900">Account Financials</h1>
-          <p className="text-sm text-gray-500">Track targets, forecasts, and financial performance across accounts</p>
+        {/* Breadcrumb Navigation */}
+        <div className="flex items-center gap-2 text-[15px] text-slate-500 mb-2 border-b border-gray-200 pb-2">
+          <div 
+             onClick={() => navigate(isFromPE ? backUrl : '/financials')}
+             className="p-1.5 bg-blue-600 rounded-full text-white cursor-pointer hover:bg-blue-700 transition-colors mr-1 shadow-sm"
+          >
+            <Menu className="w-4 h-4" />
+          </div>
+          <a 
+            onClick={() => navigate(isFromPE ? backUrl : '/financials')} 
+            className="text-blue-600 hover:underline cursor-pointer font-medium"
+          >
+            {isFromPE ? 'Private Equity' : 'Accounts'}
+          </a>
+          {isFromPE && (
+            <>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+              <a onClick={() => navigate(backUrl)} className="text-blue-600 hover:underline cursor-pointer font-medium">Portfolio</a>
+            </>
+          )}
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+          <a onClick={() => navigate(`/financials/${accountId}`, { state: { backUrl } })} className="text-blue-600 hover:underline cursor-pointer font-medium">
+            {account?.name || 'Account Details'}
+          </a>
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+          <span className="text-slate-600 font-semibold">{project?.name || 'Project Details'}</span>
         </div>
 
         {/* Project Header */}
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mt-2">
           <div className="flex items-start gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(`/financials/${accountId}`)} className="mt-1 flex-shrink-0">
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </Button>
             <div>
               <h1 className="text-3xl font-bold text-foreground">
                 {project.name}
@@ -400,7 +474,161 @@ const FinancialProjectDetails = () => {
           </div>
           
           <div className="flex items-center gap-3">
-            <Button variant="outline" className="gap-2 bg-white" onClick={() => navigate(`/financials/${accountId}/projects/${projectId}/edit`)}>
+            <Dialog open={isInsightsDialogOpen} onOpenChange={setIsInsightsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-purple-600 hover:bg-purple-700 text-white gap-2 shadow-sm">
+                  <Brain className="w-4 h-4" />
+                  Generate Insights
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+                <DialogHeader className="p-6 pb-2 border-b">
+                  <DialogTitle className="flex items-center justify-between text-2xl">
+                    <div className="flex items-center gap-2">
+                      <Brain className="w-6 h-6 text-purple-600" /> Project AI Insights
+                    </div>
+                    <Button 
+                      onClick={handleGenerateInsights} 
+                      disabled={isGeneratingInsights}
+                      size="sm"
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      {isGeneratingInsights ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-4 h-4 mr-2" />
+                          Regenerate
+                        </>
+                      )}
+                    </Button>
+                  </DialogTitle>
+                </DialogHeader>
+
+                <div className="flex-1 overflow-y-auto p-6">
+                  {isGeneratingInsights && !insights ? (
+                    <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                      <div className="relative">
+                        <div className="w-16 h-16 border-4 border-purple-100 rounded-full"></div>
+                        <div className="w-16 h-16 border-4 border-purple-600 rounded-full border-t-transparent animate-spin absolute top-0"></div>
+                      </div>
+                      <div className="text-center">
+                        <h3 className="text-lg font-bold text-slate-900">AI Agents at Work</h3>
+                        <p className="text-slate-500 max-w-xs mx-auto">Analyzing WSRs, SOWs, and technical documents for this project...</p>
+                      </div>
+                    </div>
+                  ) : insights ? (
+                    <Tabs defaultValue="overview" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2 mb-6">
+                        <TabsTrigger value="overview">Analysis Overview</TabsTrigger>
+                        <TabsTrigger value="details">Detailed Insights</TabsTrigger>
+                      </TabsList>
+                      
+                      <TabsContent value="overview" className="space-y-6">
+                        <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 shadow-sm">
+                          <h4 className="font-bold text-blue-900 flex items-center gap-2 mb-3">
+                            <Activity className="w-5 h-5" /> Executive Summary
+                          </h4>
+                          <div className="text-slate-700 leading-relaxed text-sm whitespace-pre-wrap">
+                            {insights.executive_summary || insights.summary || "No executive summary available."}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <Card className="border-emerald-100 bg-emerald-50/30">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm font-bold text-emerald-900 flex items-center gap-2">
+                                <TrendingUp className="w-4 h-4" /> Opportunities
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <ul className="text-xs text-slate-600 space-y-2">
+                                {Array.isArray(insights.opportunities) ? insights.opportunities.map((opt: any, i: number) => (
+                                  <li key={i} className="flex gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1 shrink-0" />
+                                    {typeof opt === 'string' ? opt : opt.text || opt.description}
+                                  </li>
+                                )) : <li>No specific opportunities identified.</li>}
+                              </ul>
+                            </CardContent>
+                          </Card>
+
+                          <Card className="border-amber-100 bg-amber-50/30">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm font-bold text-amber-900 flex items-center gap-2">
+                                <AlertTriangle className="w-4 h-4" /> Risks & Issues
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <ul className="text-xs text-slate-600 space-y-2">
+                                {Array.isArray(insights.risks) ? insights.risks.map((risk: any, i: number) => (
+                                  <li key={i} className="flex gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1 shrink-0" />
+                                    {typeof risk === 'string' ? risk : risk.text || risk.description}
+                                  </li>
+                                )) : <li>No significant risks identified.</li>}
+                              </ul>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="details" className="space-y-6">
+                        <div className="space-y-4">
+                          <h4 className="font-bold text-slate-900 flex items-center gap-2">
+                            <Bot className="w-4 h-4 text-blue-500" /> Strategic Recommendations
+                          </h4>
+                          <div className="space-y-3">
+                            {Array.isArray(insights.recommended_actions) ? insights.recommended_actions.map((action: any, i: number) => (
+                              <div key={i} className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                                <p className="text-sm text-slate-700 font-medium">{typeof action === 'string' ? action : action.text || action.recommendation}</p>
+                              </div>
+                            )) : <p className="text-sm text-slate-500 italic">No recommendations available.</p>}
+                          </div>
+                        </div>
+
+                        {insights.evidence_summary && (
+                          <div className="mt-6">
+                            <h4 className="font-bold text-slate-900 text-sm mb-2">Evidence Summary</h4>
+                            <p className="text-xs text-slate-500 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-100">
+                              {insights.evidence_summary}
+                            </p>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                          <div className="text-xs text-slate-400">
+                            Confidence Score: <span className="font-bold text-slate-600">{(insights.confidence_score * 100).toFixed(0)}%</span>
+                          </div>
+                          <div className="text-xs text-slate-400 italic">
+                            Generated: {new Date(insights.generated_at || Date.now()).toLocaleString()}
+                          </div>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                      <Brain className="w-12 h-12 text-slate-200 mb-4" />
+                      <h3 className="text-lg font-bold text-slate-900">Project AI Analysis</h3>
+                      <p className="text-slate-500 max-w-xs mb-6">Our AI agents will analyze all uploaded project documents (WSR, SOW, etc.) to provide deep insights.</p>
+                      <Button 
+                        onClick={handleGenerateInsights} 
+                        className="bg-purple-600 hover:bg-purple-700"
+                        disabled={isGeneratingInsights}
+                      >
+                        {isGeneratingInsights ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Brain className="w-4 h-4 mr-2" />}
+                        Generate Project Insights
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Button variant="outline" className="gap-2 bg-white" onClick={() => navigate(`/financials/${accountId}/projects/${projectId}/edit`, { state: { backUrl } })}>
               <Pencil className="w-4 h-4" />
               Edit Project
             </Button>
@@ -408,7 +636,7 @@ const FinancialProjectDetails = () => {
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" className="gap-2 bg-red-50 text-red-600 hover:bg-red-100 border-red-200 shadow-none">
-                  <Trash2 className="w-4 h-4" />
+                  <TrashIcon className="w-4 h-4" />
                   Delete Project
                 </Button>
               </AlertDialogTrigger>
@@ -524,7 +752,7 @@ const FinancialProjectDetails = () => {
               <CardContent className="p-6">
                 <h3 className="font-bold text-gray-900 mb-4 uppercase text-xs tracking-wider">Project Overview</h3>
                 <div className="bg-blue-50/30 border border-blue-100/50 rounded-lg p-6 min-h-[100px] text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
-                  {project.overview || 'No project overview defined.'}
+                  {insights?.executive_summary || insights?.summary || project.overview || 'No project overview defined.'}
                 </div>
               </CardContent>
             </Card>
@@ -556,7 +784,9 @@ const FinancialProjectDetails = () => {
                   <Bot className="w-4 h-4 text-blue-600" /> AI Recommendations
                 </h3>
                 <div className="bg-indigo-50/30 border border-indigo-100/50 rounded-xl p-8 min-h-[200px] text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
-                  {project.ai_recommendations || 'No AI recommendations defined for this project.'}
+                  {Array.isArray(insights?.recommended_actions) 
+                    ? insights.recommended_actions.map((a: any) => typeof a === 'string' ? a : a.text || a.recommendation).join('\n\n')
+                    : project.ai_recommendations || 'No AI recommendations defined for this project.'}
                 </div>
               </CardContent>
             </Card>
@@ -600,13 +830,20 @@ const FinancialProjectDetails = () => {
               <TabsContent key={cat.id} value={cat.id}>
                 <div className="flex flex-col gap-6">
                   {/* Upload Area */}
-                  <div
-                    onDragOver={onDragOver}
-                    onDragLeave={onDragLeave}
-                    onDrop={onDrop}
-                    onClick={() => !isDocLoading && document.getElementById(`file-upload-${cat.id}`)?.click()}
+                  <label
+                    htmlFor={`file-upload-${cat.id}`}
+                    onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDragging(false);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file && !isDocLoading) handleFileUpload(file);
+                    }}
                     className={cn(
-                      "relative group overflow-hidden rounded-[2rem] border-2 border-dashed transition-all duration-300 cursor-pointer",
+                      "relative group overflow-hidden rounded-[2rem] border-2 border-dashed transition-all duration-300 cursor-pointer block",
                       isDragging
                         ? "border-blue-500 bg-blue-50/50"
                         : "border-gray-200 bg-white hover:border-blue-400 hover:bg-gray-50/50",
@@ -620,6 +857,7 @@ const FinancialProjectDetails = () => {
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) handleFileUpload(file);
+                        e.target.value = ''; // Allow selecting the same file again
                       }}
                     />
                     <div className="p-10 flex flex-col items-center text-center gap-4">
@@ -647,7 +885,7 @@ const FinancialProjectDetails = () => {
                         </>
                       )}
                     </div>
-                  </div>
+                  </label>
 
                   {/* Document Display Area */}
                   {filteredDocs.length > 0 ? (
@@ -779,7 +1017,7 @@ const FinancialProjectDetails = () => {
                                         <h5 className="text-xs font-bold text-emerald-600 uppercase flex items-center gap-2">
                                           <CheckCircle2 className="w-4 h-4" /> Accomplishments
                                         </h5>
-                                        {activeDoc.wsrData.accomplishments?.map((item, i) => (
+                                        {activeDoc.wsrData.accomplishments?.filter(Boolean).map((item, i) => (
                                           <div key={i} className="p-3 bg-emerald-50/50 rounded-xl text-sm text-gray-700">{item}</div>
                                         ))}
                                       </div>
@@ -787,10 +1025,26 @@ const FinancialProjectDetails = () => {
                                         <h5 className="text-xs font-bold text-blue-600 uppercase flex items-center gap-2">
                                           <Clock className="w-4 h-4" /> Upcoming Tasks
                                         </h5>
-                                        {activeDoc.wsrData.upcomingTasks?.map((item, i) => (
+                                        {activeDoc.wsrData.upcomingTasks?.filter(Boolean).map((item, i) => (
                                           <div key={i} className="p-3 bg-blue-50/50 rounded-xl text-sm text-gray-700">{item}</div>
                                         ))}
                                       </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {activeDoc.insights && activeDoc.insights.length > 0 && (
+                                  <div className="space-y-4 pt-4 border-t border-gray-100">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Deep AI Insights</h4>
+                                    <div className="grid grid-cols-1 gap-3">
+                                      {activeDoc.insights.map((insight, i) => (
+                                        <div key={i} className="flex gap-4 p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                                          <div className={cn("p-2.5 rounded-lg shrink-0 flex items-center justify-center", insight.color)}>
+                                            <insight.icon className="w-5 h-5" />
+                                          </div>
+                                          <p className="text-sm text-gray-700 font-medium self-center">{insight.text}</p>
+                                        </div>
+                                      ))}
                                     </div>
                                   </div>
                                 )}

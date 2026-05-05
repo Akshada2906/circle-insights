@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Building2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Building2, Loader2, Menu, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   getFinanceAccountById, 
@@ -25,6 +25,9 @@ import {
 const FinancialAccountForm = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const backUrl = location.state?.backUrl || '/financials';
+  const privateEquityId = location.state?.private_equity_id || null;
   const { toast } = useToast();
   
   const isEditing = !!id;
@@ -42,7 +45,8 @@ const FinancialAccountForm = () => {
     target_revenue: 0,
     forecast_revenue: 0,
     total_revenue: 0,
-    ai_revenue: 0
+    ai_revenue: 0,
+    private_equity_id: privateEquityId,
   });
 
   useEffect(() => {
@@ -62,7 +66,8 @@ const FinancialAccountForm = () => {
             target_revenue: accountData.target_revenue || 0,
             forecast_revenue: accountData.forecast_revenue || 0,
             total_revenue: accountData.total_revenue || 0,
-            ai_revenue: accountData.ai_revenue || 0
+            ai_revenue: accountData.ai_revenue || 0,
+            private_equity_id: accountData.private_equity_id || privateEquityId || null
           });
         }
       } catch (error: any) {
@@ -97,14 +102,14 @@ const FinancialAccountForm = () => {
           title: "Account Updated",
           description: "The account has been updated successfully."
         });
-        navigate(`/financials/${id}`);
+        navigate(`/financials/${id}`, { state: { backUrl } });
       } else {
         const result = await createFinanceAccount(formData);
         toast({
           title: "Account Created",
           description: "New account added to the system."
         });
-        navigate(`/financials/${result.id}`);
+        navigate(`/financials/${result.id}`, { state: { backUrl } });
       }
     } catch (error: any) {
       toast({
@@ -130,11 +135,32 @@ const FinancialAccountForm = () => {
   return (
     <MainLayout>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Breadcrumb Navigation */}
+        <div className="flex items-center gap-2 text-[15px] text-slate-500 mb-2">
+          <div 
+             onClick={() => navigate(backUrl)}
+             className="p-1.5 bg-blue-600 rounded-full text-white cursor-pointer hover:bg-blue-700 transition-colors mr-1 shadow-sm"
+          >
+            <Menu className="w-4 h-4" />
+          </div>
+          <a 
+            onClick={() => navigate(backUrl)} 
+            className="text-blue-600 hover:underline cursor-pointer font-medium"
+          >
+            {backUrl.includes('private-equity') ? 'Private Equity' : 'Accounts'}
+          </a>
+          {backUrl.includes('private-equity') && (
+            <>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+              <a onClick={() => navigate(backUrl)} className="text-blue-600 hover:underline cursor-pointer font-medium">Portfolio</a>
+            </>
+          )}
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+          <span className="text-slate-600 font-semibold">{isEditing ? 'Edit Account' : 'Create Account'}</span>
+        </div>
+
         {/* Header section matching Updated-AI-Insight UI */}
-        <div className="flex items-start gap-4 pb-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="mt-1 bg-white hover:bg-gray-100 shadow-sm rounded-full">
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
-          </Button>
+        <div className="flex items-start gap-4 pb-4 mt-2">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
               {isEditing ? 'Edit Account' : 'Create New Account'}
@@ -269,7 +295,7 @@ const FinancialAccountForm = () => {
           </Card>
 
           <div className="flex justify-end gap-4 pb-12">
-            <Button type="button" variant="outline" onClick={() => navigate(-1)} className="bg-white shadow-sm" disabled={submitting}>
+            <Button type="button" variant="outline" onClick={() => navigate(backUrl)} className="bg-white shadow-sm" disabled={submitting}>
               Cancel
             </Button>
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white min-w-[150px] shadow-sm" disabled={submitting}>

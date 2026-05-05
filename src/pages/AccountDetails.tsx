@@ -148,22 +148,10 @@ const AccountDetails = () => {
 
                 {/* Account Info Tabs */}
                 <Tabs defaultValue="summary" className="w-full">
-                    <TabsList className="grid grid-cols-6 w-full gap-2 h-auto">
+                    <TabsList className="grid grid-cols-3 w-full gap-2 h-auto">
                         <TabsTrigger value="summary" className="tab-blue h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center gap-2">
                             <Building2 className="w-4 h-4" />
                             Summary
-                        </TabsTrigger>
-                        <TabsTrigger value="strategy" className="tab-purple h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center gap-2">
-                            <Target className="w-4 h-4" />
-                            Strategy
-                        </TabsTrigger>
-                        <TabsTrigger value="stakeholders" className="tab-indigo h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center gap-2">
-                            <Users className="w-4 h-4" />
-                            Stakeholders
-                        </TabsTrigger>
-                        <TabsTrigger value="competition-readiness" className="tab-rose h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center gap-2">
-                            <Swords className="w-4 h-4" />
-                            Competition + Readiness
                         </TabsTrigger>
                         <TabsTrigger value="roadmaps" className="tab-emerald h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center gap-2">
                             <Map className="w-4 h-4" />
@@ -313,9 +301,6 @@ const AccountDetails = () => {
                                 </CardContent>
                             </Card>
                         </div>
-                    </TabsContent>
-
-                    <TabsContent value="strategy" className="mt-6 space-y-6">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                             <Card className="border-t-4 border-t-indigo-500 shadow-sm hover:shadow-md transition-shadow h-full">
                                 <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-transparent border-b border-indigo-100">
@@ -371,10 +356,7 @@ const AccountDetails = () => {
                                 </CardContent>
                             </Card>
                         </div>
-                    </TabsContent>
-
-                    {/* STAKEHOLDERS TabsContent */}
-                    <TabsContent value="stakeholders" className="mt-6 space-y-6">
+                        {/* STAKEHOLDERS TabsContent */}
                         <Card className="border-t-4 border-t-indigo-500 shadow-sm hover:shadow-md transition-shadow">
                             <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-transparent border-b border-indigo-100">
                                 <CardTitle className="flex items-center gap-2 text-indigo-950">
@@ -441,10 +423,7 @@ const AccountDetails = () => {
                                 )}
                             </CardContent>
                         </Card>
-                    </TabsContent>
-
-                    {/* COMPETITION & READINESS Combined */}
-                    <TabsContent value="competition-readiness" className="mt-6 space-y-6">
+                        {/* COMPETITION & READINESS Combined */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                             <Card className="border-t-4 border-t-rose-500 shadow-sm hover:shadow-md transition-shadow h-full">
                                 <CardHeader className="bg-gradient-to-r from-rose-50/50 to-transparent border-b border-rose-100">

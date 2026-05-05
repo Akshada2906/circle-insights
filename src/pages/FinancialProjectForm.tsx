@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Briefcase, Loader2, Map } from 'lucide-react';
+import { ArrowLeft, Briefcase, Loader2, Map, Menu, ChevronRight } from 'lucide-react';
 import { RoadmapEditor } from '@/components/accounts/RoadmapEditor';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -27,6 +27,9 @@ import {
 const FinancialProjectForm = () => {
   const { accountId, projectId } = useParams<{ accountId: string, projectId?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const backUrl = location.state?.backUrl || `/financials/${accountId}`;
+  const isFromPE = backUrl.includes('private-equity');
   const { toast } = useToast();
   
   const isEditing = !!projectId;
@@ -152,7 +155,7 @@ const FinancialProjectForm = () => {
         await createFinanceProject(payload);
         toast({ title: "Project Created", description: "New project added to the account." });
       }
-      navigate(`/financials/${accountId}`);
+      navigate(`/financials/${accountId}`, { state: { backUrl } });
     } catch (error: any) {
       toast({ title: "Error saving project", description: error.message || "Something went wrong.", variant: "destructive" });
     } finally {
@@ -173,10 +176,35 @@ const FinancialProjectForm = () => {
   return (
     <MainLayout>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        <div className="flex items-start gap-4 pb-4">
-          <Button type="button" variant="ghost" size="icon" onClick={() => navigate(-1)} className="mt-1 bg-white hover:bg-gray-100 shadow-sm rounded-full">
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
-          </Button>
+        {/* Breadcrumb Navigation */}
+        <div className="flex items-center gap-2 text-[15px] text-slate-500 mb-2 border-b border-gray-200 pb-2">
+          <div 
+             onClick={() => navigate(isFromPE ? backUrl : '/financials')}
+             className="p-1.5 bg-blue-600 rounded-full text-white cursor-pointer hover:bg-blue-700 transition-colors mr-1 shadow-sm"
+          >
+            <Menu className="w-4 h-4" />
+          </div>
+          <a 
+            onClick={() => navigate(isFromPE ? backUrl : '/financials')} 
+            className="text-blue-600 hover:underline cursor-pointer font-medium"
+          >
+            {isFromPE ? 'Private Equity' : 'Accounts'}
+          </a>
+          {isFromPE && (
+            <>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+              <a onClick={() => navigate(backUrl)} className="text-blue-600 hover:underline cursor-pointer font-medium">Portfolio</a>
+            </>
+          )}
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+          <a onClick={() => navigate(`/financials/${accountId}`, { state: { backUrl } })} className="text-blue-600 hover:underline cursor-pointer font-medium">
+            Account Details
+          </a>
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+          <span className="text-slate-600 font-semibold">{isEditing ? 'Edit Project' : 'Create Project'}</span>
+        </div>
+
+        <div className="flex items-start gap-4 pb-4 mt-2">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
               {isEditing ? 'Edit Project' : 'Add New Project'}
@@ -341,7 +369,7 @@ const FinancialProjectForm = () => {
           </Card>
 
           <div className="flex justify-end gap-4 pb-12">
-            <Button type="button" variant="outline" onClick={() => navigate(-1)} className="bg-white" disabled={submitting}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => navigate(`/financials/${accountId}`, { state: { backUrl } })} className="bg-white" disabled={submitting}>Cancel</Button>
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white min-w-[150px]" disabled={submitting}>
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEditing ? 'Update Project' : 'Create Project')}
             </Button>

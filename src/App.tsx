@@ -13,6 +13,7 @@ import StakeholderFormPage from "./pages/StakeholderFormPage";
 import StakeholderDetails from "./pages/StakeholderDetails";
 import ImportFinanceData from "./pages/ImportFinanceData";
 import FinancialAccountDetails from "./pages/FinancialAccountDetails";
+import FinancialAccountInsights from "./pages/FinancialAccountInsights";
 import FinancialAccountForm from "./pages/FinancialAccountForm";
 import FinancialProjectForm from "./pages/FinancialProjectForm";
 import FinancialProjectDetails from "./pages/FinancialProjectDetails";
@@ -23,6 +24,9 @@ import Circles from "./pages/Circles";
 import ValueChain from "./pages/ValueChain";
 import Opportunities from "./pages/Opportunities";
 import MyCalendar from "./pages/MyCalendar";
+import PrivateEquity from "./pages/PrivateEquity";
+import PrivateEquityDetails from "./pages/PrivateEquityDetails";
+import PrivateEquityInsights from "./pages/PrivateEquityInsights";
 import Users from "./pages/Users";
 import NotFound from "./pages/NotFound";
 
@@ -57,10 +61,14 @@ const App = () => (
                 <Route path="/accounts/:id" element={<ProtectedRoute><AccountDetails /></ProtectedRoute>} />
                 <Route path="/accounts/:id/edit" element={<ProtectedRoute><AccountFormPage /></ProtectedRoute>} />
                 <Route path="/finance-dashboard" element={<ProtectedRoute><FinanceDashboard /></ProtectedRoute>} />
+                <Route path="/private-equity" element={<ProtectedRoute><PrivateEquity /></ProtectedRoute>} />
+                <Route path="/private-equity/:id" element={<ProtectedRoute><PrivateEquityDetails /></ProtectedRoute>} />
+                <Route path="/private-equity/:id/insights" element={<ProtectedRoute><PrivateEquityInsights /></ProtectedRoute>} />
                 <Route path="/financials" element={<ProtectedRoute><Financials /></ProtectedRoute>} />
                 <Route path="/financials/import" element={<ProtectedRoute><ImportFinanceData /></ProtectedRoute>} />
                 <Route path="/financials/new" element={<ProtectedRoute><FinancialAccountForm /></ProtectedRoute>} />
                 <Route path="/financials/:id" element={<ProtectedRoute><FinancialAccountDetails /></ProtectedRoute>} />
+                <Route path="/financials/:id/insights" element={<ProtectedRoute><FinancialAccountInsights /></ProtectedRoute>} />
                 <Route path="/financials/:id/edit" element={<ProtectedRoute><FinancialAccountForm /></ProtectedRoute>} />
                 <Route path="/financials/:accountId/projects/new" element={<ProtectedRoute><FinancialProjectForm /></ProtectedRoute>} />
                 <Route path="/financials/:accountId/projects/:projectId" element={<ProtectedRoute><FinancialProjectDetails /></ProtectedRoute>} />

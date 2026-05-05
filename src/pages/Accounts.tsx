@@ -4,6 +4,7 @@ import { AccountsList } from '@/components/accounts/AccountsList';
 import { useAccounts } from '@/contexts/AccountContext';
 import { useToast } from '@/hooks/use-toast';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
+import { getPrivateEquities, getFinanceAccounts } from '@/services/api';
 
 const Accounts = () => {
     const { accounts, deleteAccount, refreshAccounts } = useAccounts();
@@ -11,10 +12,35 @@ const Accounts = () => {
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [peFirms, setPeFirms] = useState<any[]>([]);
 
     useEffect(() => {
         refreshAccounts();
+        fetchFirms();
     }, [refreshAccounts]);
+
+    const fetchFirms = async () => {
+        try {
+          const [firmsData, accountsData] = await Promise.all([
+            getPrivateEquities(),
+            getFinanceAccounts()
+          ]);
+          
+          const enrichedFirms = firmsData.map((firm: any) => {
+             const firmAccounts = accountsData.filter((a: any) => a.private_equity_id === firm.id);
+             const totalRev = firmAccounts.reduce((sum: number, a: any) => sum + (a.current_revenue || a.total_revenue || 0), 0);
+             return {
+               ...firm,
+               portfolio_size: firmAccounts.length,
+               total_revenue: totalRev
+             };
+          });
+
+          setPeFirms(enrichedFirms);
+        } catch (err) {
+          console.error('Failed to fetch PE firms:', err);
+        }
+    };
 
     const handleDelete = (accountId: string) => {
         setDeleteId(accountId);
@@ -49,7 +75,7 @@ const Accounts = () => {
     return (
         <MainLayout>
             <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <AccountsList accounts={accounts} onDelete={handleDelete} onRefresh={refreshAccounts} />
+                <AccountsList accounts={accounts} peFirms={peFirms} onDelete={handleDelete} onRefresh={refreshAccounts} />
 
                 <ConfirmationDialog
                     open={isDeleteOpen}

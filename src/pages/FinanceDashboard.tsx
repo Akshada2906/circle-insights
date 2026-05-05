@@ -464,7 +464,7 @@ const FinanceDashboard = () => {
             </div>
 
             {/* Charts Row 1 */}
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <Card className="shadow-sm">
                 <CardHeader><CardTitle className="text-sm font-medium">Revenue by Month</CardTitle></CardHeader>
                 <CardContent>
@@ -505,60 +505,72 @@ const FinanceDashboard = () => {
                   </div>
                 </CardContent>
               </Card>
-            </div>
-
-            {/* Charts + Tables side by side */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card className="shadow-sm overflow-hidden">
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                  <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-600">Top 10 Projects by Current Revenue</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-slate-100">
-                        <TableHead className="font-bold text-slate-600">Project</TableHead>
-                        <TableHead className="font-bold text-slate-600">Account</TableHead>
-                        <TableHead className="font-bold text-slate-600">Status</TableHead>
-                        <TableHead className="text-right font-bold text-slate-600">Current Revenue</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {stats.topProjects.map(p => (
-                        <TableRow key={p.project_id} className="hover:bg-slate-50/50 transition-colors border-slate-100">
-                          <TableCell className="font-bold text-slate-800 text-xs">{p.project_name}</TableCell>
-                          <TableCell className="text-slate-500 text-xs">{p.account_name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={cn(
-                              "text-[10px] font-bold border-none", 
-                              p.project_status?.toLowerCase() === 'active' ? "bg-emerald-100 text-emerald-700" : 
-                              p.project_status?.toLowerCase() === 'inactive' ? "bg-red-100 text-red-700" : 
-                              "bg-slate-100 text-slate-500"
-                            )}>
-                              {p.project_status?.toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-bold text-slate-900 text-xs">{formatCurrency(p.total_revenue)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
 
               <Card className="shadow-sm">
                 <CardHeader><CardTitle className="text-sm font-medium">Revenue by Project Type</CardTitle></CardHeader>
                 <CardContent>
-                  <div className="h-[340px]">
+                  <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={stats.revenueByType} cx="50%" cy="50%" outerRadius={110} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                        <Pie data={stats.revenueByType} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
                           {stats.revenueByType.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                         </Pie>
                         <Tooltip formatter={(v: any) => formatCurrency(v)} />
                         <Legend />
                       </PieChart>
                     </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Tables Row */}
+            <div className="grid gap-4 grid-cols-1">
+              <Card className="shadow-sm overflow-hidden">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                  <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-600">Top 10 Projects by Current Revenue</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-slate-100">
+                          <TableHead className="font-bold text-slate-600 whitespace-nowrap">Project</TableHead>
+                          <TableHead className="font-bold text-slate-600 whitespace-nowrap">Account</TableHead>
+                          <TableHead className="font-bold text-slate-600 whitespace-nowrap">Type</TableHead>
+                          <TableHead className="font-bold text-slate-600 whitespace-nowrap">Status</TableHead>
+                          <TableHead className="font-bold text-slate-600 whitespace-nowrap">Start Date</TableHead>
+                          <TableHead className="font-bold text-slate-600 whitespace-nowrap">End Date</TableHead>
+                          <TableHead className="text-right font-bold text-slate-600 whitespace-nowrap">AI Direct Rev</TableHead>
+                          <TableHead className="text-right font-bold text-slate-600 whitespace-nowrap">AI Assist Rev</TableHead>
+                          <TableHead className="text-right font-bold text-slate-600 whitespace-nowrap">Current Revenue</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {stats.topProjects.map(p => (
+                          <TableRow key={p.project_id} className="hover:bg-slate-50/50 transition-colors border-slate-100">
+                            <TableCell className="font-bold text-slate-800 text-xs whitespace-nowrap">{p.project_name}</TableCell>
+                            <TableCell className="text-slate-500 text-xs whitespace-nowrap">{p.account_name}</TableCell>
+                            <TableCell className="text-slate-500 text-xs whitespace-nowrap">{p.project_type || '—'}</TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              <Badge variant="outline" className={cn(
+                                "text-[10px] font-bold border-none", 
+                                p.project_status?.toLowerCase() === 'active' ? "bg-emerald-100 text-emerald-700" : 
+                                p.project_status?.toLowerCase() === 'inactive' ? "bg-red-100 text-red-700" : 
+                                "bg-slate-100 text-slate-500"
+                              )}>
+                                {p.project_status?.toUpperCase() || 'UNKNOWN'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-slate-500 text-xs whitespace-nowrap">{p.from_date ? new Date(p.from_date).toLocaleDateString() : '—'}</TableCell>
+                            <TableCell className="text-slate-500 text-xs whitespace-nowrap">{p.to_date ? new Date(p.to_date).toLocaleDateString() : '—'}</TableCell>
+                            <TableCell className="text-right text-slate-600 text-xs whitespace-nowrap">{formatCurrency(p.total_ai_rev)}</TableCell>
+                            <TableCell className="text-right text-slate-600 text-xs whitespace-nowrap">{formatCurrency(p.total_ai_assist_rev)}</TableCell>
+                            <TableCell className="text-right font-bold text-slate-900 text-xs whitespace-nowrap">{formatCurrency(p.total_revenue)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 </CardContent>
               </Card>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,12 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
   ArrowLeft, Pencil, Plus, DollarSign, Search, 
-  Brain, TrendingUp, Briefcase, MoreVertical, Loader2, Building2, Target
+  Brain, TrendingUp, Briefcase, MoreVertical, Loader2, Building2, Target,
+  Menu, ChevronRight, ShieldAlert, Bot
 } from 'lucide-react';
 import { 
   getFinanceAccountById, 
-  deleteFinanceProject 
+  deleteFinanceProject
 } from '@/services/api';
+import { Zap } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,10 +36,17 @@ import {
 const FinancialAccountDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const backUrl = location.state?.backUrl || '/financials';
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [search, setSearch] = useState('');
   const [showAllProjects, setShowAllProjects] = useState(false);
+
+  const handleGenerateInsights = async () => {
+    if (!id) return;
+    navigate(`/financials/${id}/insights`);
+  };
 
   useEffect(() => {
     if (id) {
@@ -47,7 +56,7 @@ const FinancialAccountDetails = () => {
           const responseData = await getFinanceAccountById(id);
           setData(responseData);
         } catch (error) {
-          console.error("Failed to fetch finance account data", error);
+          console.error("Failed to fetch data", error);
         } finally {
           setLoading(false);
         }
@@ -106,12 +115,33 @@ const FinancialAccountDetails = () => {
     <MainLayout>
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         
+        {/* Breadcrumb Navigation */}
+        <div className="flex items-center gap-2 text-[15px] text-slate-500 mb-2">
+          <div 
+             onClick={() => navigate(backUrl)}
+             className="p-1.5 bg-blue-600 rounded-full text-white cursor-pointer hover:bg-blue-700 transition-colors mr-1 shadow-sm"
+          >
+            <Menu className="w-4 h-4" />
+          </div>
+          <a 
+            onClick={() => navigate(backUrl)} 
+            className="text-blue-600 hover:underline cursor-pointer font-medium"
+          >
+            {backUrl.includes('private-equity') ? 'Private Equity' : 'Accounts'}
+          </a>
+          {backUrl.includes('private-equity') && (
+            <>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+              <a onClick={() => navigate(backUrl)} className="text-blue-600 hover:underline cursor-pointer font-medium">Portfolio</a>
+            </>
+          )}
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+          <span className="text-slate-600">{data?.name || 'Account Details'}</span>
+        </div>
+
         {/* Header section matching Updated-AI-Insight UI */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mt-2">
           <div className="flex items-start gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/financials')} className="mt-1">
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </Button>
             <div>
               <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
                 {data.name}
@@ -124,11 +154,18 @@ const FinancialAccountDetails = () => {
             </div>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => navigate(`/financials/${data.id}/edit`)} className="gap-2 bg-white">
+            <Button 
+              className="bg-purple-600 hover:bg-purple-700 text-white gap-2 shadow-sm"
+              onClick={handleGenerateInsights}
+            >
+              <Brain className="w-4 h-4" />
+              View Strategic Insights
+            </Button>
+            <Button variant="outline" onClick={() => navigate(`/financials/${data.id}/edit`, { state: { backUrl } })} className="gap-2 bg-white">
               <Pencil className="w-4 h-4" />
               Edit Account
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => navigate(`/financials/${data.id}/projects/new`)}>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => navigate(`/financials/${data.id}/projects/new`, { state: { backUrl } })}>
               <Plus className="w-4 h-4" />
               Add Project
             </Button>
@@ -234,7 +271,7 @@ const FinancialAccountDetails = () => {
               <Card
                 key={project.id}
                 className="group hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer border-blue-100 hover:border-blue-300 border-t-4 border-t-blue-600 bg-gradient-to-br from-white to-blue-50/30"
-                onClick={() => navigate(`/financials/${data.id}/projects/${project.id}`)}
+                onClick={() => navigate(`/financials/${data.id}/projects/${project.id}`, { state: { backUrl } })}
               >
                   <CardHeader className="p-4 pb-3 border-b border-blue-100/50 bg-gradient-to-r from-blue-50/50 to-transparent">
                     <div className="flex items-start justify-between gap-2">
@@ -256,7 +293,7 @@ const FinancialAccountDetails = () => {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => navigate(`/financials/${data.id}/projects/${project.id}/edit`)}>
+                                <DropdownMenuItem onClick={() => navigate(`/financials/${data.id}/projects/${project.id}/edit`, { state: { backUrl } })}>
                                     Edit Project
                                 </DropdownMenuItem>
                                 <AlertDialog>

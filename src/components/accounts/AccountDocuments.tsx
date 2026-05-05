@@ -39,6 +39,34 @@ import {
   Trash2,
   Info
 } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+
+const parseStakeholder = (s: string) => {
+  let name = s;
+  let detail = '-';
+  
+  if (s.includes(':')) {
+    const parts = s.split(':');
+    name = parts[0].trim();
+    detail = parts.slice(1).join(':').trim();
+  } else if (s.includes('(') && s.includes(')')) {
+    const openParen = s.lastIndexOf('(');
+    const closeParen = s.lastIndexOf(')');
+    if (openParen !== -1 && closeParen > openParen) {
+      name = s.substring(0, openParen).trim();
+      detail = s.substring(openParen + 1, closeParen).trim();
+    }
+  }
+  
+  return { name, detail };
+};
 
 interface Document {
   id: string;
@@ -190,23 +218,24 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
         objectives: (Array.isArray(objectives) ? objectives.map(o => formatValue(o)) : [formatValue(objectives)])
           .filter(o => o.length > 5 && !/^\d+$/.test(o.replace(/[.\s]/g, ''))),
         stakeholders: (Array.isArray(stakeholders) ? stakeholders.map(s => formatValue(s)) : [formatValue(stakeholders)])
+          .flatMap(s => s.split('. ').filter(p => p.trim().length > 0))
           .filter(s => s.length > 2 && !/^\d+$/.test(s.replace(/[.\s]/g, ''))),
-        insights: filteredInsights.slice(0, 6)
+        insights: filteredInsights
       };
 
       // Special handling for WSR-reports
       if (category === 'wsr-reports' || data.document_type === 'WSR') {
         doc.wsrData = {
-          projectName: formatValue(content.project_overview_and_reporting_period?.project_name),
-          client: formatValue(content.project_overview_and_reporting_period?.client),
-          reportingPeriod: formatValue(content.project_overview_and_reporting_period?.reporting_period),
+          projectName: formatValue(content.project_overview?.project_name || content.project_overview_and_reporting_period?.project_name),
+          client: formatValue(content.project_overview?.client || content.project_overview_and_reporting_period?.client),
+          reportingPeriod: formatValue(content.project_overview?.reporting_period || content.project_overview_and_reporting_period?.reporting_period),
           status: formatValue(content.overall_project_status),
-          accomplishments: Array.isArray(content.key_accomplishments_and_milestones_achieved_this_week)
-            ? content.key_accomplishments_and_milestones_achieved_this_week.map((v: any) => formatValue(v))
-            : [formatValue(content.key_accomplishments_and_milestones_achieved_this_week)],
-          upcomingTasks: Array.isArray(content.upcoming_tasks_and_planned_activities_for_next_week)
-            ? content.upcoming_tasks_and_planned_activities_for_next_week.map((v: any) => formatValue(v))
-            : [formatValue(content.upcoming_tasks_and_planned_activities_for_next_week)],
+          accomplishments: Array.isArray(content.key_accomplishments_and_milestones || content.key_accomplishments_and_milestones_achieved_this_week)
+            ? (content.key_accomplishments_and_milestones || content.key_accomplishments_and_milestones_achieved_this_week).map((v: any) => formatValue(v))
+            : [formatValue(content.key_accomplishments_and_milestones || content.key_accomplishments_and_milestones_achieved_this_week)],
+          upcomingTasks: Array.isArray(content.upcoming_tasks_and_planned_activities || content.upcoming_tasks_and_planned_activities_for_next_week)
+            ? (content.upcoming_tasks_and_planned_activities || content.upcoming_tasks_and_planned_activities_for_next_week).map((v: any) => formatValue(v))
+            : [formatValue(content.upcoming_tasks_and_planned_activities || content.upcoming_tasks_and_planned_activities_for_next_week)],
           risks: Array.isArray(content.risks_and_issues_identified)
             ? content.risks_and_issues_identified.map((v: any) => formatValue(v))
             : [formatValue(content.risks_and_issues_identified)],
@@ -565,14 +594,14 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card className="rounded-[2rem] border-slate-100 shadow-none hover:shadow-md hover:border-blue-100 transition-all duration-300">
+                        <Card className="rounded-[2rem] border-slate-100 shadow-none hover:shadow-md hover:border-blue-100 transition-all duration-300 md:col-span-2">
                           <CardHeader className="pb-3 px-6 pt-6">
                             <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-slate-800">
                               <Target className="w-4 h-4 text-emerald-500" />
                               Key Objectives
                             </CardTitle>
                           </CardHeader>
-                          <CardContent className="px-6 pb-6">
+                          <CardContent className="px-8 pb-8">
                             <ul className="space-y-3">
                               {activeDoc.objectives.map((obj, i) => (
                                 <li key={i} className="flex gap-3 text-sm text-slate-600 font-medium leading-tight">
@@ -584,20 +613,45 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
                           </CardContent>
                         </Card>
 
-                        <Card className="rounded-[2rem] border-slate-100 shadow-none hover:shadow-md hover:border-blue-100 transition-all duration-300">
-                          <CardHeader className="pb-3 px-6 pt-6">
-                            <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-slate-800">
-                              <Users className="w-4 h-4 text-amber-500" />
+                        <Card className="rounded-[2rem] border-slate-100 shadow-none hover:shadow-md hover:border-blue-100 transition-all duration-300 md:col-span-2">
+                          <CardHeader className="pb-3 px-8 pt-8">
+                            <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-3 text-slate-800">
+                              <div className="p-2 bg-amber-50 rounded-xl">
+                                <Users className="w-4 h-4 text-amber-500" />
+                              </div>
                               Identified Stakeholders
                             </CardTitle>
                           </CardHeader>
-                          <CardContent className="px-6 pb-6">
-                            <div className="flex flex-wrap gap-2">
-                              {activeDoc.stakeholders.map((s, i) => (
-                                <Badge key={i} variant="secondary" className="px-3 py-1 rounded-xl bg-slate-100 text-slate-600 border-none font-bold text-xs hover:bg-amber-50 hover:text-amber-700 transition-colors">
-                                  {s}
-                                </Badge>
-                              ))}
+                          <CardContent className="px-8 pb-8">
+                            <div className="rounded-2xl border border-slate-100 overflow-hidden bg-slate-50/30">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow className="bg-slate-50 border-slate-100 hover:bg-slate-50">
+                                    <TableHead className="w-[40%] text-[10px] font-black uppercase tracking-widest text-slate-400 h-10">Member / Team</TableHead>
+                                    <TableHead className="w-[60%] text-[10px] font-black uppercase tracking-widest text-slate-400 h-10">Role / Count / Allocation</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {activeDoc.stakeholders.map((s, i) => {
+                                    const { name, detail } = parseStakeholder(s);
+                                    return (
+                                      <TableRow key={i} className="border-slate-100 hover:bg-white transition-colors group">
+                                        <TableCell className="py-4">
+                                          <div className="flex items-center gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-amber-400 shrink-0 shadow-sm" />
+                                            <span className="font-bold text-slate-800 tracking-tight">{name}</span>
+                                          </div>
+                                        </TableCell>
+                                        <TableCell className="py-4">
+                                          <Badge variant="secondary" className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-slate-600 font-bold text-[10px] uppercase group-hover:bg-amber-50 group-hover:text-amber-700 transition-colors">
+                                            {detail}
+                                          </Badge>
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
                             </div>
                           </CardContent>
                         </Card>

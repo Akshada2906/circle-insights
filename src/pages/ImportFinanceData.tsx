@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,8 @@ interface FileData {
 
 const ImportFinanceData = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const backUrl = location.state?.backUrl || '/financials';
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<DataType>('pmo');
   const [files, setFiles] = useState<FileData[]>([]);
@@ -130,7 +132,7 @@ const ImportFinanceData = () => {
         
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/financials')} className="rounded-full shadow-sm bg-white hover:bg-gray-100 p-2">
+          <Button variant="ghost" size="icon" onClick={() => navigate(backUrl)} className="rounded-full shadow-sm bg-white hover:bg-gray-100 p-2">
             <ArrowLeft className="h-5 w-5 text-gray-700" />
           </Button>
         </div>
@@ -149,7 +151,7 @@ const ImportFinanceData = () => {
             <button
               onClick={() => setActiveTab('revenue')}
               className={`px-12 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                activeTab === 'revenue' ? 'bg-blue-600 text-white shadow-md bg-white' : 'text-gray-600 hover:text-gray-900 bg-transparent'
+                activeTab === 'revenue' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 hover:text-gray-900 bg-transparent'
               }`}
             >
               Revenue Data

@@ -49,12 +49,16 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
 
     return (
         <Card
-            className="group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer border-blue-100 hover:border-blue-300 border-t-4 border-t-blue-600 bg-gradient-to-br from-white to-blue-100/40"
+            className="group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer border-blue-100 hover:border-blue-300 border-t-4 border-t-blue-600 bg-gradient-to-br from-white to-blue-100/40 relative"
             onClick={handleCardClick}
         >
+            <div className="absolute top-3 right-12 z-10 pointer-events-none">
+                <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50 shadow-sm">Sales Account</Badge>
+            </div>
+            
             <CardHeader className="pb-3 border-b border-blue-100/50 bg-gradient-to-r from-blue-50/50 to-transparent">
                 <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div className="flex items-start gap-3 flex-1 min-w-0 pr-28">
                         <div className="p-2 bg-blue-100/50 rounded-lg shrink-0 text-blue-600">
                             <Building2 className="w-5 h-5" />
                         </div>

@@ -55,6 +55,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { MainLayout } from '@/components/layout/MainLayout';
 import type { Account } from '@/types/finance-database';
+import { FinancialAccountCard } from '@/components/accounts/FinancialAccountCard';
 
 const Financials = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -324,113 +325,20 @@ const Financials = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-          {displayedAccounts.map((p) => {
-            const totalRev = p.current_revenue || p.total_revenue || 0;
-            const aiRev = p.ai_revenue || 0;
-            const penetration = p.ai_penetration_pct || 0;
-
-            return (
-              <Card
-                key={p.id}
-                className="group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer border-blue-100 hover:border-blue-300 border-t-4 border-t-blue-600 bg-gradient-to-br from-white to-blue-100/40"
-                onClick={() => navigate(`/financials/${p.id}`)}
-              >
-                <CardHeader className="pb-3 border-b border-blue-100/50 bg-gradient-to-r from-blue-50/50 to-transparent">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <div className="p-2 bg-blue-100/50 rounded-lg shrink-0 text-blue-600">
-                        <Building2 className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold truncate text-lg text-blue-950">{p.name}</h3>
-                          {p.active_project_count > 0 ? (
-                            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px] h-5 px-1.5 font-bold uppercase tracking-wider">Active</Badge>
-                          ) : (
-                            <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px] h-5 px-1.5 font-bold uppercase tracking-wider">Inactive</Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 hover:bg-blue-100/50 text-blue-900/40 hover:text-blue-900">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/financials/${p.id}/edit`); }}>
-                          Edit Account
-                        </DropdownMenuItem>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-500">
-                              Delete Account
-                            </DropdownMenuItem>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Account</AlertDialogTitle>
-                              <AlertDialogDescription>Are you sure you want to delete <strong>{p.name}</strong>? This action cannot be undone.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={async (e) => { e.stopPropagation(); try { await deleteFinanceAccount(p.id); setAccounts(prev => prev.filter(a => a.id !== p.id)); } catch (err) { console.error(err); } }}>Delete</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-4 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Delivery Unit</p>
-                      <p className="text-xs font-bold text-slate-700 truncate" title={p.delivery_unit?.name}>{p.delivery_unit?.name || 'Unassigned'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Account Manager</p>
-                      <p className="text-xs font-bold text-slate-700 truncate" title={p.account_manager}>{p.account_manager || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Current Revenue</p>
-                      <p className="text-xs font-bold text-slate-900">{formatCurrency(totalRev)}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">AI Revenue</p>
-                      <p className="text-xs font-bold text-emerald-600">{formatCurrency(aiRev)}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Active Projects</p>
-                      <p className="text-xs font-bold text-blue-600 px-2 py-0.5 bg-blue-50 rounded-md w-fit border border-blue-100">{p.active_project_count || 0}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Inactive Projects</p>
-                      <p className="text-xs font-bold text-slate-500 px-2 py-0.5 bg-slate-50 rounded-md w-fit border border-slate-200">{p.inactive_project_count || 0}</p>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-blue-50">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">AI Penetration</span>
-                      <span className="text-[10px] font-bold text-blue-700">{penetration.toFixed(1)}%</span>
-                    </div>
-                    <div className="w-full bg-blue-100/50 rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className="bg-blue-600 h-full transition-all duration-1000"
-                        style={{ width: `${Math.min(penetration, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-2 text-[10px] text-slate-400 font-medium">
-                    <span>Total Projects: {p.project_count || 0}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {displayedAccounts.map((p) => (
+            <FinancialAccountCard 
+              key={p.id} 
+              account={p} 
+              onDelete={async (id) => {
+                try {
+                  await deleteFinanceAccount(id);
+                  setAccounts(prev => prev.filter(a => a.id !== id));
+                } catch (err) {
+                  console.error(err);
+                }
+              }}
+            />
+          ))}
           {filteredAccounts.length === 0 && !loadingAccounts && (
             <div className="col-span-full py-24 text-center text-slate-400 italic bg-white rounded-2xl border border-dashed border-slate-200">
               No accounts found matching your search.

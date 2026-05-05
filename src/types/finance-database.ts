@@ -21,6 +21,7 @@ export interface Account {
   id: string;
   name: string;
   delivery_unit_id: string;
+  private_equity_id?: string;
   account_manager?: string;
   customer_overview?: string;
   ai_recommendations?: string;

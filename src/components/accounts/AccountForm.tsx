@@ -112,7 +112,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
         onSubmit(submissionData);
     };
 
-    const TABS = ['summary', 'strategy', 'stakeholders', 'competition-readiness', 'roadmaps', 'documents'];
+    const TABS = ['summary', 'roadmaps', 'documents'];
     const [activeTab, setActiveTab] = useState('summary');
 
     const handleNext = () => {
@@ -136,7 +136,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full relative">
-                <TabsList className="grid grid-cols-6 w-full gap-2 h-auto sticky top-0 z-50 bg-slate-50 py-4 border-b rounded-none shadow-sm">
+                <TabsList className="grid grid-cols-3 w-full gap-2 h-auto sticky top-0 z-50 bg-slate-50 py-4 border-b rounded-none shadow-sm">
                     <TabsTrigger
                         value="summary"
                         className="tab-blue py-3 text-sm font-semibold transition-all rounded-lg flex items-center justify-center gap-2"
@@ -146,33 +146,9 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                         Summary
                     </TabsTrigger>
                     <TabsTrigger
-                        value="strategy"
-                        className="tab-purple py-3 text-sm font-semibold transition-all rounded-lg flex items-center justify-center gap-2"
-                        disabled={!account && 1 > currentTabIndex}
-                    >
-                        <Target className="w-4 h-4" />
-                        Strategy
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="stakeholders"
-                        className="tab-indigo py-3 text-sm font-semibold transition-all rounded-lg flex items-center justify-center gap-2"
-                        disabled={!account && 2 > currentTabIndex}
-                    >
-                        <Users className="w-4 h-4" />
-                        Stakeholders
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="competition-readiness"
-                        className="tab-rose py-3 text-sm font-semibold transition-all rounded-lg flex items-center justify-center gap-2"
-                        disabled={!account && 3 > currentTabIndex}
-                    >
-                        <Swords className="w-4 h-4" />
-                        Competition & Readiness
-                    </TabsTrigger>
-                    <TabsTrigger
                         value="roadmaps"
                         className="tab-emerald py-3 text-sm font-semibold transition-all rounded-lg flex items-center justify-center gap-2"
-                        disabled={!account && 4 > currentTabIndex}
+                        disabled={!account && 1 > currentTabIndex}
                     >
                         <Map className="w-4 h-4" />
                         Roadmaps
@@ -180,7 +156,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                     <TabsTrigger
                         value="documents"
                         className="tab-amber py-3 text-sm font-semibold transition-all rounded-lg flex items-center justify-center gap-2"
-                        disabled={!account && 5 > currentTabIndex}
+                        disabled={!account && 2 > currentTabIndex}
                     >
                         <FileText className="w-4 h-4" />
                         Documents
@@ -329,9 +305,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
 
                             </Card>
                         </div>
-                    </TabsContent>
-
-                    <TabsContent value="strategy" className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+                        {/* strategy Section */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                             <Card className="h-full shadow-sm hover:shadow-md transition-all border border-slate-200/60">
                                 <CardHeader className="bg-gradient-to-r from-purple-50/80 to-transparent border-b border-purple-100 pb-4">
@@ -422,9 +396,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                             </Card>
 
                         </div>
-                    </TabsContent>
-
-                    <TabsContent value="stakeholders" className="space-y-6 animate-in fade-in duration-500">
+                        {/* stakeholders Section */}
                         <Card className="shadow-sm border border-slate-200/60 overflow-hidden">
                             <CardHeader className="bg-slate-50/50 border-b border-slate-200 pb-4">
                                 <div className="flex items-center justify-between">
@@ -511,9 +483,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                                 )}
                             </CardContent>
                         </Card>
-                    </TabsContent>
-
-                    <TabsContent value="competition-readiness" className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+                        {/* competition-readiness Section */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                             <Card className="border-t-4 border-t-rose-500 shadow-sm hover:shadow-md transition-all h-full border-x border-b border-slate-200/60">
                                 <CardHeader className="bg-gradient-to-r from-rose-50/80 to-transparent border-b border-rose-100 pb-4">

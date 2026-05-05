@@ -22,17 +22,22 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+
+import { PEAccountCard } from './PEAccountCard';
 
 interface AccountsListProps {
     accounts: AccountWithProjects[];
+    peFirms?: any[];
     onEdit?: (accountId: string) => void;
     onDelete?: (accountId: string) => void;
     onRefresh?: () => Promise<void>;
 }
 
-export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) {
+export function AccountsList({ accounts, peFirms = [], onEdit, onDelete }: AccountsListProps) {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
+    const [filterType, setFilterType] = useState<'All' | 'Sales' | 'PE'>('All');
     const [showAll, setShowAll] = useState(false);
 
     const parseCurrency = (val: string | undefined) => {
@@ -40,23 +45,44 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
         return parseFloat(val.replace(/[$,]/g, '')) || 0;
     };
 
-    const sortedAccounts = [...accounts].sort((a, b) => 
+    const sortedAccounts = [...accounts].sort((a, b) =>
         parseCurrency(b.last_year_business_done) - parseCurrency(a.last_year_business_done)
     );
 
-    const filteredAccounts = sortedAccounts.filter((account) => {
-        const matchesSearch =
-            account.account_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            account.account_id.toLowerCase().includes(searchQuery.toLowerCase());
+    const salesAccounts = sortedAccounts.map(acc => ({
+        id: acc.account_id,
+        name: acc.account_name,
+        type: 'Sales',
+        originalData: acc,
+    }));
 
-        return matchesSearch;
+    const privateEquities = (peFirms || []).map(firm => ({
+        id: firm.id,
+        name: firm.name,
+        type: 'PE',
+        originalData: firm,
+    }));
+
+    const combinedList = [...salesAccounts, ...privateEquities];
+
+    const filteredList = combinedList.filter((item) => {
+        const matchesSearch = item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              item.id.toLowerCase().includes(searchQuery.toLowerCase());
+
+        if (!matchesSearch) return false;
+        
+        if (filterType === 'Sales' && item.type !== 'Sales') return false;
+        if (filterType === 'PE' && item.type !== 'PE') return false;
+
+        return true;
     });
 
-    const displayedAccounts = (showAll || searchQuery !== '') 
-        ? filteredAccounts 
-        : filteredAccounts.slice(0, 10);
+    const displayedItems = (showAll || searchQuery !== '' || filterType !== 'All')
+        ? filteredList
+        : filteredList.slice(0, 10);
 
     const handleExportExcel = async () => {
+        const filteredAccounts = filteredList.filter(item => item.type === 'Sales').map(item => item.originalData);
         if (filteredAccounts.length === 0) return;
 
         // Fetch all stakeholders to include in the export
@@ -260,11 +286,12 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
     };
 
     const handleExportPDF = () => {
-        if (filteredAccounts.length === 0) return;
+        const filteredAccountsExport = filteredList.filter(item => item.type === 'Sales').map(item => item.originalData);
+        if (filteredAccountsExport.length === 0) return;
 
         const allTables: { title: string; data: any[]; columns: { header: string; dataKey: string }[] }[] = [];
 
-        filteredAccounts.forEach((account, index) => {
+        filteredAccountsExport.forEach((account, index) => {
             const generalData = [{
                 'Account': account.account_name,
                 'Domain': account.domain || '-',
@@ -337,9 +364,9 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-extrabold tracking-tight text-slate-950">
-                        Sales Accounts
+                        Accounts
                     </h1>
-                    <p className="text-slate-500 mt-1">Manage your sales accounts and strategic customer relationships</p>
+                    <p className="text-slate-500 mt-1">Manage your accounts and strategic customer relationships</p>
                 </div>
                 <div className="flex gap-2">
                     <Button onClick={() => navigate('/accounts/new')} className="gap-2">
@@ -372,33 +399,67 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
                 <div className="relative flex-1 animate-in fade-in duration-300 w-full">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input
-                        placeholder="Search accounts by name..."
+                        placeholder="Search sales or private equity accounts..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-10 h-11 border-slate-200 bg-white"
                     />
                 </div>
-                {filteredAccounts.length > 10 && searchQuery === "" && (
+                
+                <div className="flex bg-slate-100 p-1 rounded-lg self-stretch sm:self-auto shrink-0 shadow-inner overflow-x-auto">
                     <Button 
-                        variant="outline" 
+                       variant="ghost" 
+                       size="sm" 
+                       onClick={() => setFilterType('All')}
+                       className={cn("px-4 rounded-md transition-all whitespace-nowrap", filterType === 'All' ? 'bg-white text-slate-900 shadow-sm hover:bg-white font-medium' : 'text-slate-600 hover:text-slate-900')}
+                    >
+                       All
+                    </Button>
+                    <Button 
+                       variant="ghost" 
+                       size="sm" 
+                       onClick={() => setFilterType('Sales')}
+                       className={cn("px-4 rounded-md transition-all whitespace-nowrap", filterType === 'Sales' ? 'bg-blue-50 text-blue-700 shadow-sm hover:bg-blue-50 font-medium' : 'text-slate-600 hover:text-blue-600')}
+                    >
+                       Sales
+                    </Button>
+                    <Button 
+                       variant="ghost" 
+                       size="sm" 
+                       onClick={() => setFilterType('PE')}
+                       className={cn("px-4 rounded-md transition-all whitespace-nowrap", filterType === 'PE' ? 'bg-purple-50 text-purple-700 shadow-sm hover:bg-purple-50 font-medium' : 'text-slate-600 hover:text-purple-600')}
+                    >
+                       Private Equity
+                    </Button>
+                </div>
+                {filteredList.length > 10 && searchQuery === "" && filterType === 'All' && (
+                    <Button
+                        variant="outline"
                         onClick={() => setShowAll(!showAll)}
                         className="h-11 px-6 font-semibold border-slate-200 hover:border-blue-300 hover:bg-white text-blue-600 transition-all whitespace-nowrap shadow-sm"
                     >
-                        {showAll ? "Show Top 10 Only" : `View All Sales Accounts (${filteredAccounts.length})`}
+                        {showAll ? "Show Top 10 Only" : `View All (${filteredList.length})`}
                     </Button>
                 )}
             </div>
 
             {/* Accounts Grid */}
-            {displayedAccounts.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {displayedAccounts.map((account) => (
-                        <AccountCard
-                            key={account.account_id}
-                            account={account}
-                            onEdit={onEdit}
-                            onDelete={onDelete}
-                        />
+            {displayedItems.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
+                    {displayedItems.map((item) => (
+                        item.type === 'Sales' ? (
+                            <AccountCard
+                                key={`sales-${item.id}`}
+                                account={item.originalData}
+                                onEdit={onEdit}
+                                onDelete={onDelete}
+                            />
+                        ) : (
+                            <PEAccountCard
+                                key={`pe-${item.id}`}
+                                firm={item.originalData}
+                            />
+                        )
                     ))}
                 </div>
             ) : (
