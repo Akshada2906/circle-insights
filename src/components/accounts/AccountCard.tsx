@@ -53,7 +53,9 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
             onClick={handleCardClick}
         >
             <div className="absolute top-3 right-12 z-10 pointer-events-none">
-                <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50 shadow-sm">Sales Account</Badge>
+                <Badge variant="outline" className={cn("shadow-sm font-semibold", account.private_equity_id ? "border-purple-300 text-purple-700 bg-purple-50" : "border-blue-300 text-blue-700 bg-blue-50")}>
+                    {account.private_equity_id ? "PE Portfolio Account" : "Sales Account"}
+                </Badge>
             </div>
             
             <CardHeader className="pb-3 border-b border-blue-100/50 bg-gradient-to-r from-blue-50/50 to-transparent">

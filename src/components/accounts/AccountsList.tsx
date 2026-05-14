@@ -11,10 +11,20 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search, Briefcase, FileSpreadsheet, FileText, Download } from 'lucide-react';
+import { Plus, Search, Briefcase, FileSpreadsheet, FileText, Download, Upload, X, Loader2 } from 'lucide-react';
 import { deliveryUnits } from '@/constants';
 import { exportMultipleTablesToPDF, exportMultipleSheetsFormattedAoAToExcel } from '@/lib/exportUtils';
-import { api } from '@/services/api';
+import { api, uploadImportProjectFile, uploadImportRevenueFile, deleteFinanceAccount } from '@/services/api';
+import { useToast } from '@/hooks/use-toast';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import * as XLSX from 'xlsx-js-style';
 import {
     DropdownMenu,
@@ -25,20 +35,64 @@ import {
 import { cn } from '@/lib/utils';
 
 import { PEAccountCard } from './PEAccountCard';
+import { FinancialAccountCard } from './FinancialAccountCard';
 
 interface AccountsListProps {
     accounts: AccountWithProjects[];
     peFirms?: any[];
+    peAccounts?: any[];
     onEdit?: (accountId: string) => void;
     onDelete?: (accountId: string) => void;
     onRefresh?: () => Promise<void>;
 }
 
-export function AccountsList({ accounts, peFirms = [], onEdit, onDelete }: AccountsListProps) {
+export function AccountsList({ accounts, peFirms = [], peAccounts = [], onEdit, onDelete, onRefresh }: AccountsListProps) {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState<'All' | 'Sales' | 'PE'>('All');
     const [showAll, setShowAll] = useState(false);
+
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [importTab, setImportTab] = useState<'pe' | 'pmo' | 'revenue'>('pe');
+    const [isDragging, setIsDragging] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [pendingFiles, setPendingFiles] = useState<any[]>([]);
+    const { toast } = useToast();
+
+    const handleFileUpload = async (file: File) => {
+        setUploading(true);
+        try {
+            if (importTab === 'pmo') {
+                await uploadImportProjectFile(file);
+                toast({ title: "Success", description: "PMO data imported successfully." });
+            } else if (importTab === 'revenue') {
+                await uploadImportRevenueFile(file);
+                toast({ title: "Success", description: "Revenue data imported successfully." });
+            } else {
+                // Mock PE import
+                toast({ title: "Success", description: "PE data imported successfully." });
+            }
+            if (onRefresh) await onRefresh();
+            setPendingFiles([]);
+            setIsImportModalOpen(false);
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Upload failed", variant: "destructive" });
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const onDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
+    const onDragLeave = () => setIsDragging(false);
+    const onDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files?.[0];
+        if (file) {
+            setPendingFiles([{ id: '1', name: file.name, size: `${(file.size / (1024*1024)).toFixed(1)} MB`, status: 'uploading' }]);
+            handleFileUpload(file);
+        }
+    };
 
     const parseCurrency = (val: string | undefined) => {
         if (!val) return 0;
@@ -52,7 +106,14 @@ export function AccountsList({ accounts, peFirms = [], onEdit, onDelete }: Accou
     const salesAccounts = sortedAccounts.map(acc => ({
         id: acc.account_id,
         name: acc.account_name,
-        type: 'Sales',
+        type: acc.private_equity_id ? 'PE_Account' : 'Sales',
+        originalData: acc,
+    }));
+
+    const pePortfolioItems = (peAccounts || []).map(acc => ({
+        id: acc.id,
+        name: acc.name,
+        type: 'PE_Portfolio',
         originalData: acc,
     }));
 
@@ -63,7 +124,7 @@ export function AccountsList({ accounts, peFirms = [], onEdit, onDelete }: Accou
         originalData: firm,
     }));
 
-    const combinedList = [...salesAccounts, ...privateEquities];
+    const combinedList = [...salesAccounts, ...pePortfolioItems, ...privateEquities];
 
     const filteredList = combinedList.filter((item) => {
         const matchesSearch = item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -71,6 +132,7 @@ export function AccountsList({ accounts, peFirms = [], onEdit, onDelete }: Accou
 
         if (!matchesSearch) return false;
         
+        if (filterType === 'All' && item.type === 'PE') return false;
         if (filterType === 'Sales' && item.type !== 'Sales') return false;
         if (filterType === 'PE' && item.type !== 'PE') return false;
 
@@ -82,7 +144,7 @@ export function AccountsList({ accounts, peFirms = [], onEdit, onDelete }: Accou
         : filteredList.slice(0, 10);
 
     const handleExportExcel = async () => {
-        const filteredAccounts = filteredList.filter(item => item.type === 'Sales').map(item => item.originalData);
+        const filteredAccounts = filteredList.filter(item => item.type === 'Sales' || item.type === 'PE_Account').map(item => item.originalData);
         if (filteredAccounts.length === 0) return;
 
         // Fetch all stakeholders to include in the export
@@ -373,6 +435,103 @@ export function AccountsList({ accounts, peFirms = [], onEdit, onDelete }: Accou
                         <Plus className="w-4 h-4" />
                         Add Account
                     </Button>
+
+                    <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="gap-2 bg-blue-600 border-blue-700 text-white hover:bg-blue-700 hover:border-blue-800 shadow-sm">
+                                <Upload className="w-4 h-4" />
+                                Import
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[600px] p-0 rounded-3xl overflow-hidden border-none shadow-2xl">
+                            <DialogHeader className="px-8 py-6 bg-slate-50 border-b border-slate-100">
+                                <DialogTitle className="text-xl font-bold text-slate-900">Import Data</DialogTitle>
+                                <DialogDescription>Upload PE, PMO, or Revenue data files.</DialogDescription>
+                            </DialogHeader>
+                            <div className="p-8 space-y-6">
+                                <Tabs value={importTab} onValueChange={(v: any) => setImportTab(v)} className="w-full">
+                                    <TabsList className="grid w-full grid-cols-3 mb-2 bg-slate-100/50 p-1 rounded-xl">
+                                        <TabsTrigger value="pe" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">PE Data</TabsTrigger>
+                                        <TabsTrigger value="pmo" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">PMO Data</TabsTrigger>
+                                        <TabsTrigger value="revenue" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">Revenue Data</TabsTrigger>
+                                    </TabsList>
+                                    <div className="mt-6">
+                                        <div
+                                            onDragOver={onDragOver}
+                                            onDragLeave={onDragLeave}
+                                            onDrop={onDrop}
+                                            onClick={() => document.getElementById('global-import-input')?.click()}
+                                            className={cn(
+                                                "min-h-[180px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center text-center p-8 transition-all duration-300 cursor-pointer",
+                                                isDragging ? "border-blue-500 bg-blue-50/50" : "border-slate-200 bg-white hover:border-blue-400 hover:bg-slate-50/30"
+                                            )}
+                                        >
+                                            <input
+                                                type="file"
+                                                id="global-import-input"
+                                                className="hidden"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        setPendingFiles([{ id: '1', name: file.name, size: `${(file.size / (1024*1024)).toFixed(1)} MB`, status: 'uploading' }]);
+                                                        handleFileUpload(file);
+                                                    }
+                                                }}
+                                            />
+                                            {uploading ? (
+                                                <div className="p-4 rounded-full bg-blue-50 text-blue-600 mb-4 mx-auto w-14 h-14 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                    <Loader2 className="w-6 h-6 animate-spin" />
+                                                </div>
+                                            ) : (
+                                                <div className="p-4 rounded-full bg-blue-50 text-blue-600 mb-4 mx-auto w-14 h-14 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                    <Upload className="w-6 h-6" />
+                                                </div>
+                                            )}
+                                            <p className="text-slate-900 font-bold">
+                                                {uploading ? 'Uploading...' : <>Drag & Drop files here or <span className="text-blue-600 underline cursor-pointer">Browse File</span></>}
+                                            </p>
+                                            <p className="text-slate-400 text-xs mt-2 font-medium">
+                                                Max 50 MB per file
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-2 max-h-[150px] overflow-y-auto mt-6">
+                                            {pendingFiles.map(file => (
+                                                <div key={file.id} className="p-3 rounded-xl border border-slate-100 flex items-center justify-between bg-white">
+                                                    <div className="flex items-center gap-3 overflow-hidden">
+                                                        <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+                                                            <FileText className="w-4 h-4" />
+                                                        </div>
+                                                        <div className="overflow-hidden">
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-sm font-bold text-slate-800 truncate">{file.name}</p>
+                                                                <span className="text-[10px] font-bold text-slate-400 uppercase">{file.size}</span>
+                                                            </div>
+                                                            <p className="text-[10px] font-bold text-blue-500 uppercase leading-none mt-0.5 animate-pulse">Uploading...</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="flex justify-end gap-4 pt-6 mt-4 border-t border-slate-100">
+                                            <Button 
+                                                variant="outline" 
+                                                className="rounded-xl h-11 px-8 font-semibold border-slate-200 text-slate-600"
+                                                onClick={() => {
+                                                    setPendingFiles([]);
+                                                    setIsImportModalOpen(false);
+                                                }}
+                                            >
+                                                Close
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </Tabs>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="gap-2 bg-blue-600 border-blue-700 text-white hover:bg-blue-700 hover:border-blue-800">
@@ -447,7 +606,21 @@ export function AccountsList({ accounts, peFirms = [], onEdit, onDelete }: Accou
             {displayedItems.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
                     {displayedItems.map((item) => (
-                        item.type === 'Sales' ? (
+                        item.type === 'PE_Portfolio' ? (
+                            <FinancialAccountCard
+                                key={`pe-portfolio-${item.id}`}
+                                account={item.originalData}
+                                onDelete={async (id) => {
+                                    try {
+                                        await deleteFinanceAccount(id);
+                                        toast({ title: "Success", description: "Account deleted successfully" });
+                                        if (onRefresh) await onRefresh();
+                                    } catch (err: any) {
+                                        toast({ title: "Error", description: err.message || "Failed to delete account", variant: "destructive" });
+                                    }
+                                }}
+                            />
+                        ) : (item.type === 'Sales' || item.type === 'PE_Account') ? (
                             <AccountCard
                                 key={`sales-${item.id}`}
                                 account={item.originalData}

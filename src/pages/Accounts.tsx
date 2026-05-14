@@ -13,6 +13,7 @@ const Accounts = () => {
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [peFirms, setPeFirms] = useState<any[]>([]);
+    const [peAccounts, setPeAccounts] = useState<any[]>([]);
 
     useEffect(() => {
         refreshAccounts();
@@ -21,24 +22,25 @@ const Accounts = () => {
 
     const fetchFirms = async () => {
         try {
-          const [firmsData, accountsData] = await Promise.all([
-            getPrivateEquities(),
-            getFinanceAccounts()
-          ]);
-          
-          const enrichedFirms = firmsData.map((firm: any) => {
-             const firmAccounts = accountsData.filter((a: any) => a.private_equity_id === firm.id);
-             const totalRev = firmAccounts.reduce((sum: number, a: any) => sum + (a.current_revenue || a.total_revenue || 0), 0);
-             return {
-               ...firm,
-               portfolio_size: firmAccounts.length,
-               total_revenue: totalRev
-             };
-          });
+            const [firmsData, accountsData] = await Promise.all([
+                getPrivateEquities(),
+                getFinanceAccounts()
+            ]);
 
-          setPeFirms(enrichedFirms);
+            const enrichedFirms = firmsData.map((firm: any) => {
+                const firmAccounts = accountsData.filter((a: any) => a.private_equity_id === firm.id);
+                const totalRev = firmAccounts.reduce((sum: number, a: any) => sum + (a.current_revenue || a.total_revenue || 0), 0);
+                return {
+                    ...firm,
+                    portfolio_size: firmAccounts.length,
+                    total_revenue: totalRev
+                };
+            });
+
+            setPeFirms(enrichedFirms);
+            setPeAccounts(accountsData.filter((a: any) => a.private_equity_id));
         } catch (err) {
-          console.error('Failed to fetch PE firms:', err);
+            console.error('Failed to fetch PE firms:', err);
         }
     };
 
@@ -71,11 +73,10 @@ const Accounts = () => {
         }
     };
 
-    // Filter accounts if needed, but AccountsList handles internal filtering mostly
     return (
         <MainLayout>
             <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <AccountsList accounts={accounts} peFirms={peFirms} onDelete={handleDelete} onRefresh={refreshAccounts} />
+                <AccountsList accounts={accounts} peFirms={peFirms} peAccounts={peAccounts} onDelete={handleDelete} onRefresh={refreshAccounts} />
 
                 <ConfirmationDialog
                     open={isDeleteOpen}

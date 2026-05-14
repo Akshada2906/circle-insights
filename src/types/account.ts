@@ -9,6 +9,7 @@ export interface RoadmapVersion {
 export interface Account {
     account_id: string;
     account_name: string;
+    private_equity_id?: string;
     domain?: string;
     company_revenue?: string;
     know_customer_value_chain?: boolean;
@@ -21,6 +22,7 @@ export interface Account {
     target_projection_2026_accounts?: string;
     target_projection_2026_delivery?: string;
     current_pipeline_value?: string;
+    ytd_revenue?: string;
     revenue_attrition_possibility?: string;
     current_engagement_areas?: string;
     team_size?: string;
