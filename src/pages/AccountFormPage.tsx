@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { AccountForm } from '@/components/accounts/AccountForm';
@@ -8,11 +8,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useAccounts } from '@/contexts/AccountContext';
 import { ArrowLeft } from 'lucide-react';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
+import { getFinanceAccounts, getFinanceAccountById } from '@/services/api';
 
 const AccountFormPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { accounts, addAccount, updateAccount } = useAccounts();
+    const { accounts, addAccount, updateAccount, fetchAccount, getAccountById, fetchAccountStakeholders } = useAccounts();
     const { toast } = useToast();
 
     const [pendingUpdate, setPendingUpdate] = useState<Partial<Account> | null>(null);
@@ -20,14 +21,95 @@ const AccountFormPage = () => {
     const [isUpdating, setIsUpdating] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
 
-    const account = id ? accounts.find(a => a.account_id === id) : undefined;
+    // Finance data state for cross-referencing records
+    const [financeData, setFinanceData] = useState<any>(null);
+    const financeFetchedRef = useRef<string | null>(null);
+
+    // Fetch primary legacy account details
+    useEffect(() => {
+        if (id) {
+            fetchAccount(id);
+        }
+    }, [id, fetchAccount]);
+
+    const contextAccountInit = getAccountById(id || '');
+
+    // Fetch finance data by name or ID to establish parity with AccountDetails hydration logic
+    useEffect(() => {
+        if (!id) return;
+
+        const hasValidName = contextAccountInit?.account_name && contextAccountInit.account_name.trim() !== '';
+        if (financeFetchedRef.current === id && (financeData || hasValidName)) {
+            return;
+        }
+
+        const fetchFinance = async () => {
+            try {
+                const allFinanceAccounts = await getFinanceAccounts();
+                let match = allFinanceAccounts.find((a: any) => a.id === id);
+
+                if (!match && contextAccountInit?.account_name) {
+                    const searchName = contextAccountInit.account_name.trim().toLowerCase();
+                    if (searchName) {
+                        match = allFinanceAccounts.find((a: any) => {
+                            const financeName = (a.name || a.account_name || "").trim().toLowerCase();
+                            return financeName === searchName || financeName.includes(searchName) || searchName.includes(financeName);
+                        });
+                    }
+                }
+
+                if (match) {
+                    financeFetchedRef.current = id;
+                    const data = await getFinanceAccountById(match.id);
+                    setFinanceData(data);
+                } else {
+                    if (hasValidName) {
+                        financeFetchedRef.current = id;
+                    }
+                    setFinanceData(null);
+                }
+            } catch (error) {
+                console.error("Failed to fetch finance data in form page:", error);
+            }
+        };
+
+        fetchFinance();
+    }, [id, contextAccountInit?.account_name]);
+
+    // Resolve the true legacy dashboard account object by ID or by matching financeData.name
+    const resolvedContextAccount = useMemo(() => {
+        const byId = getAccountById(id || '');
+        if (byId && byId.account_name?.trim()) return byId;
+
+        if (financeData?.name) {
+            const searchName = financeData.name.trim().toLowerCase();
+            const byName = accounts.find(a => a.account_name?.trim().toLowerCase() === searchName);
+            if (byName) return byName;
+        }
+        return byId;
+    }, [id, getAccountById, financeData?.name, accounts]);
+
+    // Ensure stakeholders are loaded if they are missing
+    const realAccountId = resolvedContextAccount?.account_id;
+    const hasProfiles = resolvedContextAccount?.strategic_profiles && resolvedContextAccount.strategic_profiles.length > 0;
+    const stakeholdersFetchedRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        if (realAccountId && !hasProfiles && stakeholdersFetchedRef.current !== realAccountId) {
+            stakeholdersFetchedRef.current = realAccountId;
+            fetchAccountStakeholders(realAccountId);
+        }
+    }, [realAccountId, hasProfiles, fetchAccountStakeholders]);
+
+    const account = resolvedContextAccount;
     const isEditing = !!id;
 
     const confirmUpdate = async () => {
         if (!isEditing || !id || !pendingUpdate) return;
 
         setIsUpdating(true);
-        const success = await updateAccount(id, pendingUpdate);
+        const targetId = realAccountId || id;
+        const success = await updateAccount(targetId, pendingUpdate);
         setIsUpdating(false);
 
         if (success) {
@@ -47,7 +129,6 @@ const AccountFormPage = () => {
             const newAccount = {
                 ...accountData,
                 account_id: `acc-${Date.now()}`,
-                // Removed: account_health_score
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
                 projects: [],
@@ -63,6 +144,7 @@ const AccountFormPage = () => {
             }
         }
     };
+
     const handleCancel = () => {
         if (isEditing && id) {
             navigate(`/accounts/${id}`);

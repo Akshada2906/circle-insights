@@ -211,7 +211,7 @@ const Financials = () => {
                 <SlidersHorizontal className="w-4 h-4" /> Filters
                 {(statusFilter !== "All" || duFilter !== "All" || managerFilter !== "All" || revRange[0] > 0 || revRange[1] < maxPossibleRev || aiRevRange[0] > 0 || aiRevRange[1] < maxPossibleAiRev) && (
                   <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center bg-blue-100 text-blue-700 rounded-full">
-                    { [statusFilter !== "All", duFilter !== "All", managerFilter !== "All", (revRange[0] > 0 || revRange[1] < maxPossibleRev), (aiRevRange[0] > 0 || aiRevRange[1] < maxPossibleAiRev)].filter(Boolean).length }
+                    {[statusFilter !== "All", duFilter !== "All", managerFilter !== "All", (revRange[0] > 0 || revRange[1] < maxPossibleRev), (aiRevRange[0] > 0 || aiRevRange[1] < maxPossibleAiRev)].filter(Boolean).length}
                   </Badge>
                 )}
               </Button>
@@ -219,8 +219,8 @@ const Financials = () => {
             <PopoverContent className="w-80 p-5 space-y-6" align="start">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold text-slate-900 leading-none">Filters</h4>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => {
                     setStatusFilter("All");
@@ -326,9 +326,9 @@ const Financials = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
           {displayedAccounts.map((p) => (
-            <FinancialAccountCard 
-              key={p.id} 
-              account={p} 
+            <FinancialAccountCard
+              key={p.id}
+              account={p}
               onDelete={async (id) => {
                 try {
                   await deleteFinanceAccount(id);

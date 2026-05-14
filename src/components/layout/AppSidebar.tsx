@@ -38,7 +38,6 @@ interface NavItem {
 const mainNavItems: NavItem[] = [
   { title: 'Dashboard', icon: LayoutDashboard, href: '/' },
   { title: 'Accounts', icon: Briefcase, href: '/accounts' },
-  { title: 'Private Equity', icon: DollarSign, href: '/private-equity' },
   { title: 'My Calendar', icon: Calendar, href: '/calendar' },
   { title: 'Users', icon: Users, href: '/users' },
   { title: 'Circles', icon: Target, href: '/circles' },

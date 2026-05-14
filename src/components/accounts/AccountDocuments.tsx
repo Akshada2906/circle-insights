@@ -1,72 +1,35 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import {
-  FileSearch,
-  Upload,
-  Activity,
-  Target,
-  Users,
-  ChevronRight,
-  ShieldCheck,
-  BookOpen,
-  ClipboardCheck,
-  FileCheck,
-  LayoutGrid,
-  FileText,
-  AlertCircle,
-  Flag,
-  Calendar,
-  Briefcase,
-  TrendingDown,
-  TrendingUp,
-  AlertTriangle,
-  Clock,
-  Zap,
-  ShieldAlert,
-  PanelLeftClose,
-  PanelLeftOpen,
-  ChevronsLeft,
-  ChevronsRight
-} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/services/api';
 import {
-  Loader2,
-  CheckCircle2,
+  Upload,
+  FileText,
+  Search,
+  Eye,
+  Brain,
+  Download,
   Trash2,
+  X,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Activity,
+  Target,
+  Users,
+  Zap,
   Info
 } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-
-const parseStakeholder = (s: string) => {
-  let name = s;
-  let detail = '-';
-  
-  if (s.includes(':')) {
-    const parts = s.split(':');
-    name = parts[0].trim();
-    detail = parts.slice(1).join(':').trim();
-  } else if (s.includes('(') && s.includes(')')) {
-    const openParen = s.lastIndexOf('(');
-    const closeParen = s.lastIndexOf(')');
-    if (openParen !== -1 && closeParen > openParen) {
-      name = s.substring(0, openParen).trim();
-      detail = s.substring(openParen + 1, closeParen).trim();
-    }
-  }
-  
-  return { name, detail };
-};
 
 interface Document {
   id: string;
@@ -75,6 +38,7 @@ interface Document {
   type: string;
   date: string;
   desc?: string;
+  status: string;
   summary: string;
   objectives: string[];
   stakeholders: string[];
@@ -83,18 +47,20 @@ interface Document {
     text: string;
     color: string;
   }>;
+  rawContent?: any;
   wsrData?: {
-    projectName?: string;
     client?: string;
     reportingPeriod?: string;
     status?: string;
     accomplishments?: string[];
-    upcomingTasks?: string[];
-    risks?: string[];
-    blockers?: string[];
-    budgetStatus?: string;
-    summary?: string;
   };
+}
+
+interface PendingFile {
+  id: string;
+  file: File;
+  sizeStr: string;
+  isOverLimit: boolean;
 }
 
 interface AccountDocumentsProps {
@@ -103,77 +69,101 @@ interface AccountDocumentsProps {
 }
 
 const CATEGORIES = [
-  { id: 'wsr-reports', label: 'WSR Reports', icon: LayoutGrid, title: 'Weekly Status Reports' },
-  { id: 'code-quality', label: 'Code Quality', icon: ShieldCheck, title: 'Code Quality Documents' },
-  { id: 'tech-reviews', label: 'Tech Reviews', icon: ClipboardCheck, title: 'Technical Review Reports' },
-  { id: 'best-practices', label: 'Best Practices', icon: BookOpen, title: 'Engineering Best Practices' },
-  { id: 'sow-documents', label: 'SOW Documents', icon: FileCheck, title: 'Statement of Work Documents' }
+  { id: 'wsr-reports', label: 'WSR Reports', typeName: 'Weekly Status Report' },
+  { id: 'financial-statement', label: 'Financial Statement', typeName: 'Financial Statement' },
+  { id: 'legal-contract', label: 'Legal Contract', typeName: 'Legal Contract' },
+  { id: 'marketing', label: 'Marketing', typeName: 'Marketing' },
+  { id: 'invoice', label: 'Invoice', typeName: 'Invoice' },
+  { id: 'research', label: 'Research', typeName: 'Research' },
+  { id: 'code-quality', label: 'Code Quality', typeName: 'Code Quality Document' },
+  { id: 'tech-reviews', label: 'Tech Reviews', typeName: 'Technical Review' },
+  { id: 'best-practices', label: 'Best Practices', typeName: 'Best Practices' },
+  { id: 'sow-documents', label: 'SOW Documents', typeName: 'Statement of Work' }
 ];
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
 
 export function AccountDocuments({ accountId, readOnly = false }: AccountDocumentsProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [activeTab, setActiveTab] = useState('wsr-reports');
-  const [activeDocId, setActiveDocId] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isCategorySidebarCollapsed, setIsCategorySidebarCollapsed] = useState(false);
-  const [isFileSidebarCollapsed, setIsFileSidebarCollapsed] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  // Upload Form States
+  const [selectedType, setSelectedType] = useState('financial-statement');
+  const [shortDescription, setShortDescription] = useState('');
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Unified Modal State
+  const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
+
   const { toast } = useToast();
 
-  const filteredDocs = documents.filter(d => d.category === activeTab);
-  const activeDoc = filteredDocs.find(d => d.id === activeDocId) || (filteredDocs.length > 0 ? filteredDocs[0] : null);
+  const fetchAllDocuments = async () => {
+    if (!accountId) {
+      setDocuments([]);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const allDocs: Document[] = [];
+      const apiCategories = ['wsr-reports', 'code-quality', 'tech-reviews', 'best-practices', 'sow-documents'];
+      
+      for (const catId of apiCategories) {
+        try {
+          const data = await api.getDocument(accountId, catId);
+          if (data) {
+            allDocs.push(mapBackendToFrontend(data, catId));
+          }
+        } catch (e) {
+          // Continue mapping smoothly
+        }
+      }
+
+      setDocuments(allDocs);
+    } catch (error) {
+      console.error('Failed to fetch documents:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDocuments = async () => {
-      if (!accountId) {
-        setDocuments([]);
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        const data = await api.getDocument(accountId, activeTab);
-        if (data) {
-          const mappedDoc = mapBackendToFrontend(data, activeTab);
-          setDocuments([mappedDoc]);
-          setActiveDocId(mappedDoc.id);
-        } else {
-          setDocuments([]);
-        }
-      } catch (error) {
-        setDocuments([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchDocuments();
-  }, [accountId, activeTab]);
+    fetchAllDocuments();
+  }, [accountId]);
 
   const mapBackendToFrontend = (data: any, category: string): Document => {
     try {
       let content = data.content;
 
-      // Handle string content that might be JSON or wrapped in markdown
       if (typeof content === 'string') {
         const cleaned = content.replace(/```json\n?|\n?```/g, '').trim();
         try {
           content = JSON.parse(cleaned);
         } catch (e) {
-          console.error('Failed to parse content as JSON:', e);
           content = { summary: content };
         }
       }
 
-      // Helper to find content by partial key match
       const findContent = (keywords: string[]) => {
+        if (!content || typeof content !== 'object') return null;
         const key = Object.keys(content).find(k =>
           keywords.some(kw => k.toLowerCase().includes(kw.toLowerCase()))
         );
         return key ? content[key] : null;
       };
 
-      const summary = findContent(['summary', 'overview', 'description', 'project_overview']) || 'AI generated summary of the document.';
+      const summary = findContent(['summary', 'overview', 'description', 'project_overview']) || 'AI generated analysis summary.';
       const objectives = findContent(['objective', 'scope', 'goal', 'accomplishments']) || [];
       const stakeholders = findContent(['stakeholder', 'team', 'resource']) || [];
 
@@ -196,67 +186,60 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
         return String(v);
       };
 
-      const filteredInsights = Object.entries(content)
+      const formattedSummary = formatValue(summary);
+      const isError = formattedSummary.toLowerCase().includes('error:');
+
+      const filteredInsights = Object.entries(content || {})
         .filter(([key]) => {
           const lKey = key.toLowerCase();
-          return !['summary', 'overview', 'description', 'objective', 'scope', 'goal', 'stakeholder', 'team', 'resource', 'wsr', 'reporting'].some(kw => lKey.includes(kw));
+          return !['summary', 'overview', 'description', 'objective', 'scope', 'goal', 'stakeholder', 'team', 'resource'].some(kw => lKey.includes(kw));
         })
         .map(([key, value]) => ({
           icon: Info,
           text: `${key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim()}: ${formatValue(value)}`,
-          color: 'text-indigo-600 bg-indigo-50/50'
+          color: 'text-blue-600 bg-blue-50/50'
         }))
-        .filter(insight => insight.text.length > insight.text.split(':')[0].length + 5); // Filter out insights with virtually no content
+        .filter(insight => insight.text.length > insight.text.split(':')[0].length + 5);
+
+      const catObj = CATEGORIES.find(c => c.id === category);
+      const docName = data.document_name || `${catObj?.label || 'Document'}_Report_${new Date(data.created_at || Date.now()).getFullYear()}.pdf`;
 
       const doc: Document = {
-        id: data.document_id,
+        id: data.document_id || String(Date.now()),
         category: category,
-        name: `${CATEGORIES.find(c => c.id === category)?.label || 'Document'} - ${new Date(data.created_at).toLocaleDateString()}`,
-        type: data.document_type || 'AI Analyzed',
-        date: new Date(data.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        summary: formatValue(summary),
-        objectives: (Array.isArray(objectives) ? objectives.map(o => formatValue(o)) : [formatValue(objectives)])
-          .filter(o => o.length > 5 && !/^\d+$/.test(o.replace(/[.\s]/g, ''))),
-        stakeholders: (Array.isArray(stakeholders) ? stakeholders.map(s => formatValue(s)) : [formatValue(stakeholders)])
-          .flatMap(s => s.split('. ').filter(p => p.trim().length > 0))
-          .filter(s => s.length > 2 && !/^\d+$/.test(s.replace(/[.\s]/g, ''))),
-        insights: filteredInsights
+        name: docName,
+        type: catObj?.label || 'Analyzed Report',
+        date: new Date(data.created_at || Date.now()).toISOString().split('T')[0],
+        desc: data.description || '-',
+        status: isError ? 'Failed' : (data.status || 'Completed'),
+        summary: formattedSummary,
+        objectives: (Array.isArray(objectives) ? objectives.map(o => formatValue(o)) : [formatValue(objectives)]).filter(o => o.length > 3),
+        stakeholders: (Array.isArray(stakeholders) ? stakeholders.map(s => formatValue(s)) : [formatValue(stakeholders)]).filter(s => s.length > 2),
+        insights: filteredInsights.slice(0, 6),
+        rawContent: content
       };
 
-      // Special handling for WSR-reports
       if (category === 'wsr-reports' || data.document_type === 'WSR') {
         doc.wsrData = {
-          projectName: formatValue(content.project_overview?.project_name || content.project_overview_and_reporting_period?.project_name),
-          client: formatValue(content.project_overview?.client || content.project_overview_and_reporting_period?.client),
-          reportingPeriod: formatValue(content.project_overview?.reporting_period || content.project_overview_and_reporting_period?.reporting_period),
-          status: formatValue(content.overall_project_status),
-          accomplishments: Array.isArray(content.key_accomplishments_and_milestones || content.key_accomplishments_and_milestones_achieved_this_week)
-            ? (content.key_accomplishments_and_milestones || content.key_accomplishments_and_milestones_achieved_this_week).map((v: any) => formatValue(v))
-            : [formatValue(content.key_accomplishments_and_milestones || content.key_accomplishments_and_milestones_achieved_this_week)],
-          upcomingTasks: Array.isArray(content.upcoming_tasks_and_planned_activities || content.upcoming_tasks_and_planned_activities_for_next_week)
-            ? (content.upcoming_tasks_and_planned_activities || content.upcoming_tasks_and_planned_activities_for_next_week).map((v: any) => formatValue(v))
-            : [formatValue(content.upcoming_tasks_and_planned_activities || content.upcoming_tasks_and_planned_activities_for_next_week)],
-          risks: Array.isArray(content.risks_and_issues_identified)
-            ? content.risks_and_issues_identified.map((v: any) => formatValue(v))
-            : [formatValue(content.risks_and_issues_identified)],
-          blockers: Array.isArray(content.blockers_and_dependencies)
-            ? content.blockers_and_dependencies.map((v: any) => formatValue(v))
-            : [formatValue(content.blockers_and_dependencies)],
-          budgetStatus: formatValue(content.budget_and_timeline_status),
-          summary: formatValue(content.resource_utilization_and_team_status)
+          client: formatValue(content?.project_overview_and_reporting_period?.client),
+          reportingPeriod: formatValue(content?.project_overview_and_reporting_period?.reporting_period),
+          status: formatValue(content?.overall_project_status),
+          accomplishments: Array.isArray(content?.key_accomplishments_and_milestones_achieved_this_week)
+            ? content.key_accomplishments_and_milestones_achieved_this_week.map((v: any) => formatValue(v))
+            : [formatValue(content?.key_accomplishments_and_milestones_achieved_this_week)]
         };
       }
 
       return doc;
     } catch (e) {
-      console.error('Error mapping document:', e);
       return {
-        id: data.document_id,
+        id: data?.document_id || String(Date.now()),
         category: category,
-        name: 'Parsing Error',
+        name: 'Parsing Error.pdf',
         type: 'Error',
-        date: new Date().toLocaleDateString(),
-        summary: 'There was an error parsing the document content.',
+        date: new Date().toISOString().split('T')[0],
+        status: 'Failed',
+        summary: 'Error parsing document content structure.',
         objectives: [],
         stakeholders: [],
         insights: []
@@ -264,562 +247,639 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
     }
   };
 
-  const handleFileUpload = async (file: File) => {
+  const handleFilesSelected = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const newPending: PendingFile[] = [];
+    Array.from(files).forEach((file) => {
+      const isOverLimit = file.size > 50 * 1024 * 1024;
+      newPending.push({
+        id: `${file.name}-${Date.now()}-${Math.random()}`,
+        file,
+        sizeStr: formatFileSize(file.size),
+        isOverLimit
+      });
+    });
+
+    setPendingFiles((prev) => [...prev, ...newPending]);
+  };
+
+  const removePendingFile = (id: string) => {
+    setPendingFiles((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  const handleCancel = () => {
+    setPendingFiles([]);
+    setShortDescription('');
+  };
+
+  const handleUploadAndProcess = async () => {
     if (!accountId) {
       toast({
-        title: "Error",
-        description: "No account selected. Please select or create an account first.",
+        title: "Account Required",
+        description: "Please save or select an account before uploading documents.",
         variant: "destructive"
       });
       return;
     }
 
-    toast({
-      title: "Upload Started",
-      description: `Uploading ${file.name} to ${CATEGORIES.find(c => c.id === activeTab)?.label}...`,
-    });
+    const validFiles = pendingFiles.filter((f) => !f.isOverLimit);
+    if (validFiles.length === 0) return;
 
-    setIsLoading(true);
-    try {
-      const response = await api.importDocument(accountId, activeTab, file);
+    setIsProcessing(true);
+    let successCount = 0;
 
-      toast({
-        title: "Upload Successful",
-        description: `${file.name} has been processed and analyzed.`,
-      });
+    const mappedApiCategory = ['wsr-reports', 'code-quality', 'tech-reviews', 'best-practices', 'sow-documents'].includes(selectedType) 
+      ? selectedType 
+      : 'wsr-reports';
 
-      // Fetch the updated document
-      const data = await api.getDocument(accountId, activeTab);
-      if (data) {
-        const mappedDoc = mapBackendToFrontend(data, activeTab);
-        setDocuments([mappedDoc]);
-        setActiveDocId(mappedDoc.id);
+    for (const item of validFiles) {
+      try {
+        await api.importDocument(accountId, mappedApiCategory, item.file);
+        successCount++;
+      } catch (error: any) {
+        toast({
+          title: `Failed to upload ${item.file.name}`,
+          description: error.message || "Processing error occurred.",
+          variant: "destructive"
+        });
       }
-    } catch (error: any) {
+    }
+
+    setIsProcessing(false);
+    if (successCount > 0) {
       toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to upload and process the document.",
-        variant: "destructive"
+        title: "Processing Complete",
+        description: `Successfully processed ${successCount} document(s).`
       });
-    } finally {
-      setIsLoading(false);
+      setPendingFiles((prev) => prev.filter((f) => f.isOverLimit));
+      setShortDescription('');
+      await fetchAllDocuments();
     }
   };
 
-  const handleDelete = async () => {
-    if (!accountId || !activeDocId) return;
-
-    setIsLoading(true);
+  const handleDeleteDoc = async (doc: Document) => {
+    if (!accountId) return;
     try {
-      await api.deleteDocument(accountId, activeTab);
-      setDocuments([]);
-      setActiveDocId(null);
+      await api.deleteDocument(accountId, doc.category);
       toast({
-        title: "Deleted",
-        description: "Document deleted successfully.",
+        title: "Document Deleted",
+        description: `${doc.name} has been removed successfully.`
       });
+      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to delete document.",
+        title: "Deletion Failed",
+        description: error.message || "Could not delete document.",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const onDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
+  const filteredData = documents.filter((doc) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      doc.name.toLowerCase().includes(q) ||
+      doc.type.toLowerCase().includes(q) ||
+      (doc.desc && doc.desc.toLowerCase().includes(q)) ||
+      doc.status.toLowerCase().includes(q)
+    );
+  });
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const openViewModal = (doc: Document) => {
+    setSelectedDoc(doc);
   };
 
-  const onDragLeave = () => {
-    setIsDragging(false);
-  };
+  const renderNestedContent = (obj: any, depth = 0): React.ReactNode => {
+    if (obj === null || obj === undefined) return null;
 
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) handleFileUpload(file);
+    if (Array.isArray(obj)) {
+      return (
+        <ul className="space-y-2 mt-2 ml-1">
+          {obj.map((item, idx) => (
+            <li key={idx} className="text-xs font-semibold text-slate-700 flex items-start gap-2 bg-slate-50/70 p-3 rounded-xl border border-slate-100/80 leading-relaxed">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+              <div className="flex-1">
+                {typeof item === 'object' ? renderNestedContent(item, depth + 1) : String(item)}
+              </div>
+            </li>
+          ))}
+        </ul>
+      );
+    }
+
+    if (typeof obj === 'object') {
+      return (
+        <div className={cn("space-y-4", depth > 0 ? "pt-3 border-t border-slate-100/80 mt-3" : "")}>
+          {Object.entries(obj).map(([key, val]) => {
+            const readableKey = key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim();
+            const isSimpleVal = typeof val === 'string' || typeof val === 'number';
+
+            return (
+              <div key={key} className={cn(
+                depth === 0 ? "p-6 rounded-2xl bg-white border border-slate-200/60 shadow-xs hover:border-slate-300 transition-all duration-200" : "space-y-1.5"
+              )}>
+                <div className="flex items-center justify-between gap-3">
+                  <h5 className={cn(
+                    "font-bold tracking-tight text-slate-900",
+                    depth === 0 ? "text-xs font-black text-blue-950 uppercase tracking-widest pb-2.5 border-b border-slate-100 block w-full" : "text-xs text-slate-800"
+                  )}>
+                    {readableKey}
+                  </h5>
+                  {isSimpleVal && (
+                    <Badge variant="secondary" className="px-2.5 py-1 text-xs font-black bg-blue-50 text-blue-700 border-none ml-auto">
+                      {String(val)}
+                    </Badge>
+                  )}
+                </div>
+
+                {!isSimpleVal && (
+                  <div className="pt-1">
+                    {renderNestedContent(val, depth + 1)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    return <p className="text-xs font-medium text-slate-600 leading-relaxed pt-1">{String(obj)}</p>;
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 min-h-[800px] animate-in fade-in duration-500 relative">
-      {/* Left Sidebar: Vertical Category Tabs */}
-      <div className={cn(
-        "flex flex-col gap-6 transition-all duration-300",
-        isCategorySidebarCollapsed ? "w-16" : "w-full lg:w-60"
-      )}>
-        <div className={cn(
-          "bg-white/40 backdrop-blur-sm p-4 rounded-3xl border border-slate-200/60 shadow-sm transition-all h-full",
-          isCategorySidebarCollapsed && "items-center overflow-hidden"
-        )}>
-          <div className="flex items-center justify-between mb-4">
-            {!isCategorySidebarCollapsed && (
-              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest px-2">Categories</h3>
-            )}
-            <button
-              type="button"
-              onClick={() => setIsCategorySidebarCollapsed(!isCategorySidebarCollapsed)}
-              className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400"
-            >
-              {isCategorySidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
-            </button>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setActiveTab(cat.id)}
-                title={cat.label}
-                className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all text-sm font-bold group relative",
-                  activeTab === cat.id
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-200 ring-1 ring-blue-500"
-                    : "text-slate-500 hover:text-slate-900 hover:bg-white hover:shadow-sm",
-                  isCategorySidebarCollapsed && "justify-center px-0"
-                )}
-              >
-                <cat.icon className={cn("w-4.5 h-4.5 transition-colors shrink-0", activeTab === cat.id ? "text-white" : "text-slate-400 group-hover:text-blue-500")} />
-                {!isCategorySidebarCollapsed && cat.label}
-                {activeTab === cat.id && !isCategorySidebarCollapsed && (
-                  <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-blue-100" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {!isCategorySidebarCollapsed && (
-          <div className="p-6 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-white/10 rounded-xl">
-                <FileSearch className="w-5 h-5 text-blue-400" />
-              </div>
-              <h4 className="font-bold text-sm">AI Processing</h4>
-            </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              All uploaded documents are instantly analyzed to extract key insights, objectives, and stakeholders.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col gap-6">
-        {!readOnly && (
-          <div
-            onDragOver={onDragOver}
-            onDragLeave={onDragLeave}
-            onDrop={onDrop}
-            onClick={() => !isLoading && document.getElementById('file-upload-input')?.click()}
-            className={cn(
-              "relative group overflow-hidden rounded-[2.5rem] border-2 border-dashed transition-all duration-300 cursor-pointer",
-              isDragging
-                ? "border-blue-500 bg-blue-50/50 scale-[0.99]"
-                : "border-slate-200 bg-white hover:border-blue-400 hover:bg-slate-50/30",
-              isLoading && "pointer-events-none opacity-80"
-            )}
-          >
-            <input
-              type="file"
-              id="file-upload-input"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileUpload(file);
-              }}
-            />
-            <div className="p-12 flex flex-col items-center text-center gap-4">
-              {isLoading ? (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="relative">
-                    <Loader2 className="w-16 h-16 text-blue-600 animate-spin" />
-                    <div className="absolute inset-0 bg-blue-400 blur-2xl opacity-20 animate-pulse" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-black text-slate-900 mb-1">
-                      Processing Document...
-                    </h3>
-                    <p className="text-slate-500 font-medium animate-pulse">
-                      Our AI is analyzing your {CATEGORIES.find(c => c.id === activeTab)?.label}
-                    </p>
-                  </div>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {!readOnly && (
+        <Card className="bg-white border border-slate-200/80 shadow-sm rounded-2xl overflow-hidden">
+          <CardHeader className="border-b border-slate-100/60 pb-4 px-8 pt-6">
+            <CardTitle className="text-lg font-black text-slate-900 tracking-tight">Upload Document</CardTitle>
+          </CardHeader>
+          <CardContent className="p-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+              {/* Left Column: Controls */}
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Document Type</label>
+                  <Select value={selectedType} onValueChange={setSelectedType}>
+                    <SelectTrigger className="w-full bg-slate-50 border-slate-200/80 h-11 rounded-xl text-slate-800 font-semibold focus:ring-2 focus:ring-blue-600">
+                      <SelectValue placeholder="Select Document Type" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 shadow-xl">
+                      {CATEGORIES.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id} className="font-semibold text-slate-700 rounded-lg py-2.5">
+                          {cat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              ) : (
-                <>
-                  <div className={cn(
-                    "p-6 rounded-[2rem] transition-all duration-500",
-                    isDragging ? "bg-blue-600 text-white rotate-12 scale-110" : "bg-blue-50 text-blue-600 group-hover:scale-110"
-                  )}>
-                    <Upload className="w-10 h-10" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-black text-slate-900 mb-1">
-                      Upload {CATEGORIES.find(c => c.id === activeTab)?.label}
-                    </h3>
-                    <p className="text-slate-500 font-medium">
-                      Drag and drop your file here, or <span className="text-blue-600 font-bold underline decoration-2 underline-offset-4">browse files</span>
-                    </p>
-                  </div>
-                  <div className="flex gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-2">
-                    <span className="bg-slate-100 px-3 py-1 rounded-full">PDF</span>
-                    <span className="bg-slate-100 px-3 py-1 rounded-full">DOCX</span>
-                    <span className="bg-slate-100 px-3 py-1 rounded-full">TXT</span>
-                  </div>
-                </>
-              )}
-            </div>
 
-            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-blue-100/20 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-indigo-100/20 rounded-full blur-3xl pointer-events-none" />
-          </div>
-        )}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Short Description</label>
+                  <Input
+                    type="text"
+                    placeholder="Enter a brief description..."
+                    value={shortDescription}
+                    onChange={(e) => setShortDescription(e.target.value)}
+                    className="bg-slate-50 border-slate-200/80 h-11 rounded-xl text-slate-800 font-medium placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-600"
+                  />
+                </div>
 
-        {/* Bottom: Files & Analysis Details */}
-        <div className="flex-1 bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm overflow-hidden flex flex-col">
-          {filteredDocs.length > 0 ? (
-            <div className="flex flex-col md:flex-row h-full">
-              {/* Internal File Sidebar */}
-              <div className={cn(
-                "border-r border-slate-100 bg-slate-50/30 flex flex-col transition-all duration-300 relative",
-                isFileSidebarCollapsed ? "w-12" : "w-full md:w-64"
-              )}>
-                <button
-                  type="button"
-                  onClick={() => setIsFileSidebarCollapsed(!isFileSidebarCollapsed)}
-                  className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 bg-white border border-slate-200 rounded-full flex items-center justify-center shadow-sm z-20 hover:text-blue-600 transition-all"
+                <div className="flex items-center gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancel}
+                    disabled={pendingFiles.length === 0 && !shortDescription}
+                    className="h-11 px-6 rounded-xl border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition-all"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleUploadAndProcess}
+                    disabled={pendingFiles.length === 0 || isProcessing}
+                    className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-100 gap-2 transition-all"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      'Upload & Process'
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Right Column: Drag & Drop & Pending List */}
+              <div className="space-y-4">
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    handleFilesSelected(e.dataTransfer.files);
+                  }}
+                  onClick={() => document.getElementById('document-drop-input')?.click()}
+                  className={cn(
+                    "border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 bg-slate-50/40 group",
+                    isDragging ? "border-blue-600 bg-blue-50/40 scale-[0.99]" : "border-slate-200 hover:border-blue-400 hover:bg-slate-50/80"
+                  )}
                 >
-                  {isFileSidebarCollapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
-                </button>
-                
-                <div className={cn(
-                  "flex-1 overflow-hidden transition-all h-full",
-                  isFileSidebarCollapsed && "opacity-0 invisible w-0"
-                )}>
-                  <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                    <h4 className="font-bold text-slate-800 flex items-center gap-2 whitespace-nowrap">
-                      {CATEGORIES.find(c => c.id === activeTab)?.label}
-                      <Badge variant="secondary" className="bg-white border-slate-200 text-slate-500">
-                        {filteredDocs.length}
-                      </Badge>
-                    </h4>
+                  <input
+                    type="file"
+                    id="document-drop-input"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => handleFilesSelected(e.target.files)}
+                  />
+                  <div className="p-3 bg-white rounded-full shadow-sm border border-slate-100 text-blue-600 mb-3 group-hover:scale-110 transition-transform duration-300">
+                    <Upload className="w-6 h-6" />
                   </div>
-                  <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                    {filteredDocs.map((doc) => (
-                      <button
-                        key={doc.id}
-                        type="button"
-                        onClick={() => setActiveDocId(doc.id)}
+                  <p className="text-sm font-bold text-slate-800 mb-1">
+                    Drag & Drop files here or <span className="text-blue-600 underline">Browse File</span>
+                  </p>
+                  <p className="text-[11px] font-medium text-slate-400">
+                    Any file type • Multiple files allowed • Max 50 MB per file
+                  </p>
+                </div>
+
+                {/* Queue Display */}
+                {pendingFiles.length > 0 && (
+                  <div className="space-y-2.5 max-h-[170px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200">
+                    {pendingFiles.map((item) => (
+                      <div
+                        key={item.id}
                         className={cn(
-                          "w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group",
-                          activeDocId === doc.id
-                            ? "bg-white border-blue-200 shadow-md ring-1 ring-blue-50"
-                            : "bg-transparent border-transparent hover:bg-white hover:border-slate-200"
+                          "flex items-center justify-between p-3 rounded-xl border transition-all",
+                          item.isOverLimit 
+                            ? "bg-red-50/50 border-red-200" 
+                            : "bg-white border-slate-200/80 shadow-2xs"
                         )}
                       >
-                        <div className="overflow-hidden">
-                          <div className="flex items-center gap-2 mb-1">
-                            <FileText className={cn("w-4 h-4", activeDocId === doc.id ? "text-blue-600" : "text-slate-400")} />
-                            <span className={cn(
-                              "text-sm font-bold truncate",
-                              activeDocId === doc.id ? "text-blue-700" : "text-slate-700"
-                            )}>
-                              {doc.name}
-                            </span>
+                        <div className="flex items-center gap-3 overflow-hidden pr-2">
+                          <div className={cn(
+                            "p-2 rounded-lg shrink-0",
+                            item.isOverLimit ? "bg-red-100 text-red-600" : "bg-blue-50 text-blue-600"
+                          )}>
+                            <FileText className="w-4 h-4" />
                           </div>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider pl-6">{doc.date}</p>
+                          <div className="overflow-hidden">
+                            <p className="text-xs font-bold text-slate-800 truncate">{item.file.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] font-bold text-slate-400">{item.sizeStr}</span>
+                              {item.isOverLimit && (
+                                <span className="text-[10px] font-bold text-red-500">File exceeds 50 MB limit</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        {activeDocId === doc.id && <ChevronRight className="w-4 h-4 text-blue-500" />}
-                      </button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => { e.stopPropagation(); removePendingFile(item.id); }}
+                          className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 shrink-0"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     ))}
                   </div>
-                </div>
+                )}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-              {/* Analysis Content View */}
-              <div className="flex-1 p-10 overflow-y-auto max-h-[850px] scrollbar-thin scrollbar-thumb-slate-200 relative">
-                {isLoading && (
-                  <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="relative">
-                        <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
-                        <div className="absolute inset-0 bg-blue-400 blur-xl opacity-20 animate-pulse" />
+      {/* Uploaded Documents Table Card */}
+      <Card className="bg-white border border-slate-200/80 shadow-sm rounded-2xl overflow-hidden">
+        <CardHeader className="border-b border-slate-100/60 pb-4 px-8 pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <CardTitle className="text-lg font-black text-slate-900 tracking-tight">Uploaded Documents</CardTitle>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              type="text"
+              placeholder="Search documents..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-9 h-10 bg-slate-50/80 border-slate-200/80 rounded-xl text-xs sm:text-sm font-medium focus-visible:ring-2 focus-visible:ring-blue-600"
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader className="bg-slate-50/50 border-b border-slate-100">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider pl-8">Document Name</TableHead>
+                <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider">Document Type</TableHead>
+                <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider">Status</TableHead>
+                <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider">Uploaded Date</TableHead>
+                <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider">Short Description</TableHead>
+                <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider text-right pr-8">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading && filteredData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-48 text-center">
+                    <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
+                    <p className="text-xs font-bold text-slate-400">Loading records...</p>
+                  </TableCell>
+                </TableRow>
+              ) : paginatedData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-48 text-center">
+                    <p className="text-sm font-bold text-slate-400">No documents found matching your search.</p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedData.map((doc) => (
+                  <TableRow key={doc.id} className="border-b border-slate-100/60 hover:bg-slate-50/40 transition-colors group">
+                    <TableCell className="py-4 pl-8">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-4 h-4 text-slate-400 shrink-0 group-hover:text-blue-600 transition-colors" />
+                        <span className="font-bold text-xs sm:text-sm text-slate-800 line-clamp-1">{doc.name}</span>
                       </div>
-                      <p className="text-sm font-bold text-slate-500 animate-pulse">Analyzing Document...</p>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <span className="text-xs sm:text-sm font-medium text-slate-600">{doc.type}</span>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "rounded-full px-3 py-1 font-bold text-[10px] tracking-wider uppercase border-none gap-1",
+                          doc.status === 'Completed' ? "bg-emerald-50 text-emerald-700" :
+                          doc.status === 'Processing' ? "bg-amber-50 text-amber-700" :
+                          "bg-red-50 text-red-700"
+                        )}
+                      >
+                        {doc.status === 'Completed' && <CheckCircle2 className="w-3 h-3" />}
+                        {doc.status === 'Processing' && <Clock className="w-3 h-3 animate-spin" />}
+                        {doc.status === 'Failed' && <AlertCircle className="w-3 h-3" />}
+                        {doc.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <span className="text-xs sm:text-sm font-medium text-slate-500">{doc.date}</span>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <span className="text-xs sm:text-sm font-medium text-slate-600 line-clamp-1 max-w-[220px]">{doc.desc || '-'}</span>
+                    </TableCell>
+                    <TableCell className="py-4 text-right pr-8">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          title="View Document Insights"
+                          onClick={() => openViewModal(doc)}
+                          className="w-8 h-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          title="Download Document"
+                          onClick={() => {
+                            toast({
+                              title: "Download Initiated",
+                              description: `Downloading ${doc.name}...`
+                            });
+                          }}
+                          className="w-8 h-8 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        {!readOnly && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            title="Delete Document"
+                            onClick={() => handleDeleteDoc(doc)}
+                            className="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+
+          {/* Footer / Pagination */}
+          <div className="px-8 py-4 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-xs font-bold text-slate-400">
+              Showing <span className="text-slate-800">{Math.min(filteredData.length, (currentPage - 1) * itemsPerPage + 1)}</span>-
+              <span className="text-slate-800">{Math.min(filteredData.length, currentPage * itemsPerPage)}</span> of{' '}
+              <span className="text-slate-800">{filteredData.length}</span> documents
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((prev) => prev - 1)}
+                className="text-xs font-bold text-slate-600 hover:bg-white px-2.5 h-8 gap-1 rounded-lg"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                Previous
+              </Button>
+              <div className="flex items-center gap-0.5">
+                {Array.from({ length: totalPages || 1 }, (_, i) => i + 1).map((page) => (
+                  <Button
+                    key={page}
+                    type="button"
+                    variant={currentPage === page ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className={cn(
+                      "w-7 h-7 p-0 text-xs font-bold rounded-lg transition-all",
+                      currentPage === page ? "bg-blue-600 text-white shadow-2xs" : "text-slate-500 hover:bg-white"
+                    )}
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => setCurrentPage((prev) => prev + 1)}
+                className="text-xs font-bold text-slate-600 hover:bg-white px-2.5 h-8 gap-1 rounded-lg"
+              >
+                Next
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Deep Intelligence & Summary Unified Dialog */}
+      <Dialog open={!!selectedDoc} onOpenChange={(open) => !open && setSelectedDoc(null)}>
+        <DialogContent className="max-w-2xl bg-white rounded-[2rem] p-8 border-slate-200/80 shadow-2xl gap-6 max-h-[85vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+          {selectedDoc && (
+            <>
+              <DialogHeader className="pb-4 border-b border-slate-100 gap-1.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 shrink-0">
+                    <Brain className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-lg font-black text-slate-900 tracking-tight leading-tight">
+                      {selectedDoc.name}
+                    </DialogTitle>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-[10px] font-bold text-slate-500 bg-slate-50 border-slate-200 uppercase">
+                        {selectedDoc.type}
+                      </Badge>
+                      <span className="text-xs font-medium text-slate-400">• Analyzed on {selectedDoc.date}</span>
                     </div>
                   </div>
-                )}
-                {activeDoc && (
-                  <div className="max-w-3xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-                    <div className="flex items-center justify-between pb-6 border-b border-slate-100">
-                      <div className="flex items-center gap-4">
-                        <div className="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-[1.5rem] shadow-lg shadow-blue-100">
-                          <FileSearch className="w-7 h-7" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h2 className="text-2xl font-black text-slate-900 tracking-tight">{activeDoc.name}</h2>
-                            <Badge variant="outline" className="text-[10px] py-0 h-4 bg-slate-50 text-slate-400 border-slate-200 uppercase font-black tracking-tighter">
-                              {activeDoc.type}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-slate-500 font-medium">AI Intelligence Analysis • {activeDoc.date}</p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        type="button"
-                        onClick={handleDelete}
-                        className="text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </Button>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-8 pt-2">
+                {/* Executive Overview Block */}
+                <div className="space-y-4">
+                  <div className="p-6 bg-gradient-to-br from-indigo-50/50 to-blue-50/50 rounded-2xl border border-blue-100/40 relative overflow-hidden">
+                    <div className="absolute right-0 top-0 p-4 opacity-5">
+                      <Activity className="w-24 h-24 text-indigo-900" />
+                    </div>
+                    <h4 className="text-xs font-black text-indigo-950 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5 text-indigo-600" /> Executive Intelligence Summary
+                    </h4>
+                    <p className="text-xs sm:text-sm font-bold text-slate-800 leading-relaxed relative z-10">
+                      {selectedDoc.summary}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-5 rounded-xl border border-slate-100 bg-slate-50/40">
+                      <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                        <Target className="w-3.5 h-3.5 text-emerald-500" /> Key Objectives
+                      </h4>
+                      <ul className="space-y-2">
+                        {selectedDoc.objectives && selectedDoc.objectives.length > 0 ? (
+                          selectedDoc.objectives.map((obj, i) => (
+                            <li key={i} className="text-xs font-semibold text-slate-600 flex gap-2 items-start leading-tight">
+                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1 shrink-0" />
+                              {obj}
+                            </li>
+                          ))
+                        ) : (
+                          <li className="text-xs font-medium text-slate-400 italic">No specific objectives extracted</li>
+                        )}
+                      </ul>
                     </div>
 
-                    <div className="space-y-6">
-                      <div className="p-8 bg-gradient-to-br from-indigo-50/50 to-blue-50/50 rounded-[2rem] border border-blue-100/50 shadow-sm relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                          <Activity className="w-20 h-20 text-indigo-900" />
+                    <div className="p-5 rounded-xl border border-slate-100 bg-slate-50/40">
+                      <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-amber-500" /> Stakeholders
+                      </h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedDoc.stakeholders && selectedDoc.stakeholders.length > 0 ? (
+                          selectedDoc.stakeholders.map((s, i) => (
+                            <Badge key={i} variant="secondary" className="px-2.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 font-bold text-[11px]">
+                              {s}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-xs font-medium text-slate-400 italic">No stakeholders mapped</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedDoc.wsrData && (
+                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                      <div className="flex flex-wrap items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <span className="font-bold text-slate-400">Client:</span>
+                          <span className="font-bold text-slate-800">{selectedDoc.wsrData.client || 'N/A'}</span>
                         </div>
-                        <h4 className="text-xs font-black text-indigo-900 uppercase tracking-widest mb-4 flex items-center gap-2">
-                          <Activity className="w-4 h-4" />
-                          Executive Intelligence Summary
-                        </h4>
-                        <p className="text-slate-700 leading-relaxed font-bold text-lg relative z-10">{activeDoc.summary}</p>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card className="rounded-[2rem] border-slate-100 shadow-none hover:shadow-md hover:border-blue-100 transition-all duration-300 md:col-span-2">
-                          <CardHeader className="pb-3 px-6 pt-6">
-                            <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-slate-800">
-                              <Target className="w-4 h-4 text-emerald-500" />
-                              Key Objectives
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="px-8 pb-8">
-                            <ul className="space-y-3">
-                              {activeDoc.objectives.map((obj, i) => (
-                                <li key={i} className="flex gap-3 text-sm text-slate-600 font-medium leading-tight">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
-                                  {obj}
-                                </li>
-                              ))}
-                            </ul>
-                          </CardContent>
-                        </Card>
-
-                        <Card className="rounded-[2rem] border-slate-100 shadow-none hover:shadow-md hover:border-blue-100 transition-all duration-300 md:col-span-2">
-                          <CardHeader className="pb-3 px-8 pt-8">
-                            <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-3 text-slate-800">
-                              <div className="p-2 bg-amber-50 rounded-xl">
-                                <Users className="w-4 h-4 text-amber-500" />
-                              </div>
-                              Identified Stakeholders
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="px-8 pb-8">
-                            <div className="rounded-2xl border border-slate-100 overflow-hidden bg-slate-50/30">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow className="bg-slate-50 border-slate-100 hover:bg-slate-50">
-                                    <TableHead className="w-[40%] text-[10px] font-black uppercase tracking-widest text-slate-400 h-10">Member / Team</TableHead>
-                                    <TableHead className="w-[60%] text-[10px] font-black uppercase tracking-widest text-slate-400 h-10">Role / Count / Allocation</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {activeDoc.stakeholders.map((s, i) => {
-                                    const { name, detail } = parseStakeholder(s);
-                                    return (
-                                      <TableRow key={i} className="border-slate-100 hover:bg-white transition-colors group">
-                                        <TableCell className="py-4">
-                                          <div className="flex items-center gap-3">
-                                            <div className="w-2 h-2 rounded-full bg-amber-400 shrink-0 shadow-sm" />
-                                            <span className="font-bold text-slate-800 tracking-tight">{name}</span>
-                                          </div>
-                                        </TableCell>
-                                        <TableCell className="py-4">
-                                          <Badge variant="secondary" className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-slate-600 font-bold text-[10px] uppercase group-hover:bg-amber-50 group-hover:text-amber-700 transition-colors">
-                                            {detail}
-                                          </Badge>
-                                        </TableCell>
-                                      </TableRow>
-                                    );
-                                  })}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-
-                      <div className="space-y-4 pt-6">
-                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Deep AI Insights & Gaps</h4>
-                        <div className="grid grid-cols-1 gap-3">
-                          {activeDoc.insights.map((insight, i) => (
-                            <div key={i} className="flex gap-4 p-5 rounded-2xl bg-white border border-slate-100 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-50/50 transition-all group">
-                              <div className={cn("p-2.5 rounded-xl bg-slate-50 border border-slate-100 transition-transform group-hover:scale-110", insight.color)}>
-                                <insight.icon className="w-5 h-5 shrink-0" />
-                              </div>
-                              <p className="text-sm text-slate-600 font-bold self-center leading-relaxed">{insight.text}</p>
-                            </div>
-                          ))}
+                        <div className="flex items-center gap-1.5 text-xs ml-4">
+                          <span className="font-bold text-slate-400">Period:</span>
+                          <span className="font-bold text-slate-800">{selectedDoc.wsrData.reportingPeriod || 'N/A'}</span>
                         </div>
+                        <Badge variant="outline" className="ml-auto font-black text-[10px] uppercase border-blue-200 bg-blue-50 text-blue-700">
+                          {selectedDoc.wsrData.status || 'Active Status'}
+                        </Badge>
                       </div>
 
-                      {/* Specialized WSR View Extension */}
-                      {activeDoc.wsrData && (
-                        <div className="space-y-8 pt-8 border-t border-slate-100 animate-in fade-in slide-in-from-top-4 duration-700">
-                          <div className="flex flex-wrap items-center gap-4 p-6 bg-slate-50/50 rounded-3xl border border-slate-100">
-                            <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-2xl border border-slate-200 shadow-sm">
-                              <Briefcase className="w-4 h-4 text-blue-500" />
-                              <span className="text-xs font-black text-slate-400 uppercase tracking-tight">Client:</span>
-                              <span className="text-xs font-bold text-slate-900">{activeDoc.wsrData.client || 'N/A'}</span>
-                            </div>
-                            <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-2xl border border-slate-200 shadow-sm">
-                              <Calendar className="w-4 h-4 text-indigo-500" />
-                              <span className="text-xs font-black text-slate-400 uppercase tracking-tight">Period:</span>
-                              <span className="text-xs font-bold text-slate-900">{activeDoc.wsrData.reportingPeriod || 'N/A'}</span>
-                            </div>
-                            <div className={cn(
-                              "flex items-center gap-2 px-4 py-2 rounded-2xl border shadow-sm ml-auto",
-                              activeDoc.wsrData.status?.toLowerCase().includes('risk')
-                                ? "bg-red-50 border-red-100 text-red-700"
-                                : activeDoc.wsrData.status?.toLowerCase().includes('on track')
-                                  ? "bg-emerald-50 border-emerald-100 text-emerald-700"
-                                  : "bg-amber-50 border-amber-100 text-amber-700"
-                            )}>
-                              {activeDoc.wsrData.status?.toLowerCase().includes('risk') ? <AlertTriangle className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
-                              <span className="text-xs font-black uppercase tracking-widest">{activeDoc.wsrData.status || 'Status Unknown'}</span>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 gap-6">
-                            {activeDoc.wsrData.accomplishments && activeDoc.wsrData.accomplishments.length > 0 && (
-                              <div className="space-y-4">
-                                <h4 className="text-xs font-black text-emerald-600 uppercase tracking-[0.2em] flex items-center gap-2">
-                                  <Zap className="w-4 h-4" /> Major Accomplishments
-                                </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                  {activeDoc.wsrData.accomplishments.map((item, i) => (
-                                    <div key={i} className="p-4 bg-emerald-50/30 border border-emerald-100/50 rounded-2xl flex gap-3 items-start">
-                                      <div className="p-1 bg-emerald-500 rounded-full mt-1">
-                                        <CheckCircle2 className="w-3 h-3 text-white" />
-                                      </div>
-                                      <p className="text-sm font-semibold text-emerald-900/80 leading-snug">{item}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                              {activeDoc.wsrData.risks && activeDoc.wsrData.risks.length > 0 && (
-                                <div className="space-y-4">
-                                  <h4 className="text-xs font-black text-red-600 uppercase tracking-[0.2em] flex items-center gap-2">
-                                    <ShieldAlert className="w-4 h-4" /> Identified Risks & Issues
-                                  </h4>
-                                  <div className="space-y-3">
-                                    {activeDoc.wsrData.risks.map((risk, i) => (
-                                      <div key={i} className="p-4 bg-red-50/30 border border-red-100/50 rounded-2xl flex gap-3 items-start">
-                                        <div className="p-1 bg-red-500 rounded-lg mt-0.5">
-                                          <TrendingDown className="w-3 h-3 text-white" />
-                                        </div>
-                                        <p className="text-sm font-semibold text-red-900/80 leading-snug">{risk}</p>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {activeDoc.wsrData.upcomingTasks && activeDoc.wsrData.upcomingTasks.length > 0 && (
-                                <div className="space-y-4">
-                                  <h4 className="text-xs font-black text-blue-600 uppercase tracking-[0.2em] flex items-center gap-2">
-                                    <Clock className="w-4 h-4" /> Planned for Next Week
-                                  </h4>
-                                  <div className="space-y-3">
-                                    {activeDoc.wsrData.upcomingTasks.map((task, i) => (
-                                      <div key={i} className="p-4 bg-blue-50/30 border border-blue-100/50 rounded-2xl flex gap-3 items-start">
-                                        <div className="p-1 bg-blue-500 rounded-lg mt-0.5">
-                                          <ChevronRight className="w-3 h-3 text-white" />
-                                        </div>
-                                        <p className="text-sm font-semibold text-blue-900/80 leading-snug">{task}</p>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {activeDoc.wsrData.budgetStatus && !activeDoc.wsrData.budgetStatus.includes('Not explicitly') && (
-                              <div className="p-6 bg-slate-50 border border-slate-200 rounded-[2rem]">
-                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-                                  <Activity className="w-4 h-4 text-indigo-500" /> Project Health & Timeline
-                                </h4>
-                                <p className="text-sm font-semibold text-slate-700 leading-relaxed italic">
-                                  "{activeDoc.wsrData.budgetStatus}"
-                                </p>
-                              </div>
-                            )}
-
-                            {activeDoc.wsrData.blockers && activeDoc.wsrData.blockers.length > 0 && (
-                              <div className="p-6 bg-slate-900 rounded-[2rem] text-white shadow-xl shadow-slate-200">
-                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                                  <Flag className="w-4 h-4 text-red-500" /> Critical Blockers & Dependencies
-                                </h4>
-                                <div className="flex flex-wrap gap-3">
-                                  {activeDoc.wsrData.blockers.map((blocker, i) => (
-                                    <div key={i} className="px-5 py-3 bg-white/10 hover:bg-white/20 transition-colors rounded-2xl border border-white/10 flex items-center gap-3">
-                                      <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                                      <span className="text-sm font-bold text-slate-100">{blocker}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                      {selectedDoc.wsrData.accomplishments && selectedDoc.wsrData.accomplishments.length > 0 && (
+                        <div className="space-y-2">
+                          <h5 className="text-[11px] font-black text-emerald-600 uppercase tracking-wider flex items-center gap-1">
+                            <Zap className="w-3 h-3" /> Key Accomplishments
+                          </h5>
+                          <div className="grid grid-cols-1 gap-2">
+                            {selectedDoc.wsrData.accomplishments.map((acc, i) => (
+                              <p key={i} className="text-xs font-semibold text-slate-700 p-2.5 rounded-lg bg-emerald-50/40 border border-emerald-100/60 leading-snug">
+                                {acc}
+                              </p>
+                            ))}
                           </div>
                         </div>
                       )}
                     </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="h-[500px] flex flex-col items-center justify-center text-center p-12 bg-slate-50/20">
-              {isLoading ? (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="relative">
-                    <Loader2 className="w-16 h-16 text-blue-600 animate-spin" />
-                    <div className="absolute inset-0 bg-blue-400 blur-2xl opacity-20 animate-pulse" />
-                  </div>
-                  <p className="text-lg font-black text-slate-700 animate-pulse">Running AI Analysis...</p>
-                  <p className="text-sm text-slate-500 max-w-xs font-medium">Extracting insights, stakeholders, and objectives from your document.</p>
+                  )}
                 </div>
-              ) : (
-                <>
-                  <div className="w-32 h-32 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 flex items-center justify-center mb-8 animate-bounce duration-1000">
-                    {(() => {
-                      const CatIcon = CATEGORIES.find(c => c.id === activeTab)?.icon || LayoutGrid;
-                      return <CatIcon className="w-16 h-16 text-slate-200" />;
-                    })()}
-                  </div>
-                  <h4 className="text-2xl font-black text-slate-800 mb-3">No {CATEGORIES.find(c => c.id === activeTab)?.label} Found</h4>
-                  <p className="text-slate-500 max-w-sm font-medium leading-relaxed">
-                    {readOnly
-                      ? `No documents have been uploaded for this category yet. Click 'Edit Account' to upload and analyze documents.`
-                      : "Start by uploading a document above to see the AI-powered analysis and deep insights."}
-                  </p>
-                </>
-              )}
-            </div>
+
+                {/* Granular AI Analysis Block */}
+                <div className="space-y-4 pt-4 border-t border-slate-100/80">
+                  <h4 className="text-xs font-black text-purple-950 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                    <Brain className="w-3.5 h-3.5 text-purple-600" /> Granular AI Structural Analysis
+                  </h4>
+                  {selectedDoc.rawContent && typeof selectedDoc.rawContent === 'object' ? (
+                    <div className="space-y-4 bg-slate-50/40 p-2 rounded-2xl">
+                      {renderNestedContent(selectedDoc.rawContent)}
+                    </div>
+                  ) : selectedDoc.insights && selectedDoc.insights.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedDoc.insights.map((insight, i) => (
+                        <div key={i} className="p-4 rounded-xl bg-slate-50/60 border border-slate-100 hover:border-purple-100 transition-colors flex gap-3 items-start">
+                          <div className="p-1.5 rounded-lg bg-white border shadow-2xs mt-0.5 text-blue-600 shrink-0">
+                            <insight.icon className="w-4 h-4" />
+                          </div>
+                          <p className="text-xs font-bold text-slate-700 leading-relaxed self-center">
+                            {insight.text}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center rounded-xl bg-slate-50/40 border border-slate-100">
+                      <p className="text-xs font-bold text-slate-400 italic">No granular key-value parameters surfaced for this document structure.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
           )}
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

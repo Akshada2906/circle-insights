@@ -144,8 +144,30 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
 
     const fetchAccount = useCallback(async (accountId: string) => {
         try {
-            const accountData = await api.getAccountById(accountId);
-            const mappedAccount = mapApiToAccount(accountData);
+            let accountData: any = null;
+            try {
+                accountData = await api.getAccountById(accountId);
+            } catch (err) {
+                // Gracefully fallback for finance accounts that don't exist in legacy dashboard service
+                accountData = {
+                    account_id: accountId,
+                    account_name: '',
+                    domain: 'Technology',
+                    delivery_owner: '',
+                    current_pipeline_value: '0',
+                    number_of_active_projects: 0,
+                    overall_delivery_health: 'Amber',
+                    engagement_age: '1 Year',
+                    last_year_business_done: '0',
+                    target_projection_2026_accounts: '0',
+                    target_projection_2026_delivery: '0',
+                    company_revenue: '0',
+                    engagement_models: 'T&M',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                };
+            }
+            const mappedAccount = mapApiToAccount(accountData as any);
 
             try {
                 const stakeholders = await api.getStakeholderDetailsByAccount(accountId);
@@ -162,9 +184,17 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
             setAccounts(prevAccounts => {
                 const existingIndex = prevAccounts.findIndex(acc => acc.account_id === accountId);
                 if (existingIndex >= 0) {
-                    // Update existing account
+                    // Update existing account while preserving its valid populated properties
+                    const existing = prevAccounts[existingIndex];
                     const updated = [...prevAccounts];
-                    updated[existingIndex] = { ...updated[existingIndex], ...mappedAccount };
+                    updated[existingIndex] = {
+                        ...existing,
+                        // Only override base fields if we actually loaded real API data
+                        ...(accountData.account_name ? mappedAccount : {}),
+                        strategic_profiles: mappedAccount.strategic_profiles.length > 0
+                            ? mappedAccount.strategic_profiles
+                            : (existing.strategic_profiles || [])
+                    };
                     return updated;
                 } else {
                     // Add new account if not found

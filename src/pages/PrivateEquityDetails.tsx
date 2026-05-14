@@ -86,12 +86,12 @@ const PrivateEquityDetails = () => {
         setFirm(firmData);
         if (firmData.pe_insights) {
           try {
-            const cleanStr = typeof firmData.pe_insights.raw_output === 'string' 
-              ? firmData.pe_insights.raw_output.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim() 
+            const cleanStr = typeof firmData.pe_insights.raw_output === 'string'
+              ? firmData.pe_insights.raw_output.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
               : firmData.pe_insights.raw_output;
             const parsed = typeof cleanStr === 'string' ? JSON.parse(cleanStr) : cleanStr;
             setInsights({ ...firmData.pe_insights, ...parsed });
-          } catch(e) {
+          } catch (e) {
             setInsights(firmData.pe_insights);
           }
         }
@@ -224,7 +224,7 @@ const PrivateEquityDetails = () => {
                     </div>
                   </div>
                 </div>
-                <Button 
+                <Button
                   onClick={handleGenerateInsights}
                   className="bg-purple-600 hover:bg-purple-700 gap-2 shadow-lg"
                 >
@@ -337,7 +337,7 @@ const PrivateEquityDetails = () => {
                           <ShieldCheck className="w-5 h-5 text-emerald-600" /> Strategic Recommendations
                         </h4>
                         <ul className="text-slate-600 text-sm leading-relaxed space-y-1">
-                          {Array.isArray(insights.recommended_actions) ? insights.recommended_actions.slice(0, 3).map((action: {text?: string, recommendation?: string} | string, i: number) => (
+                          {Array.isArray(insights.recommended_actions) ? insights.recommended_actions.slice(0, 3).map((action: { text?: string, recommendation?: string } | string, i: number) => (
                             <li key={i} className="flex gap-2">
                               <div className="w-1 h-1 rounded-full bg-emerald-500 mt-2 shrink-0" />
                               <span className="line-clamp-1">{typeof action === 'string' ? action : action.text || action.recommendation}</span>

@@ -48,6 +48,11 @@ export const FinancialAccountCard: React.FC<FinancialAccountCardProps> = ({ acco
   const aiRev = account.ai_revenue || 0;
   const penetration = account.ai_penetration_pct || 0;
 
+  const isClient = (() => {
+    const nameLower = (account.name || '').toLowerCase();
+    return nameLower.includes('gordian') || nameLower.includes('provation') || nameLower.includes('fluke');
+  })();
+
   return (
     <Card
       className="group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer border-blue-100 hover:border-blue-300 border-t-4 border-t-blue-600 bg-gradient-to-br from-white to-blue-100/40"
@@ -60,8 +65,13 @@ export const FinancialAccountCard: React.FC<FinancialAccountCardProps> = ({ acco
               <Building2 className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-semibold truncate text-lg text-blue-950">{account.name}</h3>
+                {isClient ? (
+                  <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-[10px] h-5 px-1.5 font-bold uppercase tracking-wider">Client</Badge>
+                ) : (
+                  <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] h-5 px-1.5 font-bold uppercase tracking-wider">Non-Client</Badge>
+                )}
                 {account.active_project_count > 0 ? (
                   <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px] h-5 px-1.5 font-bold uppercase tracking-wider">Active</Badge>
                 ) : (
@@ -106,12 +116,12 @@ export const FinancialAccountCard: React.FC<FinancialAccountCardProps> = ({ acco
       <CardContent className="pt-4 space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Delivery Unit</p>
-            <p className="text-xs font-bold text-slate-700 truncate" title={account.delivery_unit?.name}>{account.delivery_unit?.name || 'Unassigned'}</p>
+            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Account Manager</p>
+            <p className="text-xs font-bold text-slate-700 truncate" title={account.account_manager}>{account.account_manager || 'Unassigned'}</p>
           </div>
           <div className="space-y-1">
-            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Account Manager</p>
-            <p className="text-xs font-bold text-slate-700 truncate" title={account.account_manager}>{account.account_manager || 'N/A'}</p>
+            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Target Revenue</p>
+            <p className="text-xs font-bold text-slate-900">{formatCurrency(account.target_revenue || 0)}</p>
           </div>
           <div className="space-y-1">
             <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Current Revenue</p>

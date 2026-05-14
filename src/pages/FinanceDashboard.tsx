@@ -554,10 +554,10 @@ const FinanceDashboard = () => {
                             <TableCell className="text-slate-500 text-xs whitespace-nowrap">{p.project_type || '—'}</TableCell>
                             <TableCell className="whitespace-nowrap">
                               <Badge variant="outline" className={cn(
-                                "text-[10px] font-bold border-none", 
-                                p.project_status?.toLowerCase() === 'active' ? "bg-emerald-100 text-emerald-700" : 
-                                p.project_status?.toLowerCase() === 'inactive' ? "bg-red-100 text-red-700" : 
-                                "bg-slate-100 text-slate-500"
+                                "text-[10px] font-bold border-none",
+                                p.project_status?.toLowerCase() === 'active' ? "bg-emerald-100 text-emerald-700" :
+                                  p.project_status?.toLowerCase() === 'inactive' ? "bg-red-100 text-red-700" :
+                                    "bg-slate-100 text-slate-500"
                               )}>
                                 {p.project_status?.toUpperCase() || 'UNKNOWN'}
                               </Badge>
@@ -616,44 +616,44 @@ const FinanceDashboard = () => {
               </CardHeader>
               <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                   <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50/50 border border-blue-100/50">
-                      <Brain className="w-5 h-5 text-blue-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-bold text-slate-800">AI Momentum</p>
-                        <p className="text-xs text-slate-600 leading-relaxed mt-1">
-                           Total AI revenue contribution is <span className="text-blue-700 font-bold">{stats.totalRevenue ? ((stats.aiRevenue / stats.totalRevenue) * 100).toFixed(1) : 0}%</span>. This represents a mature integration level.
-                        </p>
-                      </div>
-                   </div>
-                   <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50">
-                      <Target className="w-5 h-5 text-emerald-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-bold text-slate-800">Leading Region</p>
-                        <p className="text-xs text-slate-600 leading-relaxed mt-1">
-                           {stats.revenueByRegion[0]?.name || 'Global'} leads with {formatCurrency(stats.revenueByRegion[0]?.totalRevenue || 0)}, managing {stats.revenueByRegion[0]?.projects || 0} projects with high resource utilization.
-                        </p>
-                      </div>
-                   </div>
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50/50 border border-blue-100/50">
+                    <Brain className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">AI Momentum</p>
+                      <p className="text-xs text-slate-600 leading-relaxed mt-1">
+                        Total AI revenue contribution is <span className="text-blue-700 font-bold">{stats.totalRevenue ? ((stats.aiRevenue / stats.totalRevenue) * 100).toFixed(1) : 0}%</span>. This represents a mature integration level.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50">
+                    <Target className="w-5 h-5 text-emerald-600 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">Leading Region</p>
+                      <p className="text-xs text-slate-600 leading-relaxed mt-1">
+                        {stats.revenueByRegion[0]?.name || 'Global'} leads with {formatCurrency(stats.revenueByRegion[0]?.totalRevenue || 0)}, managing {stats.revenueByRegion[0]?.projects || 0} projects with high resource utilization.
+                      </p>
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-4">
-                   <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50/50 border border-amber-100/50">
-                      <TrendingUp className="w-5 h-5 text-amber-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-bold text-slate-800">Project Efficiency</p>
-                        <p className="text-xs text-slate-600 leading-relaxed mt-1">
-                           Average revenue per project is <span className="font-bold text-slate-800">{stats.projectCount ? formatCurrency(stats.totalRevenue / stats.projectCount) : '$0'}</span>, showing a healthy portfolio mix.
-                        </p>
-                      </div>
-                   </div>
-                   <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-100">
-                      <Activity className="w-5 h-5 text-slate-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-bold text-slate-800">Portfolio Stability</p>
-                        <p className="text-xs text-slate-600 leading-relaxed mt-1">
-                           Current pipeline value and active contract distribution suggests strong revenue visibility for the next 2 quarters.
-                        </p>
-                      </div>
-                   </div>
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50/50 border border-amber-100/50">
+                    <TrendingUp className="w-5 h-5 text-amber-600 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">Project Efficiency</p>
+                      <p className="text-xs text-slate-600 leading-relaxed mt-1">
+                        Average revenue per project is <span className="font-bold text-slate-800">{stats.projectCount ? formatCurrency(stats.totalRevenue / stats.projectCount) : '$0'}</span>, showing a healthy portfolio mix.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <Activity className="w-5 h-5 text-slate-600 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">Portfolio Stability</p>
+                      <p className="text-xs text-slate-600 leading-relaxed mt-1">
+                        Current pipeline value and active contract distribution suggests strong revenue visibility for the next 2 quarters.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
