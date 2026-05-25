@@ -488,15 +488,15 @@ export const updateFinanceAccount = async (id: string, accountData: any) => {
   return response.json();
 };
 
-// export const toggleIsSalesAccount = async (id: string, isSales: boolean) => {
-//   const response = await fetch(`${BASE_API_PATH}/accounts/${id}/toggle-is-sales`, {
-//     method: "PATCH",
-//     headers: { "Content-Type": "application/json" },
-//     body: JSON.stringify({ is_sales: isSales }),
-//   });
-//   if (!response.ok) throw new Error("Failed to toggle is_sales status");
-//   return response.json();
-// };
+export const toggleIsSalesAccount = async (id: string, isSales: boolean) => {
+  const response = await fetch(`${BASE_API_PATH}/accounts/${id}/toggle-is-sales`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ is_sales: isSales }),
+  });
+  if (!response.ok) throw new Error("Failed to toggle is_sales status");
+  return response.json();
+};
 
 
 export const getFinanceDeliveryUnits = async () => {

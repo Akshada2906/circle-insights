@@ -42,7 +42,8 @@ import {
   getFinanceAccountById,
   createFinanceAccount,
   updateFinanceAccount,
-  getFinanceDeliveryUnits
+  getFinanceDeliveryUnits,
+  toggleIsSalesAccount
 } from '@/services/api';
 import { useAccounts } from '@/contexts/AccountContext';
 import { AccountDocuments } from '@/components/accounts/AccountDocuments';
@@ -284,9 +285,17 @@ const FinancialAccountForm = () => {
 
       if (isEditing) {
         await updateFinanceAccount(id!, financePayload);
+        const previousSalesState = !!finData?.is_sales;
+        const nextSalesState = !!formData.is_sales;
+        if (previousSalesState !== nextSalesState) {
+          await toggleIsSalesAccount(id!, nextSalesState);
+        }
       } else {
         const createdFin = await createFinanceAccount(financePayload);
         resultingFinanceId = createdFin.id;
+        if (formData.is_sales) {
+          await toggleIsSalesAccount(resultingFinanceId, true);
+        }
       }
 
       // 2. Prepare Base Sales API payload to fully sync metadata
