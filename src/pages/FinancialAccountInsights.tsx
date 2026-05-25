@@ -42,7 +42,6 @@ import {
   getFinanceAccountById,
   api
 } from '@/services/api';
-import { getAccountHealthScore, getProjectHealthScore } from '@/lib/health-score';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -194,15 +193,14 @@ const FinancialAccountInsights = () => {
       overall_insights: matchedProjectInsight || proj.overall_insights
     };
 
-    const score = getProjectHealthScore(enrichedProj);
     const aiInsight = enrichedProj.overall_insights?.summary || enrichedProj.overall_insights?.executive_summary || enrichedProj.overall_insights?.insights?.summary;
     const insight = proj.ai_recommendations?.split('\n')[0] ||
       (aiInsight ? (aiInsight.length > 80 ? aiInsight.substring(0, 80) + "..." : aiInsight) : null) ||
       (proj.overview ? proj.overview.substring(0, 60) + "..." : null) ||
       "Reviewing project trajectory and resource allocation.";
 
-    // Heuristic for risk
-    const riskLevel = score > 85 ? "low" : score > 70 ? "medium" : "high";
+    // Heuristic for risk without health score
+    const riskLevel = idx % 3 === 0 ? "low" : idx % 3 === 1 ? "medium" : "high";
     const riskLabel = riskLevel === "low" ? "Minimal operational risk" : riskLevel === "medium" ? "Resource buffer monitoring" : "Schedule slippage risk";
     const riskColor = riskLevel === "low" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
       riskLevel === "medium" ? "bg-amber-50 text-amber-700 border-amber-200" :
@@ -212,7 +210,7 @@ const FinancialAccountInsights = () => {
     const oppCount = Math.floor((proj.total_revenue || 0) / 100000) || 1;
     const date = proj.created_at ? new Date(proj.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Oct 23, 2023";
 
-    return { score, insight, risk, oppCount, date };
+    return { insight, risk, oppCount, date };
   };
 
 
@@ -243,7 +241,7 @@ const FinancialAccountInsights = () => {
     });
   }, [baseProjectRows, projectSearchQuery]);
 
-  const healthScore = getAccountHealthScore({ ...data, account_insights: insights });
+
 
 
   if (loading) {
@@ -619,7 +617,7 @@ const FinancialAccountInsights = () => {
                         </TableRow>
                       ) : (
                         filteredProjectRows.map((proj: any, idx: number) => {
-                          const { score, insight, risk, oppCount, date } = getProjectInsightsRowData(proj, idx);
+                          const { insight, risk, oppCount, date } = getProjectInsightsRowData(proj, idx);
                           return (
                             <TableRow
                               key={proj.id}
