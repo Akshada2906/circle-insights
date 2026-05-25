@@ -9,6 +9,7 @@ export interface RoadmapVersion {
 export interface Account {
     account_id: string;
     account_name: string;
+    is_sales?: boolean;
     private_equity_id?: string;
     domain?: string;
     company_revenue?: string;

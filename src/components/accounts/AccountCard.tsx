@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AccountWithProjects } from '@/types/account';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,9 +20,10 @@ interface AccountCardProps {
 
 export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
     const navigate = useNavigate();
+    const location = useLocation();
 
     const handleCardClick = () => {
-        navigate(`/accounts/${account.account_id}`);
+        navigate(`/accounts/${account.account_id}`, { state: { backUrl: location.pathname + location.search } });
     };
 
     const handleEdit = (e: React.MouseEvent) => {
@@ -30,7 +31,7 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
         if (onEdit) {
             onEdit(account.account_id);
         } else {
-            navigate(`/accounts/${account.account_id}/edit`);
+            navigate(`/accounts/${account.account_id}/edit`, { state: { backUrl: location.pathname + location.search } });
         }
     };
 

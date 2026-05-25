@@ -37,6 +37,7 @@ export interface Account {
   inactive_project_count: number;
   target_revenue?: number;
   forecast_revenue?: number;
+  is_sales?: boolean;
   projects: Project[];
 }
 

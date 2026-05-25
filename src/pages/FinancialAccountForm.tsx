@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -16,28 +17,30 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { 
-  Building2, 
-  Loader2, 
-  Menu, 
-  ChevronRight, 
-  DollarSign, 
-  Target, 
-  Users, 
-  Plus, 
-  Trash2, 
-  Activity, 
-  Swords, 
-  FileText, 
-  Map, 
-  Brain, 
-  List 
+import {
+  Building2,
+  Loader2,
+  Menu,
+  ChevronRight,
+  ChevronDown,
+  DollarSign,
+  Target,
+  Users,
+  Plus,
+  Trash2,
+  Activity,
+  Swords,
+  FileText,
+  Map,
+  Brain,
+  List,
+  Award
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { 
-  getFinanceAccountById, 
-  createFinanceAccount, 
+import {
+  getFinanceAccountById,
+  createFinanceAccount,
   updateFinanceAccount,
   getFinanceDeliveryUnits
 } from '@/services/api';
@@ -53,18 +56,25 @@ const FinancialAccountForm = () => {
   const backUrl = location.state?.backUrl || '/financials';
   const privateEquityId = location.state?.private_equity_id || null;
   const { toast } = useToast();
-  
+
   const isEditing = !!id;
-  
+
   const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
-  const [deliveryUnits, setDeliveryUnits] = useState<{id: string, name: string}[]>([]);
-  
+  const [deliveryUnits, setDeliveryUnits] = useState<{ id: string, name: string }[]>([]);
+
   // Use generic accounts context to sync data with the base Account record
   const { accounts, addAccount, updateAccount, fetchAccount } = useAccounts();
   const [salesAccountId, setSalesAccountId] = useState<string | null>(null);
   const [finData, setFinData] = useState<any>(null);
   const fetchedAccountIdRef = useRef<string | null>(null);
+
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    sales_info: true,
+    roadmaps: true,
+  });
+  const toggleSection = (sectionId: string) =>
+    setOpenSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
 
   const [formData, setFormData] = useState<any>({
     // Financial Account Core Fields
@@ -73,6 +83,7 @@ const FinancialAccountForm = () => {
     account_manager: '',
     customer_overview: '',
     ai_recommendations: '',
+    is_sales: false,
     target_revenue: 0,
     forecast_revenue: 0,
     total_revenue: 0,
@@ -135,7 +146,7 @@ const FinancialAccountForm = () => {
       try {
         const units = await getFinanceDeliveryUnits();
         setDeliveryUnits(units);
-        
+
         if (isEditing && id) {
           const data = await getFinanceAccountById(id);
           setFinData(data);
@@ -158,7 +169,7 @@ const FinancialAccountForm = () => {
       // Try to match with an existing sales account by ID or Fuzzy Name
       const searchId = finData?.id || id;
       let matchedSalesAcc: any = accounts.find((a: any) => a.account_id === searchId);
-      
+
       if (!matchedSalesAcc && finData?.name) {
         const searchName = finData.name.trim().toLowerCase();
         matchedSalesAcc = accounts.find((a: any) => {
@@ -188,7 +199,8 @@ const FinancialAccountForm = () => {
         ai_recommendations: finData?.ai_recommendations || prev.ai_recommendations || '',
         target_revenue: finData?.target_revenue || prev.target_revenue || 0,
         forecast_revenue: finData?.forecast_revenue || prev.forecast_revenue || 0,
-        total_revenue: finData?.total_revenue || prev.total_revenue || 0,
+        is_sales: !!finData?.is_sales,
+        total_revenue: finData?.current_revenue || finData?.total_revenue || prev.total_revenue || 0,
         ai_revenue: finData?.ai_revenue || prev.ai_revenue || 0,
         private_equity_id: finData?.private_equity_id || privateEquityId || null,
 
@@ -249,7 +261,7 @@ const FinancialAccountForm = () => {
       });
       return;
     }
-    
+
     setSubmitting(true);
     try {
       // 1. Prepare Finance API payload with a background default unit ID if omitted
@@ -264,6 +276,7 @@ const FinancialAccountForm = () => {
         forecast_revenue: parseFloat(formData.forecast_revenue) || 0,
         total_revenue: parseFloat(formData.total_revenue) || 0,
         ai_revenue: parseFloat(formData.ai_revenue) || 0,
+        is_sales: !!formData.is_sales,
         private_equity_id: formData.private_equity_id
       };
 
@@ -315,17 +328,8 @@ const FinancialAccountForm = () => {
         updated_at: new Date().toISOString()
       };
 
-      if (salesAccountId) {
+      if (salesAccountId && isEditing) {
         await updateAccount(salesAccountId, salesUpdates);
-      } else if (resultingFinanceId) {
-        // Create base linked sales account record
-        await addAccount({
-          ...salesUpdates,
-          account_id: resultingFinanceId, // mirror ID perfectly
-          created_at: new Date().toISOString(),
-          projects: [],
-          status: 'ACTIVE'
-        });
       }
 
       toast({
@@ -347,10 +351,10 @@ const FinancialAccountForm = () => {
 
   // Standard Bento-Box Tabs System
   const TABS = ['sales_details', 'ai_recommendations', 'customer_overview', 'roadmaps', 'account_documents'];
-  const [activeTab, setActiveTab] = useState('sales_details');
+  const [activeTab, setActiveTab] = useState('ai_recommendations');
 
   const SALES_SECTIONS = [
-    { id: 'sales_info', label: 'Sales & Account Information', icon: Building2 },
+    { id: 'sales_info', label: 'Account Information', icon: Building2 },
     { id: 'delivery_ops', label: 'Delivery & Operations', icon: Activity },
     { id: 'financials', label: 'Sales Financials', icon: Target },
     { id: 'strategy', label: 'Strategy & Growth', icon: Target },
@@ -396,18 +400,18 @@ const FinancialAccountForm = () => {
 
   return (
     <MainLayout>
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 min-h-[calc(100vh-48px)] flex flex-col justify-between gap-6">
+
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 text-[15px] text-slate-500 mb-2">
-          <div 
-             onClick={() => navigate(backUrl)}
-             className="p-1.5 bg-blue-600 rounded-full text-white cursor-pointer hover:bg-blue-700 transition-colors mr-1 shadow-sm"
+          <div
+            onClick={() => navigate(isEditing ? `/financials/${id}` : backUrl, { state: { backUrl } })}
+            className="p-1.5 bg-blue-600 rounded-full text-white cursor-pointer hover:bg-blue-700 transition-colors mr-1 shadow-sm"
           >
             <Menu className="w-4 h-4" />
           </div>
-          <a 
-            onClick={() => navigate(backUrl)} 
+          <a
+            onClick={() => navigate(backUrl)}
             className="text-blue-600 hover:underline cursor-pointer font-medium"
           >
             {backUrl.includes('private-equity') ? 'Private Equity' : 'Accounts'}
@@ -419,6 +423,12 @@ const FinancialAccountForm = () => {
             </>
           )}
           <ChevronRight className="w-4 h-4 text-slate-400" />
+          {isEditing && formData.name && (
+            <>
+              <a onClick={() => navigate(`/financials/${id}`, { state: { backUrl } })} className="text-blue-600 hover:underline cursor-pointer font-medium">{formData.name}</a>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </>
+          )}
           <span className="text-slate-600 font-semibold">{isEditing ? 'Edit Financial Account' : 'Create Financial Account'}</span>
         </div>
 
@@ -432,13 +442,23 @@ const FinancialAccountForm = () => {
               {isEditing ? 'Update synchronized account parameters across finance and sales views' : 'Initialize account structure with multi-tab configuration'}
             </p>
           </div>
+          <div className="ml-auto flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+            <Label htmlFor="is-sales-toggle" className="text-sm font-semibold text-slate-700 cursor-pointer">
+              Is Sales Account
+            </Label>
+            <Switch
+              id="is-sales-toggle"
+              checked={!!formData.is_sales}
+              onCheckedChange={(checked) => setFormData({ ...formData, is_sales: checked })}
+            />
+          </div>
         </div>
 
         {/* 7 Metric Cards Top Row for Bento Box Theme Consistency */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
           <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between hover:border-blue-200 transition-colors">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Current Revenue</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">Current Revenue</span>
               <div className="relative">
                 <Input
                   value={formData.total_revenue || ''}
@@ -451,10 +471,10 @@ const FinancialAccountForm = () => {
             </div>
             <span className="text-[10px] text-slate-500 mt-4">YTD Actual</span>
           </Card>
-          
+
           <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between hover:border-blue-200 transition-colors">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Target Revenue</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">Target Revenue</span>
               <div className="relative">
                 <Input
                   value={formData.target_revenue || ''}
@@ -470,7 +490,7 @@ const FinancialAccountForm = () => {
 
           <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between hover:border-blue-200 transition-colors">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Forecast Revenue</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">Forecast Revenue</span>
               <div className="relative">
                 <Input
                   value={formData.forecast_revenue || ''}
@@ -486,7 +506,7 @@ const FinancialAccountForm = () => {
 
           <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between bg-red-50/30">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Shortfall</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">Shortfall</span>
               <p className="text-xl font-bold text-red-600">
                 {formatCurrency(shortfall)}
               </p>
@@ -496,7 +516,7 @@ const FinancialAccountForm = () => {
 
           <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between hover:border-blue-200 transition-colors">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">AI Revenue</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">AI Revenue</span>
               <div className="relative">
                 <Input
                   value={formData.ai_revenue || ''}
@@ -512,7 +532,7 @@ const FinancialAccountForm = () => {
 
           <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">AI Penetration</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">AI Penetration</span>
               <p className="text-xl font-bold text-blue-600">
                 {parsedActual > 0 ? ((parseFloat(formData.ai_revenue || 0) / parsedActual) * 100).toFixed(1) : '0.0'}%
               </p>
@@ -522,7 +542,7 @@ const FinancialAccountForm = () => {
 
           <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between hover:border-blue-200 transition-colors">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Projects</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">Projects</span>
               <div className="relative">
                 <Input
                   value={formData.number_of_active_projects || ''}
@@ -536,13 +556,9 @@ const FinancialAccountForm = () => {
           </Card>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full relative">
+        <form onSubmit={handleSubmit} className="space-y-6 flex-1 flex flex-col justify-between">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full relative flex-1 flex flex-col justify-between">
             <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full gap-2 h-auto mb-6">
-              <TabsTrigger value="sales_details" className="tab-blue h-auto py-2 whitespace-normal text-xs px-2 md:text-sm leading-tight flex items-center gap-2">
-                <Building2 className="w-4 h-4" />
-                Sales Details
-              </TabsTrigger>
               <TabsTrigger value="ai_recommendations" className="tab-purple h-auto py-2 whitespace-normal text-xs px-2 md:text-sm leading-tight flex items-center gap-2">
                 <Brain className="w-4 h-4" />
                 AI Recommendations
@@ -555,86 +571,141 @@ const FinancialAccountForm = () => {
                 <Map className="w-4 h-4" />
                 Roadmaps
               </TabsTrigger>
+              <TabsTrigger value="sales_details" className="tab-blue h-auto py-2 whitespace-normal text-xs px-2 md:text-sm leading-tight flex items-center gap-2">
+                <Building2 className="w-4 h-4" />
+                Sales Details
+              </TabsTrigger>
               <TabsTrigger value="account_documents" className="tab-amber h-auto py-2 whitespace-normal text-xs px-2 md:text-sm leading-tight flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 Account Documents
               </TabsTrigger>
             </TabsList>
 
-            <div className="pt-2">
-              <TabsContent value="sales_details" className="mt-0 animate-in fade-in slide-in-from-right-4 duration-500">
-                <div className="flex flex-col md:flex-row gap-8 items-start">
-                  
-                  {/* Vertical Sidebar Navigation */}
-                  <div className="w-full md:w-[260px] shrink-0 flex flex-col sticky top-6">
-                    <div className="px-3 pb-4">
-                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                        <List className="w-4 h-4" />
-                        Categories
-                      </h3>
+            <div className="pt-2 flex-1">
+              <TabsContent value="ai_recommendations" className="space-y-6 animate-in fade-in duration-500">
+                <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
+                  <CardHeader className="bg-gradient-to-r from-purple-50/50 to-transparent border-b border-purple-100">
+                    <CardTitle className="flex items-center gap-2 text-purple-950">
+                      <Brain className="w-5 h-5 text-purple-600" />
+                      AI Recommendations & Insights
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="ai_recommendations" className="text-slate-500 font-semibold uppercase text-xs tracking-wider">Account AI Actionables</Label>
+                      <Textarea
+                        id="ai_recommendations"
+                        value={formData.ai_recommendations}
+                        onChange={(e) => setFormData({ ...formData, ai_recommendations: e.target.value })}
+                        placeholder="Enter direct agent recommendations, key insight indicators, or identified automation opportunities..."
+                        className="min-h-[200px] bg-white border-slate-200"
+                      />
+                      <p className="text-xs text-muted-foreground mt-2">These details synchronize immediately with both global dashboards and client insight generators.</p>
                     </div>
-                    <div className="space-y-1.5">
-                      {SALES_SECTIONS.map((section) => (
-                        <button
-                          key={section.id}
-                          type="button"
-                          onClick={() => setSalesActiveSection(section.id)}
-                          className={cn(
-                            "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all text-left",
-                            salesActiveSection === section.id
-                              ? "bg-white text-blue-700 shadow-sm border border-slate-200/60"
-                              : "text-slate-500 hover:bg-slate-200/50 hover:text-slate-900"
-                          )}
-                        >
-                          <section.icon className={cn(
-                            "w-4 h-4",
-                            salesActiveSection === section.id ? "text-blue-600" : "text-slate-400"
-                          )} />
-                          {section.label}
-                          {salesActiveSection === section.id && (
-                            <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-                  {/* Section Content Area */}
-                  <div className="flex-1 w-full flex flex-col">
-                    {salesActiveSection === 'sales_info' && (
-                      <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        <CardHeader className="border-b border-slate-100 p-4 bg-indigo-50/30">
-                          <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                            <div className="p-1 rounded bg-indigo-50">
-                              <Building2 className="w-4 h-4 text-indigo-600" />
-                            </div>
-                            Sales & Account Information
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                          <div className="md:col-span-2 space-y-2">
+              <TabsContent value="customer_overview" className="space-y-6 animate-in fade-in duration-500">
+                <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
+                  <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-transparent border-b border-indigo-100">
+                    <CardTitle className="flex items-center gap-2 text-indigo-950">
+                      <Activity className="w-5 h-5 text-indigo-600" />
+                      Customer Overview
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="customer_overview" className="text-slate-500 font-semibold uppercase text-xs tracking-wider">Customer Overview & Scope</Label>
+                      <Textarea
+                        id="customer_overview"
+                        value={formData.customer_overview}
+                        onChange={(e) => setFormData({ ...formData, customer_overview: e.target.value })}
+                        placeholder="Provide an overview of the customer's background, current industry standing, and global business parameters..."
+                        className="min-h-[200px] bg-white border-slate-200"
+                      />
+                      <p className="text-xs text-muted-foreground mt-2">Provides organizational scope mapping across modules.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="roadmaps" className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden">
+                  <button type="button" onClick={() => toggleSection('roadmaps')}
+                    className="w-full flex items-center gap-3 px-5 py-4 bg-emerald-50/40 hover:bg-emerald-50/70 transition-colors text-left">
+                    <div className="p-1 rounded bg-emerald-100"><Map className="w-4 h-4 text-emerald-600" /></div>
+                    <span className="flex-1 text-sm font-bold text-slate-900">Roadmaps</span>
+                    {openSections['roadmaps'] ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                  </button>
+                  {openSections['roadmaps'] && (
+                    <div className="p-6 border-t border-slate-100 space-y-6 bg-white animate-in fade-in duration-300">
+                      <RoadmapEditor
+                        label="Technical Roadmap"
+                        value={formData.technical_roadmap}
+                        onChange={(val) => setFormData({ ...formData, technical_roadmap: val })}
+                        placeholder="Enter technical roadmap details..."
+                      />
+                      <div className="border-t border-slate-100 pt-6">
+                        <RoadmapEditor
+                          label="Product Roadmap"
+                          value={formData.product_roadmap}
+                          onChange={(val) => setFormData({ ...formData, product_roadmap: val })}
+                          placeholder="Enter product roadmap details..."
+                        />
+                      </div>
+                      <div className="border-t border-slate-100 pt-6">
+                        <RoadmapEditor
+                          label="AI Roadmap"
+                          value={formData.ai_roadmap}
+                          onChange={(val) => setFormData({ ...formData, ai_roadmap: val })}
+                          placeholder="Enter AI roadmap details..."
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="sales_details" className="mt-0 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden">
+                  <button type="button" onClick={() => toggleSection('sales_info')}
+                    className="w-full flex items-center gap-3 px-5 py-4 bg-indigo-50/40 hover:bg-indigo-50/70 transition-colors text-left">
+                    <div className="p-1 rounded bg-indigo-100"><Building2 className="w-4 h-4 text-indigo-600" /></div>
+                    <span className="flex-1 text-sm font-bold text-slate-900">Account Information</span>
+                    {openSections['sales_info'] ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                  </button>
+                  {openSections['sales_info'] && (
+                    <div className="p-6 border-t border-slate-100 space-y-8 animate-in fade-in duration-300 bg-white">
+
+                      {/* Sub-section 1: Sales & Account Details */}
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b pb-2">
+                          <Users className="w-4 h-4 text-indigo-600" />
+                          Account Details
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                          <div className="md:col-span-3 space-y-2">
                             <Label htmlFor="name" className="text-sm font-semibold">Account Name <span className="text-red-500">*</span></Label>
-                            <Input 
-                              id="name" 
-                              value={formData.name} 
-                              onChange={(e) => setFormData({ ...formData, name: e.target.value, account_name: e.target.value })} 
-                              placeholder="Enter account name..." 
-                              className={cn("h-11", errors.name ? 'border-destructive' : '')} 
-                              required 
+                            <Input
+                              id="name"
+                              value={formData.name}
+                              onChange={(e) => setFormData({ ...formData, name: e.target.value, account_name: e.target.value })}
+                              placeholder="Enter account name..."
+                              className={cn("h-11", errors.name ? 'border-destructive' : '')}
+                              required
                             />
                             {errors.name && <p className="text-[10px] text-destructive font-semibold">{errors.name}</p>}
                           </div>
 
-
-
                           <div className="space-y-2">
                             <Label htmlFor="account_manager" className="text-sm font-semibold">Account Manager / Partner</Label>
-                            <Input 
-                              id="account_manager" 
-                              value={formData.account_manager} 
-                              onChange={(e) => setFormData({ ...formData, account_manager: e.target.value, client_partner: e.target.value })} 
-                              placeholder="Manager name..." 
-                              className="h-11" 
+                            <Input
+                              id="account_manager"
+                              value={formData.account_manager}
+                              onChange={(e) => setFormData({ ...formData, account_manager: e.target.value, client_partner: e.target.value })}
+                              placeholder="Manager name..."
+                              className="h-11"
                             />
                           </div>
 
@@ -664,21 +735,16 @@ const FinancialAccountForm = () => {
                             <Label htmlFor="account_research_link" className="text-sm font-semibold">Account Research Link</Label>
                             <Input id="account_research_link" value={formData.account_research_link} onChange={(e) => setFormData({ ...formData, account_research_link: e.target.value })} placeholder="https://..." className="h-11" />
                           </div>
-                        </CardContent>
-                      </Card>
-                    )}
+                        </div>
+                      </div>
 
-                    {salesActiveSection === 'delivery_ops' && (
-                      <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        <CardHeader className="border-b border-slate-100 p-4 bg-blue-50/30">
-                          <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                            <div className="p-1 rounded bg-blue-50">
-                              <Activity className="w-4 h-4 text-blue-600" />
-                            </div>
-                            Delivery & Operations
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                      {/* Sub-section 2: Delivery & Operations */}
+                      <div className="space-y-4 pt-4">
+                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b pb-2">
+                          <Activity className="w-4 h-4 text-blue-600" />
+                          Delivery &amp; Operations
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                           <div className="space-y-2">
                             <Label htmlFor="delivery_owner" className="text-sm font-semibold">Delivery Owner</Label>
                             <Input id="delivery_owner" value={formData.delivery_owner} onChange={(e) => setFormData({ ...formData, delivery_owner: e.target.value })} placeholder="Process owner name..." className="h-11" />
@@ -688,7 +754,7 @@ const FinancialAccountForm = () => {
                             <Input id="overall_delivery_health" value={formData.overall_delivery_health} onChange={(e) => setFormData({ ...formData, overall_delivery_health: e.target.value })} placeholder="e.g. Green, Amber, Red..." className="h-11" />
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4 md:col-span-2">
+                          <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="team_size" className="text-sm font-semibold">Team Size</Label>
                               <Input id="team_size" value={formData.team_size || ''} onChange={(e) => setFormData({ ...formData, team_size: e.target.value })} placeholder="0" className="h-11" />
@@ -716,70 +782,65 @@ const FinancialAccountForm = () => {
                             <Input id="engagement_models" value={formData.engagement_models} onChange={(e) => setFormData({ ...formData, engagement_models: e.target.value })} placeholder="e.g. T&M, Fixed Price" className="h-11" />
                           </div>
 
-                          <div className="md:col-span-2 space-y-2">
+                          <div className="md:col-span-3 space-y-2">
                             <Label htmlFor="current_engagement_areas" className="text-sm font-semibold">Current Engagement Areas</Label>
-                            <Textarea id="current_engagement_areas" value={formData.current_engagement_areas} onChange={(e) => setFormData({ ...formData, current_engagement_areas: e.target.value })} rows={4} placeholder="Summary of what we do for them..." />
+                            <Textarea id="current_engagement_areas" value={formData.current_engagement_areas} onChange={(e) => setFormData({ ...formData, current_engagement_areas: e.target.value })} rows={3} placeholder="Summary of what we do for them..." />
                           </div>
-                        </CardContent>
-                      </Card>
-                    )}
+                        </div>
+                      </div>
 
-                    {salesActiveSection === 'financials' && (
-                      <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        <CardHeader className="border-b border-slate-100 p-4 bg-emerald-50/30">
-                          <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                            <div className="p-1 rounded bg-emerald-50">
-                              <Target className="w-4 h-4 text-emerald-600" />
-                            </div>
-                            Sales Financials
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                      {/* Sub-section 3: Sales Financials */}
+                      <div className="space-y-4 pt-4">
+                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b pb-2">
+                          <Target className="w-4 h-4 text-emerald-600" />
+                          Sales Financials
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                           <div className="space-y-2">
                             <Label htmlFor="total_rev" className="text-sm font-semibold">Current Revenue / Last Year Business ($)</Label>
-                            <Input 
-                              id="total_rev" 
-                              type="number" 
-                              value={formData.total_revenue || ''} 
-                              onChange={(e) => setFormData({ ...formData, total_revenue: parseFloat(e.target.value) || 0, last_year_business_done: e.target.value })} 
-                              placeholder="Current actual revenue..." 
-                              className="h-11" 
+                            <Input
+                              id="total_rev"
+                              type="number"
+                              value={formData.total_revenue || ''}
+                              onChange={(e) => setFormData({ ...formData, total_revenue: parseFloat(e.target.value) || 0, last_year_business_done: e.target.value })}
+                              placeholder="Current actual revenue..."
+                              className="h-11"
                             />
                           </div>
 
                           <div className="space-y-2">
                             <Label htmlFor="ai_rev" className="text-sm font-semibold">Current AI Revenue ($)</Label>
-                            <Input 
-                              id="ai_rev" 
-                              type="number" 
-                              value={formData.ai_revenue || ''} 
-                              onChange={(e) => setFormData({ ...formData, ai_revenue: parseFloat(e.target.value) || 0 })} 
-                              placeholder="Direct AI integration revenue..." 
-                              className="h-11" 
+                            <Input
+                              id="ai_rev"
+                              type="number"
+                              value={formData.ai_revenue || ''}
+                              onChange={(e) => setFormData({ ...formData, ai_revenue: parseFloat(e.target.value) || 0 })}
+                              placeholder="Direct AI integration revenue..."
+                              className="h-11"
                             />
                           </div>
 
                           <div className="space-y-2">
                             <Label htmlFor="target_rev" className="text-sm font-semibold">Target Revenue 2026 ($)</Label>
-                            <Input 
-                              id="target_rev" 
-                              type="number" 
-                              value={formData.target_revenue || ''} 
-                              onChange={(e) => setFormData({ ...formData, target_revenue: parseFloat(e.target.value) || 0, target_projection_2026_accounts: e.target.value })} 
-                              placeholder="Goal revenue..." 
-                              className="h-11" 
+                            <Input
+                              id="target_rev"
+                              type="number"
+                              value={formData.target_revenue || ''}
+                              onChange={(e) => setFormData({ ...formData, target_revenue: parseFloat(e.target.value) || 0, target_projection_2026_accounts: e.target.value })}
+                              placeholder="Goal revenue..."
+                              className="h-11"
                             />
                           </div>
 
                           <div className="space-y-2">
                             <Label htmlFor="forecast_rev" className="text-sm font-semibold">Forecast Revenue / Pipeline ($)</Label>
-                            <Input 
-                              id="forecast_rev" 
-                              type="number" 
-                              value={formData.forecast_revenue || ''} 
-                              onChange={(e) => setFormData({ ...formData, forecast_revenue: parseFloat(e.target.value) || 0, current_pipeline_value: e.target.value })} 
-                              placeholder="Projected forecast..." 
-                              className="h-11" 
+                            <Input
+                              id="forecast_rev"
+                              type="number"
+                              value={formData.forecast_revenue || ''}
+                              onChange={(e) => setFormData({ ...formData, forecast_revenue: parseFloat(e.target.value) || 0, current_pipeline_value: e.target.value })}
+                              placeholder="Projected forecast..."
+                              className="h-11"
                             />
                           </div>
 
@@ -792,67 +853,55 @@ const FinancialAccountForm = () => {
                             <Label htmlFor="revenue_attrition_possibility" className="text-sm font-semibold">Attrition / Leakage?</Label>
                             <Input id="revenue_attrition_possibility" value={formData.revenue_attrition_possibility} onChange={(e) => setFormData({ ...formData, revenue_attrition_possibility: e.target.value })} placeholder="None / Low / Specific projects..." className="h-11" />
                           </div>
-                        </CardContent>
-                      </Card>
-                    )}
+                        </div>
+                      </div>
 
-                    {salesActiveSection === 'strategy' && (
-                      <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        <CardHeader className="border-b border-slate-100 p-4 bg-indigo-50/30">
-                          <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                            <div className="p-1 rounded bg-indigo-50">
-                              <Target className="w-4 h-4 text-indigo-600" />
-                            </div>
-                            Strategy & Growth
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6 pt-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                              <Label htmlFor="know_customer_value_chain_trigger" className="text-sm font-semibold">Value Chain Known?</Label>
-                              <Select
-                                value={formData.know_customer_value_chain ? "yes" : "no"}
-                                onValueChange={(val) => setFormData({ ...formData, know_customer_value_chain: val === "yes" })}
-                              >
-                                <SelectTrigger id="know_customer_value_chain_trigger" className="h-11 font-medium"><SelectValue placeholder="Select..." /></SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="yes">Yes</SelectItem>
-                                  <SelectItem value="no">No</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="where_we_fit_in_value_chain" className="text-sm font-semibold">Value Chain Fit</Label>
-                              <Input id="where_we_fit_in_value_chain" value={formData.where_we_fit_in_value_chain} onChange={(e) => setFormData({ ...formData, where_we_fit_in_value_chain: e.target.value })} placeholder="Describe our role..." className="h-11" />
-                            </div>
+                      {/* Sub-section 4: Strategy & Growth */}
+                      <div className="space-y-4 pt-4">
+                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b pb-2">
+                          <Target className="w-4 h-4 text-indigo-600" />
+                          Strategy &amp; Growth
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="know_customer_value_chain_trigger" className="text-sm font-semibold">Value Chain Known?</Label>
+                            <Select
+                              value={formData.know_customer_value_chain ? "yes" : "no"}
+                              onValueChange={(val) => setFormData({ ...formData, know_customer_value_chain: val === "yes" })}
+                            >
+                              <SelectTrigger id="know_customer_value_chain_trigger" className="h-11 font-medium"><SelectValue placeholder="Select..." /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="yes">Yes</SelectItem>
+                                <SelectItem value="no">No</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="where_we_fit_in_value_chain" className="text-sm font-semibold">Value Chain Fit</Label>
+                            <Input id="where_we_fit_in_value_chain" value={formData.where_we_fit_in_value_chain} onChange={(e) => setFormData({ ...formData, where_we_fit_in_value_chain: e.target.value })} placeholder="Describe our role..." className="h-11" />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="visibility_client_roadmap_2026" className="text-sm font-semibold">Roadmap Visibility (2026)</Label>
                             <Input id="visibility_client_roadmap_2026" value={formData.visibility_client_roadmap_2026} onChange={(e) => setFormData({ ...formData, visibility_client_roadmap_2026: e.target.value })} placeholder="e.g. High, Q1 projects clear..." className="h-11" />
                           </div>
-                          <div className="space-y-2">
+                          <div className="md:col-span-3 space-y-2">
                             <Label htmlFor="identified_areas_cross_up_selling" className="text-sm font-semibold">Cross-Sell Areas</Label>
                             <Textarea id="identified_areas_cross_up_selling" value={formData.identified_areas_cross_up_selling} onChange={(e) => setFormData({ ...formData, identified_areas_cross_up_selling: e.target.value })} rows={3} placeholder="List potential opportunities..." />
                           </div>
-                          <div className="flex items-center space-x-2 pt-2">
+                          <div className="md:col-span-3 flex items-center space-x-2 pt-2">
                             <input type="checkbox" id="growth_action_plan_30days_ready" checked={formData.growth_action_plan_30days_ready} onChange={(e) => setFormData({ ...formData, growth_action_plan_30days_ready: e.target.checked })} className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
                             <Label htmlFor="growth_action_plan_30days_ready" className="text-sm font-semibold cursor-pointer">30 Days Growth Action Plan Ready?</Label>
                           </div>
-                        </CardContent>
-                      </Card>
-                    )}
+                        </div>
+                      </div>
 
-                    {salesActiveSection === 'relationships' && (
-                      <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        <CardHeader className="border-b border-slate-100 p-4 bg-violet-50/30">
-                          <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                            <div className="p-1 rounded bg-violet-50">
-                              <Users className="w-4 h-4 text-violet-600" />
-                            </div>
-                            Relationships
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                      {/* Sub-section 5: Relationships */}
+                      <div className="space-y-4 pt-4">
+                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b pb-2">
+                          <Users className="w-4 h-4 text-violet-600" />
+                          Relationships
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                           <div className="space-y-2">
                             <Label htmlFor="client_partner" className="text-sm font-semibold">Client Partner</Label>
                             <Input id="client_partner" value={formData.client_partner} onChange={(e) => setFormData({ ...formData, client_partner: e.target.value })} placeholder="Account manager name..." className="h-11" />
@@ -877,25 +926,20 @@ const FinancialAccountForm = () => {
                             <Label htmlFor="total_active_connects" className="text-sm font-semibold">Total Active Connects</Label>
                             <Input id="total_active_connects" value={formData.total_active_connects || ''} onChange={(e) => setFormData({ ...formData, total_active_connects: e.target.value })} placeholder="Number of stakeholders..." className="h-11" />
                           </div>
-                          <div className="md:col-span-2 flex items-center space-x-2 pt-2">
+                          <div className="md:col-span-3 flex items-center space-x-2 pt-2">
                             <input type="checkbox" id="connect_with_decision_maker" checked={formData.connect_with_decision_maker} onChange={(e) => setFormData({ ...formData, connect_with_decision_maker: e.target.checked })} className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
                             <Label htmlFor="connect_with_decision_maker" className="text-sm font-semibold cursor-pointer">Connect with Decision Maker</Label>
                           </div>
-                        </CardContent>
-                      </Card>
-                    )}
+                        </div>
+                      </div>
 
-                    {salesActiveSection === 'cadence' && (
-                      <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        <CardHeader className="border-b border-slate-100 p-4 bg-emerald-50/30">
-                          <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                            <div className="p-1 rounded bg-emerald-50">
-                              <Activity className="w-4 h-4 text-emerald-600" />
-                            </div>
-                            Readiness & Cadence
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6 pt-6">
+                      {/* Sub-section 6: Readiness & Cadence */}
+                      <div className="space-y-4 pt-4">
+                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b pb-2">
+                          <Award className="w-4 h-4 text-emerald-600" />
+                          Readiness &amp; Cadence
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                           <div className="space-y-2">
                             <Label htmlFor="account_review_cadence_frequency" className="text-sm font-semibold">Account Review Cadence</Label>
                             <Input id="account_review_cadence_frequency" value={formData.account_review_cadence_frequency} onChange={(e) => setFormData({ ...formData, account_review_cadence_frequency: e.target.value })} placeholder="e.g. Monthly, Bi-weekly..." className="h-11" />
@@ -914,26 +958,21 @@ const FinancialAccountForm = () => {
                             <Label htmlFor="technical_audit_frequency" className="text-sm font-semibold">Technical Audit Frequency</Label>
                             <Input id="technical_audit_frequency" value={formData.technical_audit_frequency} onChange={(e) => setFormData({ ...formData, technical_audit_frequency: e.target.value })} placeholder="e.g. Quarterly, Yearly..." className="h-11" />
                           </div>
-                        </CardContent>
-                      </Card>
-                    )}
+                        </div>
+                      </div>
 
-                    {salesActiveSection === 'competition' && (
-                      <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        <CardHeader className="border-b border-slate-100 p-4 bg-rose-50/30">
-                          <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                            <div className="p-1 rounded bg-rose-50">
-                              <Swords className="w-4 h-4 text-rose-600" />
-                            </div>
-                            Competitive Analysis
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6 pt-6">
-                          <div className="space-y-2">
+                      {/* Sub-section 7: Competitive Analysis */}
+                      <div className="space-y-4 pt-4">
+                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b pb-2">
+                          <Swords className="w-4 h-4 text-rose-600" />
+                          Competitive Analysis
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                          <div className="md:col-span-3 space-y-2">
                             <Label htmlFor="key_competitors" className="text-sm font-semibold">Key Competitors</Label>
                             <Textarea id="key_competitors" value={formData.key_competitors} onChange={(e) => setFormData({ ...formData, key_competitors: e.target.value })} rows={3} placeholder="List main competitors in this account..." />
                           </div>
-                          <div className="space-y-2">
+                          <div className="md:col-span-3 space-y-2">
                             <Label htmlFor="our_positioning_vs_competition" className="text-sm font-semibold">Positioning vs Competition</Label>
                             <Textarea id="our_positioning_vs_competition" value={formData.our_positioning_vs_competition} onChange={(e) => setFormData({ ...formData, our_positioning_vs_competition: e.target.value })} rows={3} placeholder="Cost / Quality / Speed / Trust / AI..." />
                           </div>
@@ -948,40 +987,35 @@ const FinancialAccountForm = () => {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="space-y-2">
+                          <div className="md:col-span-3 space-y-2">
                             <Label htmlFor="areas_competition_stronger" className="text-sm font-semibold">Areas Competition Stronger</Label>
                             <Textarea id="areas_competition_stronger" value={formData.areas_competition_stronger} onChange={(e) => setFormData({ ...formData, areas_competition_stronger: e.target.value })} rows={3} placeholder="Where do we need to improve?" />
                           </div>
-                          <div className="space-y-2">
+                          <div className="md:col-span-3 space-y-2">
                             <Label htmlFor="white_spaces_we_own" className="text-sm font-semibold">White Spaces We Own</Label>
                             <Textarea id="white_spaces_we_own" value={formData.white_spaces_we_own} onChange={(e) => setFormData({ ...formData, white_spaces_we_own: e.target.value })} rows={3} placeholder="Unique value propositions we have..." />
                           </div>
-                        </CardContent>
-                      </Card>
-                    )}
+                        </div>
+                      </div>
 
-                    {salesActiveSection === 'stakeholders' && (
-                      <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        <CardHeader className="border-b border-slate-100 p-4 bg-indigo-50/30">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                              <div className="p-1 rounded bg-indigo-50">
-                                <Users className="w-4 h-4 text-indigo-600" />
-                              </div>
-                              Strategic Stakeholders
-                            </CardTitle>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setProfiles([...profiles, { id: `stk-${Date.now()}`, executive_sponsor: '', technical_decision_maker: '', influencer: '', neutral_stakeholders: '', negative_stakeholder: '', succession_risk: '', key_competitors: '', our_positioning: '', incumbency_strength: 'Medium', areas_competition_stronger: '', white_spaces_we_own: '', account_review_cadence: '', qbr_happening: 'No', technical_audit_frequency: '', created_at: '', updated_at: '' } as StrategicStakeholderProfile])}
-                              className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 h-8 bg-white"
-                            >
-                              <Plus className="w-3 h-3 mr-1" /> Add Row
-                            </Button>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4 pt-6 overflow-x-auto">
+                      {/* Sub-section 8: Strategic Stakeholders */}
+                      <div className="space-y-4 pt-4">
+                        <div className="flex items-center justify-between border-b pb-2">
+                          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <Users className="w-4 h-4 text-indigo-600" />
+                            Strategic Stakeholders
+                          </h3>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setProfiles([...profiles, { id: `stk-${Date.now()}`, executive_sponsor: '', technical_decision_maker: '', influencer: '', neutral_stakeholders: '', negative_stakeholder: '', succession_risk: '', key_competitors: '', our_positioning: '', incumbency_strength: 'Medium', areas_competition_stronger: '', white_spaces_we_own: '', account_review_cadence: '', qbr_happening: 'No', technical_audit_frequency: '', created_at: '', updated_at: '' } as StrategicStakeholderProfile])}
+                            className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 h-8 bg-white"
+                          >
+                            <Plus className="w-3 h-3 mr-1" /> Add Row
+                          </Button>
+                        </div>
+                        <div className="overflow-x-auto">
                           {profiles.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
                               <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -1044,92 +1078,12 @@ const FinancialAccountForm = () => {
                               </Table>
                             </div>
                           )}
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="ai_recommendations" className="space-y-6 animate-in fade-in duration-500">
-                <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
-                  <CardHeader className="bg-gradient-to-r from-purple-50/50 to-transparent border-b border-purple-100">
-                    <CardTitle className="flex items-center gap-2 text-purple-950">
-                      <Brain className="w-5 h-5 text-purple-600" />
-                      AI Recommendations & Insights
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="ai_recommendations" className="text-slate-500 font-semibold uppercase text-xs tracking-wider">Account AI Actionables</Label>
-                      <Textarea
-                        id="ai_recommendations"
-                        value={formData.ai_recommendations}
-                        onChange={(e) => setFormData({ ...formData, ai_recommendations: e.target.value })}
-                        placeholder="Enter direct agent recommendations, key insight indicators, or identified automation opportunities..."
-                        className="min-h-[200px] bg-white border-slate-200"
-                      />
-                      <p className="text-xs text-muted-foreground mt-2">These details synchronize immediately with both global dashboards and client insight generators.</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="customer_overview" className="space-y-6 animate-in fade-in duration-500">
-                <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
-                  <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-transparent border-b border-indigo-100">
-                    <CardTitle className="flex items-center gap-2 text-indigo-950">
-                      <Activity className="w-5 h-5 text-indigo-600" />
-                      Customer Overview
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="customer_overview" className="text-slate-500 font-semibold uppercase text-xs tracking-wider">Customer Overview & Scope</Label>
-                      <Textarea
-                        id="customer_overview"
-                        value={formData.customer_overview}
-                        onChange={(e) => setFormData({ ...formData, customer_overview: e.target.value })}
-                        placeholder="Provide an overview of the customer's background, current industry standing, and global business parameters..."
-                        className="min-h-[200px] bg-white border-slate-200"
-                      />
-                      <p className="text-xs text-muted-foreground mt-2">Provides organizational scope mapping across modules.</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="roadmaps" className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
-                <Card className="shadow-sm border border-slate-200/60 overflow-hidden bg-white">
-                  <CardHeader className="bg-gradient-to-r from-emerald-50/80 to-transparent border-b border-emerald-100 pb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-emerald-100/50 rounded-lg text-emerald-600">
-                        <Map className="w-5 h-5" />
+                        </div>
                       </div>
-                      <CardTitle className="text-lg text-emerald-950">Account Roadmaps</CardTitle>
+
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-6 pt-6">
-                    <RoadmapEditor
-                      label="Technical Roadmap"
-                      value={formData.technical_roadmap}
-                      onChange={(val) => setFormData({ ...formData, technical_roadmap: val })}
-                      placeholder="Enter technical roadmap details..."
-                    />
-                    <RoadmapEditor
-                      label="Product Roadmap"
-                      value={formData.product_roadmap}
-                      onChange={(val) => setFormData({ ...formData, product_roadmap: val })}
-                      placeholder="Enter product roadmap details..."
-                    />
-                    <RoadmapEditor
-                      label="AI Roadmap"
-                      value={formData.ai_roadmap}
-                      onChange={(val) => setFormData({ ...formData, ai_roadmap: val })}
-                      placeholder="Enter AI roadmap details..."
-                    />
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
               </TabsContent>
 
               <TabsContent value="account_documents" className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
@@ -1146,7 +1100,7 @@ const FinancialAccountForm = () => {
                 variant="outline"
                 onClick={handlePrevious}
                 disabled={isFirstTab || submitting}
-                className="min-w-[100px] bg-white"
+                className="min-w-[100px] border-blue-200 text-blue-700 hover:bg-blue-50 bg-white hover:text-blue-800 font-semibold transition-all disabled:opacity-50"
               >
                 Previous
               </Button>
@@ -1155,14 +1109,14 @@ const FinancialAccountForm = () => {
                 type="button"
                 onClick={handleNext}
                 disabled={submitting || isLastTab}
-                className="min-w-[100px] bg-slate-900 text-white hover:bg-slate-800"
+                className="min-w-[100px] bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all shadow-sm disabled:opacity-50"
               >
                 Next
               </Button>
             </div>
 
             <div className="flex gap-3">
-              <Button type="button" variant="outline" onClick={() => navigate(backUrl)} className="bg-white" disabled={submitting}>
+              <Button type="button" variant="outline" onClick={() => navigate(isEditing ? `/financials/${id}` : backUrl, { state: { backUrl } })} className="bg-white" disabled={submitting}>
                 Cancel
               </Button>
 

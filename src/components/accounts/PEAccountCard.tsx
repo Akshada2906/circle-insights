@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,9 +6,10 @@ import { Building2, ArrowRight } from 'lucide-react';
 
 export function PEAccountCard({ firm }: { firm: any }) {
     const navigate = useNavigate();
+    const location = useLocation();
 
     const handleCardClick = () => {
-        navigate(`/private-equity/${firm.id}`);
+        navigate(`/private-equity/${firm.id}`, { state: { backUrl: location.pathname + location.search } });
     };
 
     return (

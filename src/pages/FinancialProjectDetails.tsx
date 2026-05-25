@@ -13,6 +13,7 @@ import { Menu, ArrowLeft, Pencil, Calendar, DollarSign, Bot, Code, UploadCloud, 
 import { useToast } from '@/hooks/use-toast';
 import { getFinanceProjectById, getFinanceAccountById, deleteFinanceProject, api } from '@/services/api';
 import { RoadmapViewer } from '@/components/accounts/RoadmapViewer';
+import { ProjectAIInsights } from '@/components/accounts/ProjectAIInsights';
 import { cn } from '@/lib/utils';
 import {
   AlertDialog,
@@ -73,10 +74,11 @@ interface PendingFile {
 
 const CATEGORIES = [
   { id: 'wsr-reports', label: 'WSR Reports', icon: LayoutGrid, title: 'Weekly Status Reports' },
+  { id: 'sow-documents', label: 'SOW Documents', icon: FileCheck, title: 'Statement of Work Documents' },
   { id: 'code-quality', label: 'Code Quality', icon: ShieldCheck, title: 'Code Quality Documents' },
   { id: 'tech-reviews', label: 'Tech Reviews', icon: ClipboardCheck, title: 'Technical Review Reports' },
   { id: 'best-practices', label: 'Best Practices', icon: BookOpen, title: 'Engineering Best Practices' },
-  { id: 'sow-documents', label: 'SOW Documents', icon: FileCheck, title: 'Statement of Work Documents' }
+  { id: 'other-docs', label: 'Other Documents', icon: FileText, title: 'Other Documents' }
 ];
 
 const formatFileSize = (bytes: number): string => {
@@ -125,7 +127,7 @@ const FinancialProjectDetails = () => {
   const itemsPerPage = 5;
 
   // Queue states
-  const [selectedType, setSelectedType] = useState('tech-reviews');
+  const [selectedType, setSelectedType] = useState('wsr-reports');
   const [shortDescription, setShortDescription] = useState('');
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
 
@@ -154,6 +156,22 @@ const FinancialProjectDetails = () => {
   const filteredDocs = documents.filter(d => d.category === activeTab);
   const activeDoc = filteredDocs.find(d => d.id === activeDocId) || (filteredDocs.length > 0 ? filteredDocs[0] : null);
 
+  const mapOtherDocToFrontend = (data: any): Document => {
+    return {
+      id: data.document_insight_id,
+      category: 'other-docs',
+      name: data.file_name,
+      type: 'Other Document',
+      date: new Date(data.generated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      desc: data.context_hint || '-',
+      status: 'Completed',
+      summary: data.insight_markdown || 'No insights generated.',
+      objectives: [],
+      stakeholders: [],
+      insights: []
+    };
+  };
+
   const fetchAllDocuments = async () => {
     if (!projectId) {
       setDocuments([]);
@@ -163,8 +181,8 @@ const FinancialProjectDetails = () => {
     setIsDocLoading(true);
     try {
       const allDocs: Document[] = [];
-      const apiCategories = ['wsr-reports', 'code-quality', 'tech-reviews', 'best-practices', 'sow-documents'];
-      
+      const apiCategories = ['wsr-reports', 'code-quality', 'tech-reviews', 'best-practices', 'sow-documents', 'other-docs'];
+
       for (const catId of apiCategories) {
         try {
           const data = await api.getFinanceDocument(projectId, catId);
@@ -175,6 +193,7 @@ const FinancialProjectDetails = () => {
           // Continue gracefully
         }
       }
+
       setDocuments(allDocs);
     } catch (error) {
       console.error('Failed to fetch finance documents:', error);
@@ -246,7 +265,7 @@ const FinancialProjectDetails = () => {
       const isError = formattedSummary.toLowerCase().includes('error:');
 
       const catObj = CATEGORIES.find(c => c.id === category);
-      const docName = data.document_name || `${catObj?.label || 'Document'} - ${new Date(data.created_at || Date.now()).toLocaleDateString()}`;
+      const docName = data.document_name || `${catObj?.label || 'Document'}`;
 
       const doc: Document = {
         id: data.document_id || String(Date.now()),
@@ -340,12 +359,11 @@ const FinancialProjectDetails = () => {
     setIsProcessing(true);
     let successCount = 0;
 
-    const mappedApiCategory = ['wsr-reports', 'code-quality', 'tech-reviews', 'best-practices', 'sow-documents'].includes(selectedType) 
-      ? selectedType 
-      : 'tech-reviews';
-
     for (const item of validFiles) {
       try {
+        const mappedApiCategory = ['wsr-reports', 'code-quality', 'tech-reviews', 'best-practices', 'sow-documents', 'other-docs'].includes(selectedType)
+          ? selectedType
+          : 'tech-reviews';
         await api.importFinanceDocument(projectId, mappedApiCategory, item.file);
         successCount++;
       } catch (error: any) {
@@ -488,18 +506,18 @@ const FinancialProjectDetails = () => {
       try {
         setLoading(true);
         if (!accountId || !projectId) {
-          navigate('/financials');
+          navigate(backUrl);
           return;
         }
-        
+
         const [projData, accData] = await Promise.all([
           getFinanceProjectById(projectId),
           getFinanceAccountById(accountId)
         ]);
-        
+
         setProject(projData);
         setAccount(accData);
-        
+
         try {
           const res = await api.getProjectInsights(projectId);
           if (res && res.status === 'success' && res.insights) {
@@ -534,13 +552,13 @@ const FinancialProjectDetails = () => {
 
   const handleGenerateInsights = async () => {
     if (!projectId) return;
-    
+
     setIsGeneratingInsights(true);
     toast({
       title: "Generating Insights",
       description: "Our AI agents are analyzing project documents and data...",
     });
-    
+
     try {
       const result = await api.generateProjectInsights(projectId);
       if (result.status === 'success') {
@@ -613,17 +631,17 @@ const FinancialProjectDetails = () => {
   return (
     <MainLayout>
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        
+
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 text-[15px] text-slate-500 mb-2 border-b border-gray-200 pb-2">
-          <div 
-             onClick={() => navigate(isFromPE ? backUrl : '/financials')}
-             className="p-1.5 bg-blue-600 rounded-full text-white cursor-pointer hover:bg-blue-700 transition-colors mr-1 shadow-sm"
+          <div
+            onClick={() => navigate(backUrl)}
+            className="p-1.5 bg-blue-600 rounded-full text-white cursor-pointer hover:bg-blue-700 transition-colors mr-1 shadow-sm"
           >
             <Menu className="w-4 h-4" />
           </div>
-          <a 
-            onClick={() => navigate(isFromPE ? backUrl : '/accounts')} 
+          <a
+            onClick={() => navigate(backUrl === '/financials' ? '/accounts' : backUrl)}
             className="text-blue-600 hover:underline cursor-pointer font-medium"
           >
             {isFromPE ? 'Private Equity' : 'Accounts'}
@@ -631,7 +649,7 @@ const FinancialProjectDetails = () => {
           {isFromPE && (
             <>
               <ChevronRight className="w-4 h-4 text-slate-400" />
-              <a onClick={() => navigate(backUrl)} className="text-blue-600 hover:underline cursor-pointer font-medium">Portfolio</a>
+              <a onClick={() => navigate(backUrl.replace('/insights', ''))} className="text-blue-600 hover:underline cursor-pointer font-medium">Portfolio</a>
             </>
           )}
           <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -655,7 +673,7 @@ const FinancialProjectDetails = () => {
                   {account?.name || 'Account'}
                 </div>
                 <Badge className={
-                    project.status?.toLowerCase() === 'active' 
+                  project.status?.toLowerCase() === 'active'
                     ? "bg-green-100 text-green-700 border-green-200 shadow-none hover:bg-green-100"
                     : "bg-red-100 text-red-700 border-red-200 shadow-none hover:bg-red-100"
                 }>
@@ -668,23 +686,9 @@ const FinancialProjectDetails = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
-            <Dialog open={isInsightsDialogOpen} onOpenChange={(open) => {
-              setIsInsightsDialogOpen(open);
-              if (!open && location.pathname.endsWith('/insights')) {
-                navigate(`/financials/${accountId}/projects/${projectId}`, { replace: true, state: { backUrl } });
-              }
-            }}>
-              <DialogTrigger asChild>
-                <Button 
-                  onClick={() => navigate(`/financials/${accountId}/projects/${projectId}/insights`, { state: { backUrl } })}
-                  className="bg-purple-600 hover:bg-purple-700 text-white gap-2 shadow-sm"
-                >
-                  <Brain className="w-4 h-4" />
-                  Generate Insights
-                </Button>
-              </DialogTrigger>
+            {false && (
               <DialogContent className="max-w-[96vw] w-full h-[94vh] max-h-[94vh] overflow-hidden flex flex-col p-0 bg-[#F8FAFC] border-none rounded-2xl shadow-2xl">
                 <div className="flex-1 flex flex-col overflow-hidden bg-[#F8FAFC]">
                   {/* TOP BAR */}
@@ -711,7 +715,7 @@ const FinancialProjectDetails = () => {
                             {project?.name || "Cloud Migration Strategy"}
                           </CardTitle>
                         </div>
-                        
+
                         {/* Circular Score Indicator */}
                         <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-2xs shrink-0">
                           <div className="relative w-12 h-12 flex items-center justify-center">
@@ -733,18 +737,35 @@ const FinancialProjectDetails = () => {
                       </CardHeader>
                       <CardContent className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white">
                         <p className="text-xs font-semibold text-slate-600 leading-relaxed max-w-4xl">
-                          {parsedInsights?.summary || parsedInsights?.executive_summary || project?.overview || 
-                           "Strategic multi-agent synthesis compiled optimal throughput across execution layers. Budget trajectories follow ideal linear allocations with standard governance tracking."}
+                          {parsedInsights?.summary || parsedInsights?.executive_summary || project?.overview ||
+                            "Strategic multi-agent synthesis compiled optimal throughput across execution layers. Budget trajectories follow ideal linear allocations with standard governance tracking."}
                         </p>
-                        <Button 
-                          onClick={handleGenerateInsights}
-                          disabled={isGeneratingInsights}
-                          size="sm"
-                          className="bg-[#0EA5E9] hover:bg-[#0284C7] text-white font-bold text-xs h-9 px-4 rounded-xl shadow-xs gap-1.5 shrink-0"
-                        >
-                          {isGeneratingInsights ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5 fill-current" />}
-                          <span>Regenerate Insights</span>
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              disabled={isGeneratingInsights}
+                              size="sm"
+                              className="bg-[#0EA5E9] hover:bg-[#0284C7] text-white font-bold text-xs h-9 px-4 rounded-xl shadow-xs gap-1.5 shrink-0"
+                            >
+                              {isGeneratingInsights ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5 fill-current" />}
+                              <span>Regenerate Insights</span>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Regenerate Insights</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to regenerate the insights?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>No</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleGenerateInsights} className="bg-[#0EA5E9] hover:bg-[#0284C7] text-white">
+                                Yes
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </CardContent>
                     </Card>
 
@@ -888,8 +909,8 @@ const FinancialProjectDetails = () => {
                               const typeStr = r?.type || r?.category || "RISK FACTOR";
                               const sevStr = (r?.severity || r?.level || "high").toLowerCase();
                               const msgStr = r?.message || r?.text || r?.description || JSON.stringify(r);
-                              const badgeClass = sevStr === 'high' 
-                                ? "bg-rose-50 text-rose-700 border-rose-200 font-black text-[9px] px-2.5 py-0.5 shadow-none" 
+                              const badgeClass = sevStr === 'high'
+                                ? "bg-rose-50 text-rose-700 border-rose-200 font-black text-[9px] px-2.5 py-0.5 shadow-none"
                                 : "bg-amber-50 text-amber-700 border-amber-200 font-black text-[9px] px-2.5 py-0.5 shadow-none";
                               return (
                                 <div key={idx} className="p-3.5 rounded-xl border border-rose-100/60 bg-rose-50/20 space-y-1" title={msgStr}>
@@ -924,8 +945,8 @@ const FinancialProjectDetails = () => {
                               const typeStr = opt?.type || opt?.category || "GROWTH PATH";
                               const impStr = (opt?.impact || opt?.level || "high").toLowerCase();
                               const msgStr = opt?.message || opt?.text || opt?.description || JSON.stringify(opt);
-                              const badgeClass = impStr === 'high' 
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 font-black text-[9px] px-2.5 py-0.5 shadow-none" 
+                              const badgeClass = impStr === 'high'
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 font-black text-[9px] px-2.5 py-0.5 shadow-none"
                                 : "bg-slate-50 text-slate-600 border-slate-200 font-black text-[9px] px-2.5 py-0.5 shadow-none";
                               return (
                                 <div key={idx} className="p-3.5 rounded-xl border border-emerald-100/60 bg-emerald-50/20 space-y-1" title={msgStr}>
@@ -1031,13 +1052,13 @@ const FinancialProjectDetails = () => {
                   </div>
                 </div>
               </DialogContent>
-            </Dialog>
+            )}
 
             <Button variant="outline" className="gap-2 bg-white" onClick={() => navigate(`/financials/${accountId}/projects/${projectId}/edit`, { state: { backUrl } })}>
               <Pencil className="w-4 h-4" />
               Edit Project
             </Button>
-            
+
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" className="gap-2 bg-red-50 text-red-600 hover:bg-red-100 border-red-200 shadow-none">
@@ -1061,627 +1082,494 @@ const FinancialProjectDetails = () => {
           </div>
         </div>
 
-          {/* Stats Cards Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            {/* Total Revenue Card */}
-            <Card className="border-t-4 border-t-emerald-500 shadow-sm hover:shadow-md transition-shadow bg-white">
-              <CardHeader className="bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-emerald-100 pb-3">
-                <CardTitle className="flex items-center gap-2 text-emerald-950 text-lg">
-                  <DollarSign className="w-5 h-5 text-emerald-600" />
-                  Current Revenue
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
-                 <p className="text-3xl font-bold text-emerald-900 mb-4">{formatCurrency(project.total_revenue)}</p>
-                 <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <div>
-                        <span className="font-semibold block">Expected</span>
-                        {formatCurrency(project.expected_revenue)}
-                    </div>
-                    <div>
-                        <span className="font-semibold block">YTD</span>
-                        {formatCurrency(project.ytd_revenue)}
-                    </div>
-                 </div>
-              </CardContent>
-            </Card>
+        {/* Primary Tabs */}
+        <Tabs defaultValue="ai-insights" className="w-full">
+          <TabsList className="grid grid-cols-2 w-full max-w-[400px] mx-auto mb-6">
+            <TabsTrigger value="ai-insights" className="tab-purple h-auto py-2.5 text-xs px-4 md:text-sm leading-tight flex items-center justify-center gap-2">
+              <Brain className="w-4 h-4" /> AI Insights
+            </TabsTrigger>
+            <TabsTrigger value="project-details" className="tab-blue h-auto py-2.5 text-xs px-4 md:text-sm leading-tight flex items-center justify-center gap-2">
+              <Building2 className="w-4 h-4" /> Project Details
+            </TabsTrigger>
+          </TabsList>
 
-            {/* Total AI Revenue Card */}
-            <Card className="border-t-4 border-t-blue-500 shadow-sm hover:shadow-md transition-shadow bg-white">
-              <CardHeader className="bg-gradient-to-r from-blue-50/50 to-transparent border-b border-blue-100 pb-3">
-                 <div className="flex justify-between items-center w-full">
+          <TabsContent value="ai-insights" className="mt-0">
+            <ProjectAIInsights projectId={projectId!} />
+          </TabsContent>
+
+          <TabsContent value="project-details" className="space-y-6 mt-0">
+            {/* Stats Cards Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Total Revenue Card */}
+              <Card className="border-t-4 border-t-emerald-500 shadow-sm hover:shadow-md transition-shadow bg-white">
+                <CardHeader className="bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-emerald-100 pb-3">
+                  <CardTitle className="flex items-center gap-2 text-emerald-950 text-lg">
+                    <DollarSign className="w-5 h-5 text-emerald-600" />
+                    Current Revenue
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <p className="text-3xl font-bold text-emerald-900 mb-4">{formatCurrency(project.total_revenue)}</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    <div>
+                      <span className="font-semibold block">Expected</span>
+                      {formatCurrency(project.expected_revenue)}
+                    </div>
+                    <div>
+                      <span className="font-semibold block">YTD</span>
+                      {formatCurrency(project.ytd_revenue)}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Total AI Revenue Card */}
+              <Card className="border-t-4 border-t-blue-500 shadow-sm hover:shadow-md transition-shadow bg-white">
+                <CardHeader className="bg-gradient-to-r from-blue-50/50 to-transparent border-b border-blue-100 pb-3">
+                  <div className="flex justify-between items-center w-full">
                     <CardTitle className="flex items-center gap-2 text-blue-950 text-lg">
                       <Bot className="w-5 h-5 text-blue-600" />
                       Total AI Revenue
                     </CardTitle>
                     <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200 font-medium whitespace-nowrap px-2">
-                        Penetration: {(project.ai_penetration || project.ai_penetration_pct || (project.total_revenue > 0 ? (((project.ai_revenue || 0) + (project.ai_assisted_revenue || 0)) / project.total_revenue) * 100 : 0)).toFixed(1)}%
+                      Penetration: {(project.ai_penetration || project.ai_penetration_pct || (project.total_revenue > 0 ? (((project.ai_revenue || 0) + (project.ai_assisted_revenue || 0)) / project.total_revenue) * 100 : 0)).toFixed(1)}%
                     </Badge>
-                 </div>
-              </CardHeader>
-              <CardContent className="pt-6">
-                 <p className="text-3xl font-bold text-blue-900 mb-4">{formatCurrency((project.ai_revenue || 0) + (project.ai_assisted_revenue || 0) || project.total_ai_revenue || 0)}</p>
-                 <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <div>
-                        <span className="font-semibold block ml-1 text-gray-500">Direct / Assist</span>
-                        {formatCurrency(project.ai_revenue)} / {formatCurrency(project.ai_assisted_revenue)}
-                    </div>
-                    <div>
-                        <span className="font-semibold block ml-1 text-gray-500">People</span>
-                        {project.ai_direct_people || 0} / {project.ai_assisted_people || 0}
-                    </div>
-                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Code Coverage Card */}
-            <Card className="border-t-4 border-t-indigo-500 shadow-sm hover:shadow-md transition-shadow bg-white">
-              <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-transparent border-b border-indigo-100 pb-3">
-                <CardTitle className="flex items-center gap-2 text-indigo-950 text-lg">
-                  <Code className="w-5 h-5 text-indigo-600" />
-                  Code Coverage
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <p className="text-3xl font-bold text-indigo-900 mb-6">{project.code_coverage_pct?.toFixed(1) || '0.0'}%</p>
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mt-2">
-                    <span className="text-[10px] font-semibold text-gray-400 block mb-1">MEASUREMENT</span>
-                    <Progress 
-                      value={project.code_coverage_pct || 0} 
-                      className="h-2 bg-gray-200 [&>div]:bg-indigo-600" 
-                    />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-        {/* Tabbed Section */}
-        <Tabs defaultValue="overview" className="w-full mt-6">
-          <TabsList className="grid grid-cols-4 w-full gap-2 h-auto">
-              <TabsTrigger value="overview" className="tab-blue h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center justify-center gap-2">
-                Overview
-              </TabsTrigger>
-              <TabsTrigger value="recommendations" className="tab-purple h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center justify-center gap-2">
-                Recommendations
-              </TabsTrigger>
-              <TabsTrigger value="deliverables" className="tab-emerald h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center justify-center gap-2">
-                Deliverables
-              </TabsTrigger>
-              <TabsTrigger value="circle-penetration" className="tab-rose h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center justify-center gap-2">
-                Circle Penetration
-              </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="mt-6 space-y-6">
-            <Card className="shadow-sm border-gray-100">
-              <CardContent className="p-6">
-                <h3 className="font-bold text-gray-900 mb-4 uppercase text-xs tracking-wider">Project Overview</h3>
-                <div className="bg-blue-50/30 border border-blue-100/50 rounded-lg p-6 min-h-[100px] text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
-                  {insights?.executive_summary || insights?.summary || project.overview || 'No project overview defined.'}
-                </div>
-              </CardContent>
-            </Card>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-              <RoadmapViewer 
-                title="Technical Roadmap" 
-                content={project.technical_roadmap} 
-                icon={Map}
-              />
-              <RoadmapViewer 
-                title="Product Roadmap" 
-                content={project.product_roadmap} 
-                icon={Map}
-              />
-              <RoadmapViewer 
-                title="AI Roadmap" 
-                content={project.ai_roadmap} 
-                icon={Map}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="recommendations" className="mt-6">
-            <Card className="shadow-sm border-gray-100">
-              <CardContent className="p-6">
-                <h3 className="font-bold text-gray-900 mb-4 uppercase text-xs tracking-wider flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-blue-600" /> AI Recommendations
-                </h3>
-                <div className="bg-indigo-50/30 border border-indigo-100/50 rounded-xl p-8 min-h-[200px] text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
-                  {Array.isArray(insights?.recommended_actions) 
-                    ? insights.recommended_actions.map((a: any) => typeof a === 'string' ? a : a.text || a.recommendation).join('\n\n')
-                    : project.ai_recommendations || 'No AI recommendations defined for this project.'}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="deliverables">
-            <Card className="shadow-sm border-gray-100 p-8 text-center text-gray-500">
-              Deliverables content goes here.
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="circle-penetration">
-            <Card className="shadow-sm border-gray-100 p-8 text-center text-gray-500">
-              Circle Penetration metrics go here.
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        {/* Premium Bento Stacked Document Dashboard Section */}
-        <div className="space-y-8 animate-in fade-in duration-500 pt-4">
-          <div className="flex items-center gap-2 mb-2">
-            <FileText className="w-5 h-5 text-blue-600" />
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight">Report Analytics & Intelligence</h2>
-          </div>
-
-          {/* Upload Queue Manager Card */}
-          <Card className="bg-white border border-slate-200/80 shadow-sm rounded-2xl overflow-hidden">
-            <CardHeader className="border-b border-slate-100/60 pb-4 px-8 pt-6">
-              <CardTitle className="text-lg font-black text-slate-900 tracking-tight">Upload Project Document</CardTitle>
-            </CardHeader>
-            <CardContent className="p-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                {/* Left Controls */}
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Document Category</label>
-                    <Select value={selectedType} onValueChange={setSelectedType}>
-                      <SelectTrigger className="w-full bg-slate-50 border-slate-200/80 h-11 rounded-xl text-slate-800 font-semibold focus:ring-2 focus:ring-blue-600">
-                        <SelectValue placeholder="Select Document Category" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl border-slate-200 shadow-xl">
-                        {CATEGORIES.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id} className="font-semibold text-slate-700 rounded-lg py-2.5">
-                            {cat.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <p className="text-3xl font-bold text-blue-900 mb-4">{formatCurrency((project.ai_revenue || 0) + (project.ai_assisted_revenue || 0) || project.total_ai_revenue || 0)}</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    <div>
+                      <span className="font-semibold block ml-1 text-gray-500">Direct / Assist</span>
+                      {formatCurrency(project.ai_revenue)} / {formatCurrency(project.ai_assisted_revenue)}
+                    </div>
+                    <div>
+                      <span className="font-semibold block ml-1 text-gray-500">People</span>
+                      {project.ai_direct_people || 0} / {project.ai_assisted_people || 0}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Short Description</label>
+              {/* Code Coverage Card */}
+              <Card className="border-t-4 border-t-indigo-500 shadow-sm hover:shadow-md transition-shadow bg-white">
+                <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-transparent border-b border-indigo-100 pb-3">
+                  <CardTitle className="flex items-center gap-2 text-indigo-950 text-lg">
+                    <Code className="w-5 h-5 text-indigo-600" />
+                    Code Coverage
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <p className="text-3xl font-bold text-indigo-900 mb-6">{project.code_coverage_pct?.toFixed(1) || '0.0'}%</p>
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mt-2">
+                    <span className="text-[10px] font-semibold text-gray-400 block mb-1">MEASUREMENT</span>
+                    <Progress
+                      value={project.code_coverage_pct || 0}
+                      className="h-2 bg-gray-200 [&>div]:bg-indigo-600"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Tabbed Section */}
+            <Tabs defaultValue="overview" className="w-full mt-6">
+              <TabsList className="grid grid-cols-4 w-full gap-2 h-auto">
+                <TabsTrigger value="overview" className="tab-blue h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center justify-center gap-2">
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="recommendations" className="tab-purple h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center justify-center gap-2">
+                  Recommendations
+                </TabsTrigger>
+                <TabsTrigger value="deliverables" className="tab-emerald h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center justify-center gap-2">
+                  Deliverables
+                </TabsTrigger>
+                <TabsTrigger value="circle-penetration" className="tab-rose h-auto py-2 whitespace-normal text-xs px-1 sm:px-2 md:text-sm leading-tight flex items-center justify-center gap-2">
+                  Circle Penetration
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="overview" className="mt-6 space-y-6">
+                <Card className="shadow-sm border-gray-100">
+                  <CardContent className="p-6">
+                    <h3 className="font-bold text-gray-900 mb-4 uppercase text-xs tracking-wider">Project Overview</h3>
+                    <div className="bg-blue-50/30 border border-blue-100/50 rounded-lg p-6 min-h-[100px] text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
+                      {insights?.executive_summary || insights?.summary || project.overview || 'No project overview defined.'}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                  <RoadmapViewer
+                    title="Technical Roadmap"
+                    content={project.technical_roadmap}
+                    icon={Map}
+                  />
+                  <RoadmapViewer
+                    title="Product Roadmap"
+                    content={project.product_roadmap}
+                    icon={Map}
+                  />
+                  <RoadmapViewer
+                    title="AI Roadmap"
+                    content={project.ai_roadmap}
+                    icon={Map}
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="recommendations" className="mt-6">
+                <Card className="shadow-sm border-gray-100">
+                  <CardContent className="p-6">
+                    <h3 className="font-bold text-gray-900 mb-4 uppercase text-xs tracking-wider flex items-center gap-2">
+                      <Bot className="w-4 h-4 text-blue-600" /> AI Recommendations
+                    </h3>
+                    <div className="bg-indigo-50/30 border border-indigo-100/50 rounded-xl p-8 min-h-[200px] text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
+                      {Array.isArray(insights?.recommended_actions)
+                        ? insights.recommended_actions.map((a: any) => typeof a === 'string' ? a : a.text || a.recommendation).join('\n\n')
+                        : project.ai_recommendations || 'No AI recommendations defined for this project.'}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="deliverables">
+                <Card className="shadow-sm border-gray-100 p-8 text-center text-gray-500">
+                  Deliverables content goes here.
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="circle-penetration">
+                <Card className="shadow-sm border-gray-100 p-8 text-center text-gray-500">
+                  Circle Penetration metrics go here.
+                </Card>
+              </TabsContent>
+            </Tabs>
+
+            {/* Premium Bento Stacked Document Dashboard Section */}
+            <div className="space-y-8 animate-in fade-in duration-500 pt-4">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight">Report Analytics & Intelligence</h2>
+              </div>
+
+
+
+              {/* Uploaded Documents Data Table */}
+              <Card className="bg-white border border-slate-200/80 shadow-sm rounded-2xl overflow-hidden">
+                <CardHeader className="border-b border-slate-100/60 pb-4 px-8 pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <CardTitle className="text-lg font-black text-slate-900 tracking-tight">Project Analyzed Reports</CardTitle>
+                  <div className="relative w-full sm:w-72">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <Input
                       type="text"
-                      placeholder="Enter a brief description..."
-                      value={shortDescription}
-                      onChange={(e) => setShortDescription(e.target.value)}
-                      className="bg-slate-50 border-slate-200/80 h-11 rounded-xl text-slate-800 font-medium placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-600"
+                      placeholder="Search reports..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="pl-9 h-10 bg-slate-50/80 border-slate-200/80 rounded-xl text-xs sm:text-sm font-medium focus-visible:ring-2 focus-visible:ring-blue-600"
                     />
                   </div>
-
-                  <div className="flex items-center gap-3 pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleCancel}
-                      disabled={pendingFiles.length === 0 && !shortDescription}
-                      className="h-11 px-6 rounded-xl border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition-all"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={handleUploadAndProcess}
-                      disabled={pendingFiles.length === 0 || isProcessing}
-                      className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-100 gap-2 transition-all"
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Processing...
-                        </>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader className="bg-slate-50/50 border-b border-slate-100">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider pl-8">Report Name</TableHead>
+                        <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider">Category</TableHead>
+                        <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider">Status</TableHead>
+                        <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider">Analyzed Date</TableHead>
+                        <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider">Description</TableHead>
+                        <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider text-right pr-8">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isDocLoading && docFilteredData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="h-48 text-center">
+                            <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
+                            <p className="text-xs font-bold text-slate-400">Loading document intelligence...</p>
+                          </TableCell>
+                        </TableRow>
+                      ) : docPaginatedData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="h-48 text-center">
+                            <p className="text-sm font-bold text-slate-400">No project documents uploaded yet.</p>
+                          </TableCell>
+                        </TableRow>
                       ) : (
-                        'Upload & Process'
+                        docPaginatedData.map((doc) => (
+                          <TableRow key={doc.id} className="border-b border-slate-100/60 hover:bg-slate-50/40 transition-colors group">
+                            <TableCell className="py-4 pl-8">
+                              <div className="flex items-center gap-3">
+                                <FileText className="w-4 h-4 text-slate-400 shrink-0 group-hover:text-blue-600 transition-colors" />
+                                <span className="font-bold text-xs sm:text-sm text-slate-800 line-clamp-1" title={doc.name}>{doc.name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <span className="text-xs sm:text-sm font-medium text-slate-600">{doc.type}</span>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <Badge
+                                variant="secondary"
+                                className={cn(
+                                  "rounded-full px-3 py-1 font-bold text-[10px] tracking-wider uppercase border-none gap-1",
+                                  doc.status === 'Completed' ? "bg-emerald-50 text-emerald-700" :
+                                    doc.status === 'Processing' ? "bg-amber-50 text-amber-700" :
+                                      "bg-red-50 text-red-700"
+                                )}
+                              >
+                                {doc.status === 'Completed' && <CheckCircle2 className="w-3 h-3" />}
+                                {doc.status === 'Processing' && <Clock className="w-3 h-3 animate-spin" />}
+                                {doc.status === 'Failed' && <AlertCircle className="w-3 h-3" />}
+                                {doc.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <span className="text-xs sm:text-sm font-medium text-slate-500">{doc.date}</span>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <span className="text-xs sm:text-sm font-medium text-slate-600 line-clamp-1 max-w-[220px]" title={doc.desc || undefined}>{doc.desc || '-'}</span>
+                            </TableCell>
+                            <TableCell className="py-4 text-right pr-8">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  title="View Document Intelligence"
+                                  onClick={() => openViewModal(doc)}
+                                  className="w-8 h-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  title="Download Report"
+                                  onClick={() => {
+                                    toast({
+                                      title: "Download Initiated",
+                                      description: `Downloading ${doc.name}...`
+                                    });
+                                  }}
+                                  className="w-8 h-8 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </Button>
+
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
                       )}
-                    </Button>
-                  </div>
-                </div>
+                    </TableBody>
+                  </Table>
 
-                {/* Right Drag Area & List */}
-                <div className="space-y-4">
-                  <div
-                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                    onDragLeave={() => setIsDragging(false)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setIsDragging(false);
-                      handleFilesSelected(e.dataTransfer.files);
-                    }}
-                    onClick={() => document.getElementById('proj-document-drop-input')?.click()}
-                    className={cn(
-                      "border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 bg-slate-50/40 group",
-                      isDragging ? "border-blue-600 bg-blue-50/40 scale-[0.99]" : "border-slate-200 hover:border-blue-400 hover:bg-slate-50/80"
-                    )}
-                  >
-                    <input
-                      type="file"
-                      id="proj-document-drop-input"
-                      multiple
-                      className="hidden"
-                      onChange={(e) => handleFilesSelected(e.target.files)}
-                    />
-                    <div className="p-3 bg-white rounded-full shadow-sm border border-slate-100 text-blue-600 mb-3 group-hover:scale-110 transition-transform duration-300">
-                      <Upload className="w-6 h-6" />
+                  {/* Table Footer / Pagination */}
+                  <div className="px-8 py-4 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="text-xs font-bold text-slate-400">
+                      Showing <span className="text-slate-800">{Math.min(docFilteredData.length, (currentPage - 1) * itemsPerPage + 1)}</span>-
+                      <span className="text-slate-800">{Math.min(docFilteredData.length, currentPage * itemsPerPage)}</span> of{' '}
+                      <span className="text-slate-800">{docFilteredData.length}</span> reports
                     </div>
-                    <p className="text-sm font-bold text-slate-800 mb-1">
-                      Drag & Drop files here or <span className="text-blue-600 underline">Browse File</span>
-                    </p>
-                    <p className="text-[11px] font-medium text-slate-400">
-                      Any file type • Multiple files allowed • Max 50 MB per file
-                    </p>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage((prev) => prev - 1)}
+                        className="text-xs font-bold text-slate-600 hover:bg-white px-2.5 h-8 gap-1 rounded-lg"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-0.5">
+                        {Array.from({ length: docTotalPages || 1 }, (_, i) => i + 1).map((page) => (
+                          <Button
+                            key={page}
+                            type="button"
+                            variant={currentPage === page ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                            className={cn(
+                              "w-7 h-7 p-0 text-xs font-bold rounded-lg transition-all",
+                              currentPage === page ? "bg-blue-600 text-white shadow-2xs" : "text-slate-500 hover:bg-white"
+                            )}
+                          >
+                            {page}
+                          </Button>
+                        ))}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={currentPage === docTotalPages || docTotalPages === 0}
+                        onClick={() => setCurrentPage((prev) => prev + 1)}
+                        className="text-xs font-bold text-slate-600 hover:bg-white px-2.5 h-8 gap-1 rounded-lg"
+                      >
+                        Next
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
+                </CardContent>
+              </Card>
 
-                  {pendingFiles.length > 0 && (
-                    <div className="space-y-2.5 max-h-[170px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200">
-                      {pendingFiles.map((item) => (
-                        <div
-                          key={item.id}
-                          className={cn(
-                            "flex items-center justify-between p-3 rounded-xl border transition-all",
-                            item.isOverLimit 
-                              ? "bg-red-50/50 border-red-200" 
-                              : "bg-white border-slate-200/80 shadow-2xs"
-                          )}
-                        >
-                          <div className="flex items-center gap-3 overflow-hidden pr-2">
-                            <div className={cn(
-                              "p-2 rounded-lg shrink-0",
-                              item.isOverLimit ? "bg-red-100 text-red-600" : "bg-blue-50 text-blue-600"
-                            )}>
-                              <FileText className="w-4 h-4" />
+              {/* Master Unified Intelligence Overlay Modal */}
+              <Dialog open={!!selectedDoc} onOpenChange={(open) => !open && setSelectedDoc(null)}>
+                <DialogContent className="max-w-2xl bg-white rounded-[2rem] p-8 border-slate-200/80 shadow-2xl gap-6 max-h-[85vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                  {selectedDoc && (
+                    <>
+                      <DialogHeader className="pb-4 border-b border-slate-100 gap-1.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 shrink-0">
+                            <Brain className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <DialogTitle className="text-lg font-black text-slate-900 tracking-tight leading-tight">
+                              {selectedDoc.name}
+                            </DialogTitle>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className="text-[10px] font-bold text-slate-500 bg-slate-50 border-slate-200 uppercase">
+                                {selectedDoc.type}
+                              </Badge>
+                              <span className="text-xs font-medium text-slate-400">• Analyzed on {selectedDoc.date}</span>
                             </div>
-                            <div className="overflow-hidden">
-                              <p className="text-xs font-bold text-slate-800 truncate">{item.file.name}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[10px] font-bold text-slate-400">{item.sizeStr}</span>
-                                {item.isOverLimit && (
-                                  <span className="text-[10px] font-bold text-red-500">File exceeds 50 MB limit</span>
+                          </div>
+                        </div>
+                      </DialogHeader>
+
+                      <div className="space-y-8 pt-2">
+                        {/* Executive Summary Block */}
+                        <div className="p-6 bg-gradient-to-br from-indigo-50/50 to-blue-50/50 rounded-2xl border border-blue-100/40 relative overflow-hidden">
+                          <div className="absolute right-0 top-0 p-4 opacity-5">
+                            <Activity className="w-24 h-24 text-indigo-900" />
+                          </div>
+                          <h4 className="text-xs font-black text-indigo-950 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                            <Activity className="w-3.5 h-3.5 text-indigo-600" /> {selectedDoc.category === 'other-docs' ? 'Document Analysis & Insights' : 'Executive Overview'}
+                          </h4>
+                          <p className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed relative z-10 whitespace-pre-wrap">
+                            {selectedDoc.summary}
+                          </p>
+                        </div>
+
+                        {selectedDoc.category !== 'other-docs' && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="p-5 rounded-xl border border-slate-100 bg-slate-50/40">
+                              <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                <Target className="w-3.5 h-3.5 text-emerald-500" /> Core Objectives
+                              </h4>
+                              <ul className="space-y-2">
+                                {selectedDoc.objectives && selectedDoc.objectives.length > 0 ? (
+                                  selectedDoc.objectives.map((obj, i) => (
+                                    <li key={i} className="text-xs font-semibold text-slate-600 flex gap-2 items-start leading-tight">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1 shrink-0" />
+                                      {obj}
+                                    </li>
+                                  ))
+                                ) : (
+                                  <li className="text-xs font-medium text-slate-400 italic">No specific objectives extracted</li>
+                                )}
+                              </ul>
+                            </div>
+
+                            <div className="p-5 rounded-xl border border-slate-100 bg-slate-50/40">
+                              <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                <Users className="w-3.5 h-3.5 text-amber-500" /> Key Stakeholders
+                              </h4>
+                              <div className="flex flex-wrap gap-1.5">
+                                {selectedDoc.stakeholders && selectedDoc.stakeholders.length > 0 ? (
+                                  selectedDoc.stakeholders.map((s, i) => (
+                                    <Badge key={i} variant="secondary" className="px-2.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 font-bold text-[11px]">
+                                      {s}
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <span className="text-xs font-medium text-slate-400 italic">No stakeholders identified</span>
                                 )}
                               </div>
                             </div>
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => { e.stopPropagation(); removePendingFile(item.id); }}
-                            className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 shrink-0"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Uploaded Documents Data Table */}
-          <Card className="bg-white border border-slate-200/80 shadow-sm rounded-2xl overflow-hidden">
-            <CardHeader className="border-b border-slate-100/60 pb-4 px-8 pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <CardTitle className="text-lg font-black text-slate-900 tracking-tight">Project Analyzed Reports</CardTitle>
-              <div className="relative w-full sm:w-72">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  type="text"
-                  placeholder="Search reports..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="pl-9 h-10 bg-slate-50/80 border-slate-200/80 rounded-xl text-xs sm:text-sm font-medium focus-visible:ring-2 focus-visible:ring-blue-600"
-                />
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader className="bg-slate-50/50 border-b border-slate-100">
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider pl-8">Report Name</TableHead>
-                    <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider">Category</TableHead>
-                    <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider">Status</TableHead>
-                    <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider">Analyzed Date</TableHead>
-                    <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider">Description</TableHead>
-                    <TableHead className="h-11 font-bold text-xs text-slate-500 uppercase tracking-wider text-right pr-8">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isDocLoading && docFilteredData.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-48 text-center">
-                        <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
-                        <p className="text-xs font-bold text-slate-400">Loading document intelligence...</p>
-                      </TableCell>
-                    </TableRow>
-                  ) : docPaginatedData.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-48 text-center">
-                        <p className="text-sm font-bold text-slate-400">No project documents uploaded yet.</p>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    docPaginatedData.map((doc) => (
-                      <TableRow key={doc.id} className="border-b border-slate-100/60 hover:bg-slate-50/40 transition-colors group">
-                        <TableCell className="py-4 pl-8">
-                          <div className="flex items-center gap-3">
-                            <FileText className="w-4 h-4 text-slate-400 shrink-0 group-hover:text-blue-600 transition-colors" />
-                            <span className="font-bold text-xs sm:text-sm text-slate-800 line-clamp-1">{doc.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <span className="text-xs sm:text-sm font-medium text-slate-600">{doc.type}</span>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <Badge
-                            variant="secondary"
-                            className={cn(
-                              "rounded-full px-3 py-1 font-bold text-[10px] tracking-wider uppercase border-none gap-1",
-                              doc.status === 'Completed' ? "bg-emerald-50 text-emerald-700" :
-                              doc.status === 'Processing' ? "bg-amber-50 text-amber-700" :
-                              "bg-red-50 text-red-700"
-                            )}
-                          >
-                            {doc.status === 'Completed' && <CheckCircle2 className="w-3 h-3" />}
-                            {doc.status === 'Processing' && <Clock className="w-3 h-3 animate-spin" />}
-                            {doc.status === 'Failed' && <AlertCircle className="w-3 h-3" />}
-                            {doc.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <span className="text-xs sm:text-sm font-medium text-slate-500">{doc.date}</span>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <span className="text-xs sm:text-sm font-medium text-slate-600 line-clamp-1 max-w-[220px]">{doc.desc || '-'}</span>
-                        </TableCell>
-                        <TableCell className="py-4 text-right pr-8">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              title="View Document Intelligence"
-                              onClick={() => openViewModal(doc)}
-                              className="w-8 h-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              title="Download Report"
-                              onClick={() => {
-                                toast({
-                                  title: "Download Initiated",
-                                  description: `Downloading ${doc.name}...`
-                                });
-                              }}
-                              className="w-8 h-8 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
-                            >
-                              <Download className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              title="Delete Report"
-                              onClick={() => handleDeleteDoc(doc)}
-                              className="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                            >
-                              <TrashIcon className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-
-              {/* Table Footer / Pagination */}
-              <div className="px-8 py-4 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="text-xs font-bold text-slate-400">
-                  Showing <span className="text-slate-800">{Math.min(docFilteredData.length, (currentPage - 1) * itemsPerPage + 1)}</span>-
-                  <span className="text-slate-800">{Math.min(docFilteredData.length, currentPage * itemsPerPage)}</span> of{' '}
-                  <span className="text-slate-800">{docFilteredData.length}</span> reports
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage((prev) => prev - 1)}
-                    className="text-xs font-bold text-slate-600 hover:bg-white px-2.5 h-8 gap-1 rounded-lg"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                    Previous
-                  </Button>
-                  <div className="flex items-center gap-0.5">
-                    {Array.from({ length: docTotalPages || 1 }, (_, i) => i + 1).map((page) => (
-                      <Button
-                        key={page}
-                        type="button"
-                        variant={currentPage === page ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => setCurrentPage(page)}
-                        className={cn(
-                          "w-7 h-7 p-0 text-xs font-bold rounded-lg transition-all",
-                          currentPage === page ? "bg-blue-600 text-white shadow-2xs" : "text-slate-500 hover:bg-white"
                         )}
-                      >
-                        {page}
-                      </Button>
-                    ))}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={currentPage === docTotalPages || docTotalPages === 0}
-                    onClick={() => setCurrentPage((prev) => prev + 1)}
-                    className="text-xs font-bold text-slate-600 hover:bg-white px-2.5 h-8 gap-1 rounded-lg"
-                  >
-                    Next
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Master Unified Intelligence Overlay Modal */}
-          <Dialog open={!!selectedDoc} onOpenChange={(open) => !open && setSelectedDoc(null)}>
-            <DialogContent className="max-w-2xl bg-white rounded-[2rem] p-8 border-slate-200/80 shadow-2xl gap-6 max-h-[85vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
-              {selectedDoc && (
-                <>
-                  <DialogHeader className="pb-4 border-b border-slate-100 gap-1.5">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 shrink-0">
-                        <Brain className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <DialogTitle className="text-lg font-black text-slate-900 tracking-tight leading-tight">
-                          {selectedDoc.name}
-                        </DialogTitle>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="outline" className="text-[10px] font-bold text-slate-500 bg-slate-50 border-slate-200 uppercase">
-                            {selectedDoc.type}
-                          </Badge>
-                          <span className="text-xs font-medium text-slate-400">• Analyzed on {selectedDoc.date}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </DialogHeader>
-
-                  <div className="space-y-8 pt-2">
-                    {/* Executive Summary Block */}
-                    <div className="space-y-4">
-                      <div className="p-6 bg-gradient-to-br from-indigo-50/50 to-blue-50/50 rounded-2xl border border-blue-100/40 relative overflow-hidden">
-                        <div className="absolute right-0 top-0 p-4 opacity-5">
-                          <Activity className="w-24 h-24 text-indigo-900" />
-                        </div>
-                        <h4 className="text-xs font-black text-indigo-950 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                          <Activity className="w-3.5 h-3.5 text-indigo-600" /> Executive Overview
-                        </h4>
-                        <p className="text-xs sm:text-sm font-bold text-slate-800 leading-relaxed relative z-10">
-                          {selectedDoc.summary}
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="p-5 rounded-xl border border-slate-100 bg-slate-50/40">
-                          <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                            <Target className="w-3.5 h-3.5 text-emerald-500" /> Core Objectives
-                          </h4>
-                          <ul className="space-y-2">
-                            {selectedDoc.objectives && selectedDoc.objectives.length > 0 ? (
-                              selectedDoc.objectives.map((obj, i) => (
-                                <li key={i} className="text-xs font-semibold text-slate-600 flex gap-2 items-start leading-tight">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1 shrink-0" />
-                                  {obj}
-                                </li>
-                              ))
-                            ) : (
-                              <li className="text-xs font-medium text-slate-400 italic">No specific objectives extracted</li>
-                            )}
-                          </ul>
-                        </div>
-
-                        <div className="p-5 rounded-xl border border-slate-100 bg-slate-50/40">
-                          <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                            <Users className="w-3.5 h-3.5 text-amber-500" /> Key Stakeholders
-                          </h4>
-                          <div className="flex flex-wrap gap-1.5">
-                            {selectedDoc.stakeholders && selectedDoc.stakeholders.length > 0 ? (
-                              selectedDoc.stakeholders.map((s, i) => (
-                                <Badge key={i} variant="secondary" className="px-2.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 font-bold text-[11px]">
-                                  {s}
-                                </Badge>
-                              ))
-                            ) : (
-                              <span className="text-xs font-medium text-slate-400 italic">No stakeholders identified</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {selectedDoc.wsrData && (
-                        <div className="space-y-4 pt-4 border-t border-slate-100">
-                          <div className="flex flex-wrap items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                            <div className="flex items-center gap-1.5 text-xs">
-                              <span className="font-bold text-slate-400">Client:</span>
-                              <span className="font-bold text-slate-800">{selectedDoc.wsrData.client || 'N/A'}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-xs ml-4">
-                              <span className="font-bold text-slate-400">Period:</span>
-                              <span className="font-bold text-slate-800">{selectedDoc.wsrData.reportingPeriod || 'N/A'}</span>
-                            </div>
-                            <Badge variant="outline" className="ml-auto font-black text-[10px] uppercase border-blue-200 bg-blue-50 text-blue-700">
-                              {selectedDoc.wsrData.status || 'Active Status'}
-                            </Badge>
-                          </div>
-
-                          {selectedDoc.wsrData.accomplishments && selectedDoc.wsrData.accomplishments.length > 0 && (
-                            <div className="space-y-2">
-                              <h5 className="text-[11px] font-black text-emerald-600 uppercase tracking-wider flex items-center gap-1">
-                                <Zap className="w-3 h-3" /> Accomplishments
-                              </h5>
-                              <div className="grid grid-cols-1 gap-2">
-                                {selectedDoc.wsrData.accomplishments.map((acc, i) => (
-                                  <p key={i} className="text-xs font-semibold text-slate-700 p-2.5 rounded-lg bg-emerald-50/40 border border-emerald-100/60 leading-snug">
-                                    {acc}
-                                  </p>
-                                ))}
+                        {selectedDoc.category !== 'other-docs' && selectedDoc.wsrData && (
+                          <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <div className="flex flex-wrap items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <span className="font-bold text-slate-400">Client:</span>
+                                <span className="font-bold text-slate-800">{selectedDoc.wsrData.client || 'N/A'}</span>
                               </div>
+                              <div className="flex items-center gap-1.5 text-xs ml-4">
+                                <span className="font-bold text-slate-400">Period:</span>
+                                <span className="font-bold text-slate-800">{selectedDoc.wsrData.reportingPeriod || 'N/A'}</span>
+                              </div>
+                              <Badge variant="outline" className="ml-auto font-black text-[10px] uppercase border-blue-200 bg-blue-50 text-blue-700">
+                                {selectedDoc.wsrData.status || 'Active Status'}
+                              </Badge>
+                            </div>
+
+                            {selectedDoc.wsrData.accomplishments && selectedDoc.wsrData.accomplishments.length > 0 && (
+                              <div className="space-y-2">
+                                <h5 className="text-[11px] font-black text-emerald-600 uppercase tracking-wider flex items-center gap-1">
+                                  <Zap className="w-3 h-3" /> Accomplishments
+                                </h5>
+                                <div className="grid grid-cols-1 gap-2">
+                                  {selectedDoc.wsrData.accomplishments.map((acc, i) => (
+                                    <p key={i} className="text-xs font-semibold text-slate-700 p-2.5 rounded-lg bg-emerald-50/40 border border-emerald-100/60 leading-snug">
+                                      {acc}
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Granular Recursive Structural Analysis View */}
+                      {selectedDoc.category !== 'other-docs' && (
+                        <div className="space-y-4 pt-4 border-t border-slate-100/80">
+                          <h4 className="text-xs font-black text-purple-950 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                            <Brain className="w-3.5 h-3.5 text-purple-600" /> Deep AI Structural Intelligence
+                          </h4>
+                          {selectedDoc.rawContent && typeof selectedDoc.rawContent === 'object' ? (
+                            <div className="space-y-4 bg-slate-50/40 p-2 rounded-2xl">
+                              {renderNestedContent(selectedDoc.rawContent)}
+                            </div>
+                          ) : selectedDoc.insights && selectedDoc.insights.length > 0 ? (
+                            <div className="space-y-3">
+                              {selectedDoc.insights.map((insight, i) => (
+                                <div key={i} className="p-4 rounded-xl bg-slate-50/60 border border-slate-100 hover:border-purple-100 transition-colors flex gap-3 items-start">
+                                  <div className="p-1.5 rounded-lg bg-white border shadow-2xs mt-0.5 text-blue-600 shrink-0">
+                                    <insight.icon className="w-4 h-4" />
+                                  </div>
+                                  <p className="text-xs font-bold text-slate-700 leading-relaxed self-center">
+                                    {insight.text}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="p-8 text-center rounded-xl bg-slate-50/40 border border-slate-100">
+                              <p className="text-xs font-bold text-slate-400 italic">No granular key-value parameters surfaced for this document structure.</p>
                             </div>
                           )}
                         </div>
                       )}
-                    </div>
-
-                    {/* Granular Recursive Structural Analysis View */}
-                    <div className="space-y-4 pt-4 border-t border-slate-100/80">
-                      <h4 className="text-xs font-black text-purple-950 uppercase tracking-widest mb-4 flex items-center gap-1.5">
-                        <Brain className="w-3.5 h-3.5 text-purple-600" /> Deep AI Structural Intelligence
-                      </h4>
-                      {selectedDoc.rawContent && typeof selectedDoc.rawContent === 'object' ? (
-                        <div className="space-y-4 bg-slate-50/40 p-2 rounded-2xl">
-                          {renderNestedContent(selectedDoc.rawContent)}
-                        </div>
-                      ) : selectedDoc.insights && selectedDoc.insights.length > 0 ? (
-                        <div className="space-y-3">
-                          {selectedDoc.insights.map((insight, i) => (
-                            <div key={i} className="p-4 rounded-xl bg-slate-50/60 border border-slate-100 hover:border-purple-100 transition-colors flex gap-3 items-start">
-                              <div className="p-1.5 rounded-lg bg-white border shadow-2xs mt-0.5 text-blue-600 shrink-0">
-                                <insight.icon className="w-4 h-4" />
-                              </div>
-                              <p className="text-xs font-bold text-slate-700 leading-relaxed self-center">
-                                {insight.text}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="p-8 text-center rounded-xl bg-slate-50/40 border border-slate-100">
-                          <p className="text-xs font-bold text-slate-400 italic">No granular key-value parameters surfaced for this document structure.</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-            </DialogContent>
-          </Dialog>
-        </div>
-
+                    </>
+                  )}
+                </DialogContent>
+              </Dialog>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );

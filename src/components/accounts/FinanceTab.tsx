@@ -155,8 +155,8 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({ accountId }) => {
           </h2>
           <div className="flex items-center gap-3">
             {filteredProjects.length > 10 && search === "" && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowAllProjects(!showAllProjects)}
                 className="h-10 px-4 font-semibold border-slate-200 hover:border-blue-300 hover:bg-white text-blue-600 transition-all whitespace-nowrap shadow-sm"
               >
@@ -241,7 +241,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({ accountId }) => {
           ))}
           {filteredProjects.length === 0 && (
             <div className="col-span-full py-12 text-center text-gray-500 bg-white rounded-lg border border-gray-100">
-              No projects found matching your search.
+              No projects found.
             </div>
           )}
         </div>

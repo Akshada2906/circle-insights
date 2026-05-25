@@ -17,6 +17,7 @@ import FinancialAccountInsights from "./pages/FinancialAccountInsights";
 import FinancialAccountForm from "./pages/FinancialAccountForm";
 import FinancialProjectForm from "./pages/FinancialProjectForm";
 import FinancialProjectDetails from "./pages/FinancialProjectDetails";
+import FinancialProjectInsights from "./pages/FinancialProjectInsights";
 
 import Financials from "./pages/Financials";
 import FinanceDashboard from "./pages/FinanceDashboard";
@@ -57,6 +58,8 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                 <Route path="/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
+                <Route path="/accounts/sales" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
+                <Route path="/accounts/private-equity" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
                 <Route path="/accounts/new" element={<ProtectedRoute><AccountFormPage /></ProtectedRoute>} />
                 <Route path="/accounts/:id" element={<ProtectedRoute><AccountDetails /></ProtectedRoute>} />
                 <Route path="/accounts/:id/edit" element={<ProtectedRoute><AccountFormPage /></ProtectedRoute>} />
@@ -72,7 +75,7 @@ const App = () => (
                 <Route path="/financials/:id/edit" element={<ProtectedRoute><FinancialAccountForm /></ProtectedRoute>} />
                 <Route path="/financials/:accountId/projects/new" element={<ProtectedRoute><FinancialProjectForm /></ProtectedRoute>} />
                 <Route path="/financials/:accountId/projects/:projectId" element={<ProtectedRoute><FinancialProjectDetails /></ProtectedRoute>} />
-                <Route path="/financials/:accountId/projects/:projectId/insights" element={<ProtectedRoute><FinancialProjectDetails /></ProtectedRoute>} />
+                <Route path="/financials/:accountId/projects/:projectId/insights" element={<ProtectedRoute><FinancialProjectInsights /></ProtectedRoute>} />
                 <Route path="/financials/:accountId/projects/:projectId/edit" element={<ProtectedRoute><FinancialProjectForm /></ProtectedRoute>} />
                 <Route path="/circles" element={<ProtectedRoute><Circles /></ProtectedRoute>} />
                 <Route path="/value-chain" element={<ProtectedRoute><ValueChain /></ProtectedRoute>} />

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AccountWithProjects, Project } from '@/types/account';
-import { api } from '@/services/api';
+import { api, deleteFinanceAccount } from '@/services/api';
 import { AccountDashboardResponse, AccountDashboardCreate, AccountDashboardUpdate } from '@/types/dashboard-api';
 import { useToast } from '@/hooks/use-toast';
 
@@ -152,17 +152,17 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
                 accountData = {
                     account_id: accountId,
                     account_name: '',
-                    domain: 'Technology',
+                    domain: '',
                     delivery_owner: '',
                     current_pipeline_value: '0',
                     number_of_active_projects: 0,
                     overall_delivery_health: 'Amber',
-                    engagement_age: '1 Year',
+                    engagement_age: '',
                     last_year_business_done: '0',
                     target_projection_2026_accounts: '0',
                     target_projection_2026_delivery: '0',
                     company_revenue: '0',
-                    engagement_models: 'T&M',
+                    engagement_models: '',
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
                 };
@@ -236,8 +236,8 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     useEffect(() => {
-        fetchAccounts();
-    }, [fetchAccounts]);
+        // Accounts are now fetched on demand instead of globally on mount
+    }, []);
 
     const refreshAccounts = useCallback(async () => {
         await fetchAccounts();
@@ -246,6 +246,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
     const addAccount = async (newAccount: AccountWithProjects): Promise<boolean> => {
         try {
             const apiPayload: AccountDashboardCreate = {
+                account_id: newAccount.account_id,
                 account_name: newAccount.account_name,
                 domain: newAccount.domain,
                 know_customer_value_chain: newAccount.know_customer_value_chain,
@@ -366,23 +367,43 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const deleteAccount = async (accountId: string): Promise<boolean> => {
+        let deletedSales = false;
+        let deletedFinance = false;
+        let salesError: any = null;
+        let financeError: any = null;
+
         try {
             await api.deleteAccount(accountId);
+            deletedSales = true;
+        } catch (err: any) {
+            salesError = err;
+            console.warn(`Failed to delete from sales account-dashboard: ${err.message || err}`);
+        }
+
+        try {
+            await deleteFinanceAccount(accountId);
+            deletedFinance = true;
+        } catch (err: any) {
+            financeError = err;
+            console.warn(`Failed to delete from finance accounts: ${err.message || err}`);
+        }
+
+        if (deletedSales || deletedFinance) {
             setAccounts((prev) => prev.filter((account) => account.account_id !== accountId));
             toast({
                 title: 'Success',
                 description: 'Account deleted successfully',
             });
             return true;
-        } catch (err: any) {
-            console.error("Failed to delete account:", err);
-            toast({
-                title: 'Error',
-                description: 'Failed to delete account',
-                variant: 'destructive',
-            });
-            return false;
         }
+
+        console.error("Failed to delete account in both databases", { salesError, financeError });
+        toast({
+            title: 'Error',
+            description: 'Failed to delete account',
+            variant: 'destructive',
+        });
+        return false;
     };
     const addProject = (newProject: Project) => {
         setProjects((prev) => [...prev, newProject]);
