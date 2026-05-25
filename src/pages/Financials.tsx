@@ -341,7 +341,7 @@ const Financials = () => {
           ))}
           {filteredAccounts.length === 0 && !loadingAccounts && (
             <div className="col-span-full py-24 text-center text-slate-400 italic bg-white rounded-2xl border border-dashed border-slate-200">
-              No accounts found matching your search.
+              No accounts found.
             </div>
           )}
         </div>

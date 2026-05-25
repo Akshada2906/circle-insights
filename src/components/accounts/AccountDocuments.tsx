@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Markdown } from '@/components/ui/markdown';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -66,19 +67,17 @@ interface PendingFile {
 interface AccountDocumentsProps {
   accountId?: string;
   readOnly?: boolean;
+  ownerType?: 'account' | 'project' | 'pe';
+  categoryMode?: 'default' | 'pe';
 }
 
 const CATEGORIES = [
   { id: 'wsr-reports', label: 'WSR Reports', typeName: 'Weekly Status Report' },
-  { id: 'financial-statement', label: 'Financial Statement', typeName: 'Financial Statement' },
-  { id: 'legal-contract', label: 'Legal Contract', typeName: 'Legal Contract' },
-  { id: 'marketing', label: 'Marketing', typeName: 'Marketing' },
-  { id: 'invoice', label: 'Invoice', typeName: 'Invoice' },
-  { id: 'research', label: 'Research', typeName: 'Research' },
+  { id: 'sow-documents', label: 'SOW Documents', typeName: 'Statement of Work' },
   { id: 'code-quality', label: 'Code Quality', typeName: 'Code Quality Document' },
   { id: 'tech-reviews', label: 'Tech Reviews', typeName: 'Technical Review' },
   { id: 'best-practices', label: 'Best Practices', typeName: 'Best Practices' },
-  { id: 'sow-documents', label: 'SOW Documents', typeName: 'Statement of Work' }
+  { id: 'other-docs', label: 'Other Documents', typeName: 'Other Document' }
 ];
 
 const formatFileSize = (bytes: number): string => {
@@ -89,7 +88,12 @@ const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
-export function AccountDocuments({ accountId, readOnly = false }: AccountDocumentsProps) {
+export function AccountDocuments({
+  accountId,
+  readOnly = false,
+  ownerType = 'account',
+  categoryMode = 'default'
+}: AccountDocumentsProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -98,7 +102,7 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
   const itemsPerPage = 5;
 
   // Upload Form States
-  const [selectedType, setSelectedType] = useState('financial-statement');
+  const [selectedType, setSelectedType] = useState(categoryMode === 'pe' ? 'research-docs' : 'wsr-reports');
   const [shortDescription, setShortDescription] = useState('');
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -107,6 +111,31 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
 
   const { toast } = useToast();
+
+  const activeCategories = categoryMode === 'pe'
+    ? [
+      { id: 'research-docs', label: 'Research Documents', typeName: 'Research Document' },
+      { id: 'other-docs', label: 'Other Documents', typeName: 'Other Document' }
+    ]
+    : CATEGORIES;
+
+  const mapOtherDocToFrontend = (data: any): Document => {
+    const hint = (data.context_hint || '').toLowerCase();
+    const isResearchDoc = hint.includes('research') || hint.includes('research-docs');
+    return {
+      id: data.document_insight_id,
+      category: categoryMode === 'pe' && isResearchDoc ? 'research-docs' : 'other-docs',
+      name: data.file_name,
+      type: categoryMode === 'pe' && isResearchDoc ? 'Research Document' : 'Other Document',
+      date: new Date(data.generated_at).toISOString().split('T')[0],
+      desc: data.context_hint || '-',
+      status: 'Completed',
+      summary: data.insight_markdown || 'No insights generated.',
+      objectives: [],
+      stakeholders: [],
+      insights: []
+    };
+  };
 
   const fetchAllDocuments = async () => {
     if (!accountId) {
@@ -117,16 +146,33 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
     setIsLoading(true);
     try {
       const allDocs: Document[] = [];
-      const apiCategories = ['wsr-reports', 'code-quality', 'tech-reviews', 'best-practices', 'sow-documents'];
-      
-      for (const catId of apiCategories) {
+      if (categoryMode === 'default') {
+        const apiCategories = ['wsr-reports', 'code-quality', 'tech-reviews', 'best-practices', 'sow-documents', 'other-docs'];
+
+        for (const catId of apiCategories) {
+          try {
+            const data = ownerType === 'project'
+              ? await api.getFinanceDocument(accountId, catId)
+              : await api.getDocument(accountId, catId);
+            if (data) {
+              allDocs.push(mapBackendToFrontend(data, catId));
+            }
+          } catch (e) {
+            // Continue mapping smoothly
+          }
+        }
+      }
+
+      if (categoryMode === 'pe') {
         try {
-          const data = await api.getDocument(accountId, catId);
-          if (data) {
-            allDocs.push(mapBackendToFrontend(data, catId));
+          const otherDocsRes = await api.getOtherDocuments(accountId, ownerType);
+          if (otherDocsRes && otherDocsRes.status === 'success' && Array.isArray(otherDocsRes.insights)) {
+            otherDocsRes.insights.forEach((record: any) => {
+              allDocs.push(mapOtherDocToFrontend(record));
+            });
           }
         } catch (e) {
-          // Continue mapping smoothly
+          console.error('Failed to fetch other documents:', e);
         }
       }
 
@@ -139,8 +185,12 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
   };
 
   useEffect(() => {
+    setSelectedType(categoryMode === 'pe' ? 'research-docs' : 'wsr-reports');
+  }, [categoryMode]);
+
+  useEffect(() => {
     fetchAllDocuments();
-  }, [accountId]);
+  }, [accountId, ownerType, categoryMode]);
 
   const mapBackendToFrontend = (data: any, category: string): Document => {
     try {
@@ -201,8 +251,8 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
         }))
         .filter(insight => insight.text.length > insight.text.split(':')[0].length + 5);
 
-      const catObj = CATEGORIES.find(c => c.id === category);
-      const docName = data.document_name || `${catObj?.label || 'Document'}_Report_${new Date(data.created_at || Date.now()).getFullYear()}.pdf`;
+      const catObj = activeCategories.find(c => c.id === category) || CATEGORIES.find(c => c.id === category);
+      const docName = data.document_name || `${catObj?.label || 'Document'}`;
 
       const doc: Document = {
         id: data.document_id || String(Date.now()),
@@ -289,13 +339,24 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
     setIsProcessing(true);
     let successCount = 0;
 
-    const mappedApiCategory = ['wsr-reports', 'code-quality', 'tech-reviews', 'best-practices', 'sow-documents'].includes(selectedType) 
-      ? selectedType 
-      : 'wsr-reports';
-
     for (const item of validFiles) {
       try {
-        await api.importDocument(accountId, mappedApiCategory, item.file);
+        if (categoryMode === 'pe') {
+          const contextHintPrefix = selectedType === 'research-docs' ? 'research-docs' : 'other-docs';
+          const contextHint = shortDescription
+            ? `${contextHintPrefix}: ${shortDescription}`
+            : contextHintPrefix;
+          await api.importOtherDocument(accountId, ownerType, item.file, contextHint);
+        } else {
+          const mappedApiCategory = ['wsr-reports', 'code-quality', 'tech-reviews', 'best-practices', 'sow-documents', 'other-docs'].includes(selectedType)
+            ? selectedType
+            : 'wsr-reports';
+          if (ownerType === 'project') {
+            await api.importFinanceDocument(accountId, mappedApiCategory, item.file);
+          } else {
+            await api.importDocument(accountId, mappedApiCategory, item.file);
+          }
+        }
         successCount++;
       } catch (error: any) {
         toast({
@@ -321,7 +382,15 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
   const handleDeleteDoc = async (doc: Document) => {
     if (!accountId) return;
     try {
-      await api.deleteDocument(accountId, doc.category);
+      if (categoryMode === 'pe') {
+        await api.deleteOtherDocument(doc.id);
+      } else {
+        if (ownerType === 'project') {
+          await api.deleteFinanceDocument(accountId, doc.category);
+        } else {
+          await api.deleteDocument(accountId, doc.category);
+        }
+      }
       toast({
         title: "Document Deleted",
         description: `${doc.name} has been removed successfully.`
@@ -429,7 +498,7 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
                       <SelectValue placeholder="Select Document Type" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 shadow-xl">
-                      {CATEGORIES.map((cat) => (
+                      {activeCategories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id} className="font-semibold text-slate-700 rounded-lg py-2.5">
                           {cat.label}
                         </SelectItem>
@@ -519,8 +588,8 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
                         key={item.id}
                         className={cn(
                           "flex items-center justify-between p-3 rounded-xl border transition-all",
-                          item.isOverLimit 
-                            ? "bg-red-50/50 border-red-200" 
+                          item.isOverLimit
+                            ? "bg-red-50/50 border-red-200"
                             : "bg-white border-slate-200/80 shadow-2xs"
                         )}
                       >
@@ -601,7 +670,7 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
               ) : paginatedData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-48 text-center">
-                    <p className="text-sm font-bold text-slate-400">No documents found matching your search.</p>
+                    <p className="text-sm font-bold text-slate-400">No documents found.</p>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -610,7 +679,7 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
                     <TableCell className="py-4 pl-8">
                       <div className="flex items-center gap-3">
                         <FileText className="w-4 h-4 text-slate-400 shrink-0 group-hover:text-blue-600 transition-colors" />
-                        <span className="font-bold text-xs sm:text-sm text-slate-800 line-clamp-1">{doc.name}</span>
+                        <span className="font-bold text-xs sm:text-sm text-slate-800 line-clamp-1" title={doc.name}>{doc.name}</span>
                       </div>
                     </TableCell>
                     <TableCell className="py-4">
@@ -622,8 +691,8 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
                         className={cn(
                           "rounded-full px-3 py-1 font-bold text-[10px] tracking-wider uppercase border-none gap-1",
                           doc.status === 'Completed' ? "bg-emerald-50 text-emerald-700" :
-                          doc.status === 'Processing' ? "bg-amber-50 text-amber-700" :
-                          "bg-red-50 text-red-700"
+                            doc.status === 'Processing' ? "bg-amber-50 text-amber-700" :
+                              "bg-red-50 text-red-700"
                         )}
                       >
                         {doc.status === 'Completed' && <CheckCircle2 className="w-3 h-3" />}
@@ -636,7 +705,7 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
                       <span className="text-xs sm:text-sm font-medium text-slate-500">{doc.date}</span>
                     </TableCell>
                     <TableCell className="py-4">
-                      <span className="text-xs sm:text-sm font-medium text-slate-600 line-clamp-1 max-w-[220px]">{doc.desc || '-'}</span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-600 line-clamp-1 max-w-[220px]" title={doc.desc || undefined}>{doc.desc || '-'}</span>
                     </TableCell>
                     <TableCell className="py-4 text-right pr-8">
                       <div className="flex items-center justify-end gap-1">
@@ -769,51 +838,53 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
                       <Activity className="w-24 h-24 text-indigo-900" />
                     </div>
                     <h4 className="text-xs font-black text-indigo-950 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                      <Activity className="w-3.5 h-3.5 text-indigo-600" /> Executive Intelligence Summary
+                      <Activity className="w-3.5 h-3.5 text-indigo-600" /> {selectedDoc.category === 'other-docs' ? 'Document Analysis & Insights' : 'Executive Intelligence Summary'}
                     </h4>
-                    <p className="text-xs sm:text-sm font-bold text-slate-800 leading-relaxed relative z-10">
-                      {selectedDoc.summary}
-                    </p>
+                    <div className="relative z-10">
+                      <Markdown content={selectedDoc.summary} />
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="p-5 rounded-xl border border-slate-100 bg-slate-50/40">
-                      <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                        <Target className="w-3.5 h-3.5 text-emerald-500" /> Key Objectives
-                      </h4>
-                      <ul className="space-y-2">
-                        {selectedDoc.objectives && selectedDoc.objectives.length > 0 ? (
-                          selectedDoc.objectives.map((obj, i) => (
-                            <li key={i} className="text-xs font-semibold text-slate-600 flex gap-2 items-start leading-tight">
-                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1 shrink-0" />
-                              {obj}
-                            </li>
-                          ))
-                        ) : (
-                          <li className="text-xs font-medium text-slate-400 italic">No specific objectives extracted</li>
-                        )}
-                      </ul>
-                    </div>
+                  {selectedDoc.category !== 'other-docs' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="p-5 rounded-xl border border-slate-100 bg-slate-50/40">
+                        <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                          <Target className="w-3.5 h-3.5 text-emerald-500" /> Key Objectives
+                        </h4>
+                        <ul className="space-y-2">
+                          {selectedDoc.objectives && selectedDoc.objectives.length > 0 ? (
+                            selectedDoc.objectives.map((obj, i) => (
+                              <li key={i} className="text-xs font-semibold text-slate-600 flex gap-2 items-start leading-tight">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1 shrink-0" />
+                                {obj}
+                              </li>
+                            ))
+                          ) : (
+                            <li className="text-xs font-medium text-slate-400 italic">No specific objectives extracted</li>
+                          )}
+                        </ul>
+                      </div>
 
-                    <div className="p-5 rounded-xl border border-slate-100 bg-slate-50/40">
-                      <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5 text-amber-500" /> Stakeholders
-                      </h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedDoc.stakeholders && selectedDoc.stakeholders.length > 0 ? (
-                          selectedDoc.stakeholders.map((s, i) => (
-                            <Badge key={i} variant="secondary" className="px-2.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 font-bold text-[11px]">
-                              {s}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-xs font-medium text-slate-400 italic">No stakeholders mapped</span>
-                        )}
+                      <div className="p-5 rounded-xl border border-slate-100 bg-slate-50/40">
+                        <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-amber-500" /> Stakeholders
+                        </h4>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedDoc.stakeholders && selectedDoc.stakeholders.length > 0 ? (
+                            selectedDoc.stakeholders.map((s, i) => (
+                              <Badge key={i} variant="secondary" className="px-2.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 font-bold text-[11px]">
+                                {s}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-xs font-medium text-slate-400 italic">No stakeholders mapped</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
-                  {selectedDoc.wsrData && (
+                  {selectedDoc.category !== 'other-docs' && selectedDoc.wsrData && (
                     <div className="space-y-4 pt-4 border-t border-slate-100">
                       <div className="flex flex-wrap items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
                         <div className="flex items-center gap-1.5 text-xs">
@@ -848,33 +919,35 @@ export function AccountDocuments({ accountId, readOnly = false }: AccountDocumen
                 </div>
 
                 {/* Granular AI Analysis Block */}
-                <div className="space-y-4 pt-4 border-t border-slate-100/80">
-                  <h4 className="text-xs font-black text-purple-950 uppercase tracking-widest mb-4 flex items-center gap-1.5">
-                    <Brain className="w-3.5 h-3.5 text-purple-600" /> Granular AI Structural Analysis
-                  </h4>
-                  {selectedDoc.rawContent && typeof selectedDoc.rawContent === 'object' ? (
-                    <div className="space-y-4 bg-slate-50/40 p-2 rounded-2xl">
-                      {renderNestedContent(selectedDoc.rawContent)}
-                    </div>
-                  ) : selectedDoc.insights && selectedDoc.insights.length > 0 ? (
-                    <div className="space-y-3">
-                      {selectedDoc.insights.map((insight, i) => (
-                        <div key={i} className="p-4 rounded-xl bg-slate-50/60 border border-slate-100 hover:border-purple-100 transition-colors flex gap-3 items-start">
-                          <div className="p-1.5 rounded-lg bg-white border shadow-2xs mt-0.5 text-blue-600 shrink-0">
-                            <insight.icon className="w-4 h-4" />
+                {selectedDoc.category !== 'other-docs' && (
+                  <div className="space-y-4 pt-4 border-t border-slate-100/80">
+                    <h4 className="text-xs font-black text-purple-950 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                      <Brain className="w-3.5 h-3.5 text-purple-600" /> Granular AI Structural Analysis
+                    </h4>
+                    {selectedDoc.rawContent && typeof selectedDoc.rawContent === 'object' ? (
+                      <div className="space-y-4 bg-slate-50/40 p-2 rounded-2xl">
+                        {renderNestedContent(selectedDoc.rawContent)}
+                      </div>
+                    ) : selectedDoc.insights && selectedDoc.insights.length > 0 ? (
+                      <div className="space-y-3">
+                        {selectedDoc.insights.map((insight, i) => (
+                          <div key={i} className="p-4 rounded-xl bg-slate-50/60 border border-slate-100 hover:border-purple-100 transition-colors flex gap-3 items-start">
+                            <div className="p-1.5 rounded-lg bg-white border shadow-2xs mt-0.5 text-blue-600 shrink-0">
+                              <insight.icon className="w-4 h-4" />
+                            </div>
+                            <p className="text-xs font-bold text-slate-700 leading-relaxed self-center">
+                              {insight.text}
+                            </p>
                           </div>
-                          <p className="text-xs font-bold text-slate-700 leading-relaxed self-center">
-                            {insight.text}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center rounded-xl bg-slate-50/40 border border-slate-100">
-                      <p className="text-xs font-bold text-slate-400 italic">No granular key-value parameters surfaced for this document structure.</p>
-                    </div>
-                  )}
-                </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center rounded-xl bg-slate-50/40 border border-slate-100">
+                        <p className="text-xs font-bold text-slate-400 italic">No granular key-value parameters surfaced for this document structure.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </>
           )}

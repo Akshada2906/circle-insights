@@ -64,7 +64,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const currentPath = location.pathname;
 
   const NavButton = ({ item }: { item: NavItem }) => {
-    const isActive = currentPath === item.href;
+    const isActive = item.href === '/' ? currentPath === '/' : currentPath.startsWith(item.href);
     const Icon = item.icon;
 
     const handleClick = () => {

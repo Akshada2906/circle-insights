@@ -14,11 +14,11 @@ const Accounts = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [peFirms, setPeFirms] = useState<any[]>([]);
     const [peAccounts, setPeAccounts] = useState<any[]>([]);
+    const [salesAccounts, setSalesAccounts] = useState<any[]>([]);
 
     useEffect(() => {
-        refreshAccounts();
         fetchFirms();
-    }, [refreshAccounts]);
+    }, []);
 
     const fetchFirms = async () => {
         try {
@@ -39,6 +39,38 @@ const Accounts = () => {
 
             setPeFirms(enrichedFirms);
             setPeAccounts(accountsData.filter((a: any) => a.private_equity_id));
+
+            const salesData = accountsData.filter((a: any) => !a.private_equity_id).map((a: any) => ({
+                account_id: a.id,
+                account_name: a.name,
+                domain: '',
+                delivery_owner: a.account_manager || '',
+                current_pipeline_value: a.forecast_revenue ? `$${a.forecast_revenue.toLocaleString()}` : '$0',
+                number_of_active_projects: a.active_project_count || 0,
+                overall_delivery_health: a.active_project_count > 0 ? 'Green' : 'Amber',
+                engagement_age: '',
+                last_year_business_done: a.current_revenue ? `$${a.current_revenue.toLocaleString()}` : '$0',
+                target_projection_2026_accounts: a.target_revenue ? `$${a.target_revenue.toLocaleString()}` : '$0',
+                company_revenue: a.target_revenue ? `$${a.target_revenue.toLocaleString()}` : '$0',
+                engagement_models: '',
+                created_at: a.created_at || new Date().toISOString(),
+                updated_at: a.updated_at || new Date().toISOString(),
+                projects: a.projects || [],
+                status: 'ACTIVE',
+                delivery_unit: a.delivery_unit,
+                id: a.id,
+                name: a.name,
+                account_manager: a.account_manager,
+                target_revenue: a.target_revenue,
+                current_revenue: a.current_revenue,
+                ai_revenue: a.ai_revenue,
+                active_project_count: a.active_project_count,
+                inactive_project_count: a.inactive_project_count,
+                ai_penetration_pct: a.ai_penetration_pct,
+                project_count: a.project_count,
+                is_sales: a.is_sales
+            }));
+            setSalesAccounts(salesData);
         } catch (err) {
             console.error('Failed to fetch PE firms:', err);
         }
@@ -54,11 +86,14 @@ const Accounts = () => {
 
         setIsDeleting(true);
         try {
-            await deleteAccount(deleteId);
-            toast({
-                title: 'Account deleted',
-                description: 'The account has been successfully deleted.',
-            });
+            const success = await deleteAccount(deleteId);
+            if (success) {
+                toast({
+                    title: 'Account deleted',
+                    description: 'The account has been successfully deleted.',
+                });
+                await fetchFirms();
+            }
         } catch (error) {
             console.error("Failed to delete account", error);
             toast({
@@ -76,7 +111,7 @@ const Accounts = () => {
     return (
         <MainLayout>
             <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <AccountsList accounts={accounts} peFirms={peFirms} peAccounts={peAccounts} onDelete={handleDelete} onRefresh={refreshAccounts} />
+                <AccountsList accounts={salesAccounts as any} peFirms={peFirms} peAccounts={peAccounts} onDelete={handleDelete} onRefresh={fetchFirms} />
 
                 <ConfirmationDialog
                     open={isDeleteOpen}

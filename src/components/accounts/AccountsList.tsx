@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AccountWithProjects, StrategicStakeholderProfile } from '@/types/account';
-import { AccountCard } from './AccountCard';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -11,7 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search, Briefcase, FileSpreadsheet, FileText, Download, Upload, X, Loader2 } from 'lucide-react';
+import { Plus, Search, Briefcase, FileSpreadsheet, FileText, Download, Upload, X, Loader2, SlidersHorizontal } from 'lucide-react';
 import { deliveryUnits } from '@/constants';
 import { exportMultipleTablesToPDF, exportMultipleSheetsFormattedAoAToExcel } from '@/lib/exportUtils';
 import { api, uploadImportProjectFile, uploadImportRevenueFile, deleteFinanceAccount } from '@/services/api';
@@ -33,9 +33,18 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { Badge } from '@/components/ui/badge';
 
 import { PEAccountCard } from './PEAccountCard';
 import { FinancialAccountCard } from './FinancialAccountCard';
+
+const parseCurrency = (val: string | undefined) => {
+    if (!val) return 0;
+    return parseFloat(val.replace(/[$,]/g, '')) || 0;
+};
 
 interface AccountsListProps {
     accounts: AccountWithProjects[];
@@ -48,9 +57,88 @@ interface AccountsListProps {
 
 export function AccountsList({ accounts, peFirms = [], peAccounts = [], onEdit, onDelete, onRefresh }: AccountsListProps) {
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const filterType = location.pathname.includes('/sales') ? 'Sales'
+        : location.pathname.includes('/private-equity') ? 'PE'
+            : 'All';
+
+    const setFilterType = (type: 'All' | 'Sales' | 'PE') => {
+        if (type === 'Sales') navigate('/accounts/sales');
+        else if (type === 'PE') navigate('/accounts/private-equity');
+        else navigate('/accounts');
+    };
+
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterType, setFilterType] = useState<'All' | 'Sales' | 'PE'>('All');
     const [showAll, setShowAll] = useState(false);
+    const [statusFilter, setStatusFilter] = useState("Active");
+    const [managerFilter, setManagerFilter] = useState("All");
+    const [duFilter, setDuFilter] = useState("All");
+    const [revRange, setRevRange] = useState<[number, number]>([0, 10000000]);
+    const [aiRevRange, setAiRevRange] = useState<[number, number]>([0, 10000000]);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(amount || 0);
+    };
+
+    const availableManagers = useMemo(() => {
+        const managers = new Set<string>();
+        accounts.forEach((a: any) => { if (a.account_manager) managers.add(a.account_manager); });
+        peAccounts.forEach(a => { if (a.account_manager) managers.add(a.account_manager); });
+        return Array.from(managers).sort();
+    }, [accounts, peAccounts]);
+
+    const availableDUs = useMemo(() => {
+        const dus = new Set<string>();
+        accounts.forEach((a: any) => {
+            const duName = a.delivery_unit?.name || a.delivery_unit;
+            if (typeof duName === 'string' && duName) dus.add(duName);
+            else if (duName && typeof duName === 'object' && 'name' in duName) dus.add((duName as any).name);
+        });
+        peAccounts.forEach(a => {
+            const duName = a.delivery_unit?.name || a.delivery_unit;
+            if (typeof duName === 'string' && duName) dus.add(duName);
+            else if (duName && typeof duName === 'object' && 'name' in duName) dus.add((duName as any).name);
+        });
+        return Array.from(dus).sort();
+    }, [accounts, peAccounts]);
+
+    const maxPossibleRev = useMemo(() => {
+        let max = 1000000;
+        accounts.forEach((a: any) => {
+            const rev = a.current_revenue || parseCurrency(a.last_year_business_done) || 0;
+            if (rev > max) max = rev;
+        });
+        peAccounts.forEach(a => {
+            const rev = a.current_revenue || a.total_revenue || 0;
+            if (rev > max) max = rev;
+        });
+        return max;
+    }, [accounts, peAccounts]);
+
+    const maxPossibleAiRev = useMemo(() => {
+        let max = 1000000;
+        accounts.forEach((a: any) => {
+            const rev = a.ai_revenue || 0;
+            if (rev > max) max = rev;
+        });
+        peAccounts.forEach(a => {
+            const rev = a.ai_revenue || 0;
+            if (rev > max) max = rev;
+        });
+        return max;
+    }, [accounts, peAccounts]);
+
+    useEffect(() => {
+        setRevRange([0, maxPossibleRev]);
+        setAiRevRange([0, maxPossibleAiRev]);
+    }, [maxPossibleRev, maxPossibleAiRev]);
 
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importTab, setImportTab] = useState<'pe' | 'pmo' | 'revenue'>('pe');
@@ -89,15 +177,11 @@ export function AccountsList({ accounts, peFirms = [], peAccounts = [], onEdit, 
         setIsDragging(false);
         const file = e.dataTransfer.files?.[0];
         if (file) {
-            setPendingFiles([{ id: '1', name: file.name, size: `${(file.size / (1024*1024)).toFixed(1)} MB`, status: 'uploading' }]);
+            setPendingFiles([{ id: '1', name: file.name, size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`, status: 'uploading' }]);
             handleFileUpload(file);
         }
     };
 
-    const parseCurrency = (val: string | undefined) => {
-        if (!val) return 0;
-        return parseFloat(val.replace(/[$,]/g, '')) || 0;
-    };
 
     const sortedAccounts = [...accounts].sort((a, b) =>
         parseCurrency(b.last_year_business_done) - parseCurrency(a.last_year_business_done)
@@ -106,7 +190,7 @@ export function AccountsList({ accounts, peFirms = [], peAccounts = [], onEdit, 
     const salesAccounts = sortedAccounts.map(acc => ({
         id: acc.account_id,
         name: acc.account_name,
-        type: acc.private_equity_id ? 'PE_Account' : 'Sales',
+        type: acc.private_equity_id ? 'PE_Account' : (acc.is_sales ? 'Sales' : 'Finance'),
         originalData: acc,
     }));
 
@@ -128,13 +212,41 @@ export function AccountsList({ accounts, peFirms = [], peAccounts = [], onEdit, 
 
     const filteredList = combinedList.filter((item) => {
         const matchesSearch = item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              item.id.toLowerCase().includes(searchQuery.toLowerCase());
+            item.id.toLowerCase().includes(searchQuery.toLowerCase());
 
         if (!matchesSearch) return false;
-        
+
         if (filterType === 'All' && item.type === 'PE') return false;
-        if (filterType === 'Sales' && item.type !== 'Sales') return false;
+        if (filterType === 'Sales' && !item.originalData?.is_sales) return false;
         if (filterType === 'PE' && item.type !== 'PE') return false;
+
+        // Apply advanced filters ONLY to accounts (Sales, PE_Account, and PE_Portfolio accounts)
+        if (item.type !== 'PE') {
+            const acc: any = item.originalData;
+
+            // 1. Status Filter (Active / Inactive)
+            const activeProjects = acc.active_project_count || acc.number_of_active_projects || 0;
+            const isActive = activeProjects > 0;
+            if (statusFilter === "Active" && !isActive) return false;
+            if (statusFilter === "Inactive" && isActive) return false;
+
+            // 2. Account Manager Filter
+            const manager = acc.account_manager || acc.delivery_owner || '';
+            if (managerFilter !== "All" && manager !== managerFilter) return false;
+
+            // 3. Delivery Unit Filter
+            const du = acc.delivery_unit?.name || acc.delivery_unit || '';
+            const duName = typeof du === 'object' ? du.name : du;
+            if (duFilter !== "All" && duName !== duFilter) return false;
+
+            // 4. Current Revenue Filter
+            const rev = acc.current_revenue || parseCurrency(acc.last_year_business_done) || 0;
+            if (rev < revRange[0] || rev > revRange[1]) return false;
+
+            // 5. AI Revenue Filter
+            const aiRev = acc.ai_revenue || 0;
+            if (aiRev < aiRevRange[0] || aiRev > aiRevRange[1]) return false;
+        }
 
         return true;
     });
@@ -144,7 +256,7 @@ export function AccountsList({ accounts, peFirms = [], peAccounts = [], onEdit, 
         : filteredList.slice(0, 10);
 
     const handleExportExcel = async () => {
-        const filteredAccounts = filteredList.filter(item => item.type === 'Sales' || item.type === 'PE_Account').map(item => item.originalData);
+        const filteredAccounts = filteredList.filter(item => item.type === 'Sales' || item.type === 'PE_Account' || item.originalData?.is_sales).map(item => item.originalData);
         if (filteredAccounts.length === 0) return;
 
         // Fetch all stakeholders to include in the export
@@ -473,7 +585,7 @@ export function AccountsList({ accounts, peFirms = [], peAccounts = [], onEdit, 
                                                 onChange={(e) => {
                                                     const file = e.target.files?.[0];
                                                     if (file) {
-                                                        setPendingFiles([{ id: '1', name: file.name, size: `${(file.size / (1024*1024)).toFixed(1)} MB`, status: 'uploading' }]);
+                                                        setPendingFiles([{ id: '1', name: file.name, size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`, status: 'uploading' }]);
                                                         handleFileUpload(file);
                                                     }
                                                 }}
@@ -515,8 +627,8 @@ export function AccountsList({ accounts, peFirms = [], peAccounts = [], onEdit, 
                                         </div>
 
                                         <div className="flex justify-end gap-4 pt-6 mt-4 border-t border-slate-100">
-                                            <Button 
-                                                variant="outline" 
+                                            <Button
+                                                variant="outline"
                                                 className="rounded-xl h-11 px-8 font-semibold border-slate-200 text-slate-600"
                                                 onClick={() => {
                                                     setPendingFiles([]);
@@ -555,40 +667,150 @@ export function AccountsList({ accounts, peFirms = [], peAccounts = [], onEdit, 
 
             {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-4 items-center">
-                <div className="relative flex-1 animate-in fade-in duration-300 w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                        placeholder="Search sales or private equity accounts..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-11 border-slate-200 bg-white"
-                    />
+                <div className="relative flex-1 animate-in fade-in duration-300 w-full flex gap-2">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                            placeholder="Search sales or private equity accounts..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-11 border-slate-200 bg-white"
+                        />
+                    </div>
+
+                    <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="h-11 px-4 gap-2 font-medium bg-white shrink-0 border-slate-200 hover:bg-slate-50">
+                                <SlidersHorizontal className="w-4 h-4 text-slate-500" /> Filters
+                                {(statusFilter !== "All" || duFilter !== "All" || managerFilter !== "All" || revRange[0] > 0 || revRange[1] < maxPossibleRev || aiRevRange[0] > 0 || aiRevRange[1] < maxPossibleAiRev) && (
+                                    <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center bg-blue-100 text-blue-700 rounded-full text-xs font-bold">
+                                        {[statusFilter !== "All", duFilter !== "All", managerFilter !== "All", (revRange[0] > 0 || revRange[1] < maxPossibleRev), (aiRevRange[0] > 0 || aiRevRange[1] < maxPossibleAiRev)].filter(Boolean).length}
+                                    </Badge>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-5 space-y-6" align="end">
+                            <div className="flex items-center justify-between">
+                                <h4 className="font-semibold text-slate-900 leading-none">Filters</h4>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                        setStatusFilter("Active");
+                                        setManagerFilter("All");
+                                        setDuFilter("All");
+                                        setRevRange([0, maxPossibleRev]);
+                                        setAiRevRange([0, maxPossibleAiRev]);
+                                    }}
+                                    className="text-slate-500 h-8 text-xs hover:text-slate-800"
+                                >
+                                    Clear All
+                                </Button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</Label>
+                                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                        <SelectTrigger className="w-full bg-white border-slate-200">
+                                            <SelectValue placeholder="All Statuses" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="All">All Statuses</SelectItem>
+                                            <SelectItem value="Active">Active</SelectItem>
+                                            <SelectItem value="Inactive">Inactive</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Delivery Unit</Label>
+                                    <Select value={duFilter} onValueChange={setDuFilter}>
+                                        <SelectTrigger className="w-full bg-white border-slate-200">
+                                            <SelectValue placeholder="All DUs" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="All">All DUs</SelectItem>
+                                            {availableDUs.map(du => <SelectItem key={du} value={du}>{du}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Account Manager</Label>
+                                    <Select value={managerFilter} onValueChange={setManagerFilter}>
+                                        <SelectTrigger className="w-full bg-white border-slate-200">
+                                            <SelectValue placeholder="All Managers" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="All">All Managers</SelectItem>
+                                            {availableManagers.map(mgr => <SelectItem key={mgr} value={mgr}>{mgr}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-3 pt-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Current Revenue</Label>
+                                        <span className="text-xs text-slate-500 font-medium">
+                                            {formatCurrency(revRange[0])} - {formatCurrency(revRange[1])}
+                                        </span>
+                                    </div>
+                                    <Slider
+                                        min={0}
+                                        max={maxPossibleRev}
+                                        step={10000}
+                                        value={revRange}
+                                        onValueChange={(val) => setRevRange(val as [number, number])}
+                                        className="mt-2"
+                                    />
+                                </div>
+
+                                <div className="space-y-3 pt-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">AI Revenue</Label>
+                                        <span className="text-xs text-slate-500 font-medium">
+                                            {formatCurrency(aiRevRange[0])} - {formatCurrency(aiRevRange[1])}
+                                        </span>
+                                    </div>
+                                    <Slider
+                                        min={0}
+                                        max={maxPossibleAiRev}
+                                        step={10000}
+                                        value={aiRevRange}
+                                        onValueChange={(val) => setAiRevRange(val as [number, number])}
+                                        className="mt-2"
+                                    />
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                 </div>
-                
+
                 <div className="flex bg-slate-100 p-1 rounded-lg self-stretch sm:self-auto shrink-0 shadow-inner overflow-x-auto">
-                    <Button 
-                       variant="ghost" 
-                       size="sm" 
-                       onClick={() => setFilterType('All')}
-                       className={cn("px-4 rounded-md transition-all whitespace-nowrap", filterType === 'All' ? 'bg-white text-slate-900 shadow-sm hover:bg-white font-medium' : 'text-slate-600 hover:text-slate-900')}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFilterType('All')}
+                        className={cn("px-4 rounded-md transition-all whitespace-nowrap", filterType === 'All' ? 'bg-white text-slate-900 shadow-sm hover:bg-white font-medium' : 'text-slate-600 hover:text-slate-900')}
                     >
-                       All
+                        All
                     </Button>
-                    <Button 
-                       variant="ghost" 
-                       size="sm" 
-                       onClick={() => setFilterType('Sales')}
-                       className={cn("px-4 rounded-md transition-all whitespace-nowrap", filterType === 'Sales' ? 'bg-blue-50 text-blue-700 shadow-sm hover:bg-blue-50 font-medium' : 'text-slate-600 hover:text-blue-600')}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFilterType('Sales')}
+                        className={cn("px-4 rounded-md transition-all whitespace-nowrap", filterType === 'Sales' ? 'bg-blue-50 text-blue-700 shadow-sm hover:bg-blue-50 font-medium' : 'text-slate-600 hover:text-blue-600')}
                     >
-                       Sales
+                        Sales
                     </Button>
-                    <Button 
-                       variant="ghost" 
-                       size="sm" 
-                       onClick={() => setFilterType('PE')}
-                       className={cn("px-4 rounded-md transition-all whitespace-nowrap", filterType === 'PE' ? 'bg-purple-50 text-purple-700 shadow-sm hover:bg-purple-50 font-medium' : 'text-slate-600 hover:text-purple-600')}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFilterType('PE')}
+                        className={cn("px-4 rounded-md transition-all whitespace-nowrap", filterType === 'PE' ? 'bg-purple-50 text-purple-700 shadow-sm hover:bg-purple-50 font-medium' : 'text-slate-600 hover:text-purple-600')}
                     >
-                       Private Equity
+                        Private Equity
                     </Button>
                 </div>
                 {filteredList.length > 10 && searchQuery === "" && filterType === 'All' && (
@@ -606,26 +828,40 @@ export function AccountsList({ accounts, peFirms = [], peAccounts = [], onEdit, 
             {displayedItems.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
                     {displayedItems.map((item) => (
-                        item.type === 'PE_Portfolio' ? (
+                        (item.type === 'PE_Portfolio' || item.type === 'Sales' || item.type === 'PE_Account') ? (
                             <FinancialAccountCard
-                                key={`pe-portfolio-${item.id}`}
+                                key={`financial-acc-${item.id}`}
                                 account={item.originalData}
                                 onDelete={async (id) => {
+                                    let deletedSales = false;
+                                    let deletedFinance = false;
+                                    let salesError: any = null;
+                                    let financeError: any = null;
+
+                                    try {
+                                        await api.deleteAccount(id);
+                                        deletedSales = true;
+                                    } catch (err: any) {
+                                        salesError = err;
+                                        console.warn(`Failed to delete from sales account-dashboard: ${err.message || err}`);
+                                    }
+
                                     try {
                                         await deleteFinanceAccount(id);
+                                        deletedFinance = true;
+                                    } catch (err: any) {
+                                        financeError = err;
+                                        console.warn(`Failed to delete from finance accounts: ${err.message || err}`);
+                                    }
+
+                                    if (deletedSales || deletedFinance) {
                                         toast({ title: "Success", description: "Account deleted successfully" });
                                         if (onRefresh) await onRefresh();
-                                    } catch (err: any) {
-                                        toast({ title: "Error", description: err.message || "Failed to delete account", variant: "destructive" });
+                                    } else {
+                                        console.error("Failed to delete account in both databases", { salesError, financeError });
+                                        toast({ title: "Error", description: "Failed to delete account", variant: "destructive" });
                                     }
                                 }}
-                            />
-                        ) : (item.type === 'Sales' || item.type === 'PE_Account') ? (
-                            <AccountCard
-                                key={`sales-${item.id}`}
-                                account={item.originalData}
-                                onEdit={onEdit}
-                                onDelete={onDelete}
                             />
                         ) : (
                             <PEAccountCard

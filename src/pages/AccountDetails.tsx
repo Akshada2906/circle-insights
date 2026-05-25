@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils';
 import { api, getFinanceAccounts, getFinanceAccountById, deleteFinanceProject, createFinanceAccount, getFinanceDeliveryUnits } from '@/services/api';
 import { StrategicStakeholderProfile } from '@/types/account';
 import { AccountDocuments } from '@/components/accounts/AccountDocuments';
+import { AccountAIInsights } from '@/components/accounts/AccountAIInsights';
 import { Input } from '@/components/ui/input';
 import {
     AlertDialog,
@@ -55,8 +56,10 @@ import { useToast } from '@/hooks/use-toast';
 const AccountDetails = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
     const { toast } = useToast();
-    const { accounts, getAccountById, fetchAccount, fetchAccountStakeholders } = useAccounts();
+    const { accounts, getAccountById, fetchAccount, fetchAccountStakeholders, refreshAccounts } = useAccounts();
+    const backUrl = location.state?.backUrl || '/accounts';
     // Finance data state
     const [financeData, setFinanceData] = useState<any>(null);
     const [loadingFinance, setLoadingFinance] = useState(false);
@@ -76,7 +79,7 @@ const AccountDetails = () => {
     const [readinessOpen, setReadinessOpen] = useState(false);
 
     const SALES_SECTIONS = [
-        { id: 'sales_info', label: 'Sales & Account Information', icon: Building2 },
+        { id: 'sales_info', label: 'Account Information', icon: Building2 },
         { id: 'delivery_ops', label: 'Delivery & Operations', icon: Activity },
         { id: 'financials', label: 'Sales Financials', icon: Target },
         { id: 'strategy', label: 'Strategy & Growth', icon: Target },
@@ -91,7 +94,10 @@ const AccountDetails = () => {
         if (id) {
             fetchAccount(id);
         }
-    }, [id, fetchAccount]);
+        if (accounts.length === 0) {
+            refreshAccounts();
+        }
+    }, [id, fetchAccount, accounts.length, refreshAccounts]);
 
     const contextAccountInit = getAccountById(id || '');
 
@@ -178,18 +184,18 @@ const AccountDetails = () => {
         ...baseAcc,
         account_id: baseAcc.account_id || id,
         account_name: financeData?.name || baseAcc.account_name || 'Loading Account...',
-        domain: hasSalesDetails ? (baseAcc.domain || financeData?.domain || 'Technology') : '-',
+        domain: hasSalesDetails ? (baseAcc.domain || financeData?.domain || '') : '-',
         account_focus: hasSalesDetails ? (baseAcc.account_focus || '-') : '-',
-        delivery_owner: hasSalesDetails ? (baseAcc.delivery_owner || financeData?.account_manager || 'Unassigned') : '-',
+        delivery_owner: hasSalesDetails ? (baseAcc.delivery_owner || financeData?.account_manager || '') : '-',
         current_pipeline_value: hasSalesDetails ? (financeData?.forecast_revenue ? `$${financeData.forecast_revenue.toLocaleString()}` : (baseAcc.current_pipeline_value || '$0')) : '-',
         number_of_active_projects: hasSalesDetails ? (financeData?.active_project_count ? financeData.active_project_count.toString() : (baseAcc.number_of_active_projects || '0')) : '-',
         overall_delivery_health: hasSalesDetails ? (financeData?.active_project_count > 0 ? 'Green' : (baseAcc.overall_delivery_health || 'Amber')) : '-',
-        engagement_age: hasSalesDetails ? (baseAcc.engagement_age || '2 Years') : '-',
+        engagement_age: hasSalesDetails ? (baseAcc.engagement_age || '') : '-',
         last_year_business_done: hasSalesDetails ? (financeData?.current_revenue ? `$${financeData.current_revenue.toLocaleString()}` : (baseAcc.last_year_business_done || '$0')) : '-',
         target_projection_2026_accounts: hasSalesDetails ? (financeData?.target_revenue ? `$${financeData.target_revenue.toLocaleString()}` : (baseAcc.target_projection_2026_accounts || '$0')) : '-',
         target_projection_2026_delivery: hasSalesDetails ? (baseAcc.target_projection_2026_delivery || '-') : '-',
         company_revenue: hasSalesDetails ? (financeData?.target_revenue ? `$${financeData.target_revenue.toLocaleString()}` : (baseAcc.company_revenue || '$0')) : '-',
-        engagement_models: hasSalesDetails ? (baseAcc.engagement_models || 'T&M') : '-',
+        engagement_models: hasSalesDetails ? (baseAcc.engagement_models || '') : '-',
         current_engagement_areas: hasSalesDetails ? (baseAcc.current_engagement_areas || '-') : '-',
         team_size: hasSalesDetails ? (baseAcc.team_size || '-') : '-',
         current_rate_card_health: hasSalesDetails ? (baseAcc.current_rate_card_health || '-') : '-',
@@ -276,7 +282,7 @@ const AccountDetails = () => {
                         <p className="text-muted-foreground mb-6">
                             The account you're looking for doesn't exist.
                         </p>
-                        <Button onClick={() => navigate('/accounts')}>Back to Accounts</Button>
+                        <Button onClick={() => navigate(backUrl)}>Back to Accounts</Button>
                     </div>
                 </div>
             </MainLayout>
@@ -288,26 +294,12 @@ const AccountDetails = () => {
             <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
                 {/* Back Button */}
                 <div className="flex items-center justify-between">
-                    <Button variant="ghost" onClick={() => navigate('/accounts')} className="gap-2">
+                    <Button variant="ghost" onClick={() => navigate(backUrl)} className="gap-2">
                         <ArrowLeft className="w-4 h-4" />
                         Back to Accounts
                     </Button>
                     <div className="flex gap-3">
-                        <Button
-                            className="bg-purple-600 hover:bg-purple-700 text-white gap-2 shadow-sm"
-                            onClick={() => {
-                                if (financeData) {
-                                    navigate(`/financials/${financeData.id}/insights`);
-                                } else {
-                                    // Trigger auto-init flow if someone clicks this
-                                    document.getElementById('add-project-btn-header')?.click();
-                                }
-                            }}
-                        >
-                            <Brain className="w-4 h-4" />
-                            View Strategic Insights
-                        </Button>
-                        <Button onClick={() => navigate(`/accounts/${baseAcc.account_id || id}/edit`)} variant="outline" className="gap-2">
+                        <Button onClick={() => navigate(`/accounts/${baseAcc.account_id || id}/edit`, { state: { backUrl } })} variant="outline" className="gap-2">
                             <Pencil className="w-4 h-4" />
                             Edit Account
                         </Button>
@@ -369,8 +361,8 @@ const AccountDetails = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
                         <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between">
                             <div className="space-y-1">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Current Revenue</span>
-                                <p className="text-2xl font-bold text-slate-900">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">Current Revenue</span>
+                                <p className="text-xl font-bold text-slate-900">
                                     {financeData
                                         ? formatCurrency(financeData.current_revenue || financeData.total_revenue || 0)
                                         : formatCurrency(account.last_year_business_done || 0)}
@@ -380,8 +372,8 @@ const AccountDetails = () => {
                         </Card>
                         <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between">
                             <div className="space-y-1">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Target Revenue</span>
-                                <p className="text-2xl font-bold text-slate-900">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">Target Revenue</span>
+                                <p className="text-xl font-bold text-slate-900">
                                     {financeData
                                         ? formatCurrency(financeData.target_revenue || 0)
                                         : formatCurrency(account.target_projection_2026_accounts || 0)}
@@ -391,8 +383,8 @@ const AccountDetails = () => {
                         </Card>
                         <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between">
                             <div className="space-y-1">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Forecast Revenue</span>
-                                <p className="text-2xl font-bold text-slate-900">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">Forecast Revenue</span>
+                                <p className="text-xl font-bold text-slate-900">
                                     {financeData
                                         ? formatCurrency(financeData.forecast_revenue || 0)
                                         : formatCurrency(account.current_pipeline_value || 0)}
@@ -402,8 +394,8 @@ const AccountDetails = () => {
                         </Card>
                         <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between">
                             <div className="space-y-1">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Shortfall</span>
-                                <p className="text-2xl font-bold text-red-600">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">Shortfall</span>
+                                <p className="text-xl font-bold text-red-600">
                                     {financeData
                                         ? formatCurrency(financeData.shortfall ?? ((financeData.target_revenue || 0) - (financeData.current_revenue || financeData.total_revenue || 0) - (financeData.forecast_revenue || 0)))
                                         : formatCurrency(Math.max(0, parseFloat((account.target_projection_2026_accounts || "0").toString().replace(/[$,]/g, '')) - parseFloat((account.last_year_business_done || "0").toString().replace(/[$,]/g, '')) - parseFloat((account.current_pipeline_value || "0").toString().replace(/[$,]/g, ''))))
@@ -414,8 +406,8 @@ const AccountDetails = () => {
                         </Card>
                         <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between">
                             <div className="space-y-1">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">AI Revenue</span>
-                                <p className="text-2xl font-bold text-blue-600">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">AI Revenue</span>
+                                <p className="text-xl font-bold text-blue-600">
                                     {financeData ? formatCurrency(financeData.ai_revenue) : "$0"}
                                 </p>
                             </div>
@@ -423,8 +415,8 @@ const AccountDetails = () => {
                         </Card>
                         <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between">
                             <div className="space-y-1">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">AI Penetration</span>
-                                <p className="text-2xl font-bold text-blue-600">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">AI Penetration</span>
+                                <p className="text-xl font-bold text-blue-600">
                                     {financeData ? `${(financeData.ai_penetration_pct || 0).toFixed(1)}%` : "0.0%"}
                                 </p>
                             </div>
@@ -432,8 +424,8 @@ const AccountDetails = () => {
                         </Card>
                         <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between">
                             <div className="space-y-1">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Projects</span>
-                                <p className="text-2xl font-bold text-slate-900">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">Projects</span>
+                                <p className="text-xl font-bold text-slate-900">
                                     {financeData
                                         ? financeData.active_project_count + financeData.inactive_project_count
                                         : account.number_of_active_projects || 0}
@@ -475,425 +467,445 @@ const AccountDetails = () => {
                     </Card>
                 )}
 
-                {/* Tabs */}
-                <Tabs defaultValue="sales details" className="w-full">
-                    <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full gap-2 h-auto mb-6">
-                        <TabsTrigger value="sales details" className="tab-blue h-auto py-2 whitespace-normal text-xs px-2 md:text-sm leading-tight flex items-center gap-2">
-                            <Building2 className="w-4 h-4" />
-                            Sales Details
-                        </TabsTrigger>
-                        <TabsTrigger value="ai recommendations" className="tab-purple h-auto py-2 whitespace-normal text-xs px-2 md:text-sm leading-tight flex items-center gap-2">
+                {/* Primary Tabs */}
+                <Tabs defaultValue="ai insights" className="w-full">
+                    <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto gap-2 h-auto mb-6">
+                        <TabsTrigger value="ai insights" className="tab-purple h-auto py-2.5 text-xs px-4 md:text-sm leading-tight flex items-center justify-center gap-2">
                             <Brain className="w-4 h-4" />
-                            AI Recommendations
+                            AI Insights
                         </TabsTrigger>
-                        <TabsTrigger value="customer overview" className="tab-indigo h-auto py-2 whitespace-normal text-xs px-2 md:text-sm leading-tight flex items-center gap-2">
-                            <Activity className="w-4 h-4" />
-                            Customer Overview
-                        </TabsTrigger>
-                        <TabsTrigger value="roadmaps" className="tab-emerald h-auto py-2 whitespace-normal text-xs px-2 md:text-sm leading-tight flex items-center gap-2">
-                            <Map className="w-4 h-4" />
-                            Roadmaps
-                        </TabsTrigger>
-                        <TabsTrigger value="account documents" className="tab-amber h-auto py-2 whitespace-normal text-xs px-2 md:text-sm leading-tight flex items-center gap-2">
-                            <FileText className="w-4 h-4" />
-                            Account Documents
+                        <TabsTrigger value="sales & account details" className="tab-blue h-auto py-2.5 text-xs px-4 md:text-sm leading-tight flex items-center justify-center gap-2">
+                            <Building2 className="w-4 h-4" />
+                            Account Details
                         </TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="sales details" className="mt-0 animate-in fade-in slide-in-from-right-4 duration-500">
-                        <div className="flex flex-col md:flex-row gap-8 items-start">
-                            {/* Vertical Sidebar Navigation */}
-                            <div className="w-full md:w-[260px] shrink-0 flex flex-col sticky top-6">
-                                <div className="px-3 pb-4">
-                                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                                        <List className="w-4 h-4" />
-                                        Categories
-                                    </h3>
-                                </div>
-                                <div className="space-y-1.5">
-                                    {SALES_SECTIONS.map((section) => (
-                                        <button
-                                            key={section.id}
-                                            type="button"
-                                            onClick={() => setSalesActiveSection(section.id)}
-                                            className={cn(
-                                                "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all text-left",
-                                                salesActiveSection === section.id
-                                                    ? "bg-white text-blue-700 shadow-sm border border-slate-200/60"
-                                                    : "text-slate-500 hover:bg-slate-200/50 hover:text-slate-900"
-                                            )}
-                                        >
-                                            <section.icon className={cn(
-                                                "w-4 h-4",
-                                                salesActiveSection === section.id ? "text-blue-600" : "text-slate-400"
-                                            )} />
-                                            {section.label}
-                                            {salesActiveSection === section.id && (
-                                                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Section Content Area */}
-                            <div className="flex-1 w-full flex flex-col">
-                                {salesActiveSection === 'sales_info' && (
-                                    <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                        <CardHeader className="border-b border-slate-100 p-4 bg-indigo-50/30">
-                                            <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                                                <div className="p-1 rounded bg-indigo-50">
-                                                    <Users className="w-4 h-4 text-indigo-600" />
-                                                </div>
-                                                Sales & Account Information
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-5 p-6">
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Domain</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.domain || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Account Focus</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.account_focus || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Engagement Age</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.engagement_age || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1 md:col-span-3">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Account Research</span>
-                                                <div>
-                                                    <a href={account.account_research_link} target="_blank" rel="noreferrer" className="text-blue-600 hover:text-blue-700 hover:underline truncate block text-sm font-semibold">
-                                                        View Market Report ↗
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
-
-                                {salesActiveSection === 'delivery_ops' && (
-                                    <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                        <CardHeader className="border-b border-slate-100 p-4 bg-blue-50/30">
-                                            <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                                                <div className="p-1 rounded bg-blue-50">
-                                                    <Activity className="w-4 h-4 text-blue-600" />
-                                                </div>
-                                                Delivery & Operations
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="grid grid-cols-2 gap-x-6 gap-y-5 p-6">
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Delivery Owner</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.delivery_owner || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Team Size</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.team_size || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Active Projects</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.number_of_active_projects || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Overall Health</span>
-                                                <div className="mt-0.5">
-                                                    <Badge variant="outline" className={cn(
-                                                        "border-none px-2 py-0.5 text-xs font-semibold",
-                                                        account.overall_delivery_health === 'Green' ? "bg-green-50 text-green-700" :
-                                                            account.overall_delivery_health === 'Red' ? "bg-red-50 text-red-700" :
-                                                                account.overall_delivery_health === 'Amber' ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-700"
-                                                    )}>
-                                                        {account.overall_delivery_health || '-'}
-                                                    </Badge>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Rate Card Health</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.current_rate_card_health || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Engagement Models</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.engagement_models || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1 col-span-2">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Current Engagement Areas</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.current_engagement_areas || '-'}</p>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
-
-                                {salesActiveSection === 'financials' && (
-                                    <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                        <CardHeader className="border-b border-slate-100 p-4 bg-emerald-50/30">
-                                            <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                                                <div className="p-1 rounded bg-emerald-50">
-                                                    <Target className="w-4 h-4 text-emerald-600" />
-                                                </div>
-                                                Sales Financials
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="grid grid-cols-2 gap-x-6 gap-y-5 p-6">
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Company Revenue</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.company_revenue || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Last Year Business</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.last_year_business_done || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Target 2026 (Accounts)</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.target_projection_2026_accounts || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Target 2026 (Delivery)</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.target_projection_2026_delivery || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Current Pipeline</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.current_pipeline_value || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Attrition / Leakage Risk</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.revenue_attrition_possibility || '-'}</p>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
-
-                                {salesActiveSection === 'strategy' && (
-                                    <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                        <CardHeader className="border-b border-slate-100 p-4 bg-indigo-50/30">
-                                            <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                                                <div className="p-1 rounded bg-indigo-50">
-                                                    <Target className="w-4 h-4 text-indigo-600" />
-                                                </div>
-                                                Strategy & Growth
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="grid grid-cols-2 gap-x-6 gap-y-5 p-6">
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Value Chain Known?</span>
-                                                <div className="mt-0.5">
-                                                    <Badge variant={account.know_customer_value_chain ? 'default' : 'secondary'} className="bg-indigo-600">
-                                                        {account.know_customer_value_chain ? 'Yes' : 'No'}
-                                                    </Badge>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Value Chain Fit</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.where_we_fit_in_value_chain || 'Not detailed.'}</p>
-                                            </div>
-                                            <div className="space-y-1 col-span-2">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cross-Sell Areas</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.identified_areas_cross_up_selling || 'None identified.'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Roadmap Visibility (2026)</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.visibility_client_roadmap_2026 || 'No visibility.'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">30 Days Growth Action Plan Ready?</span>
-                                                <div className="mt-0.5">
-                                                    <Badge variant={account.growth_action_plan_30days_ready ? 'default' : 'secondary'} className="bg-indigo-600">
-                                                        {account.growth_action_plan_30days_ready ? 'Yes' : 'No'}
-                                                    </Badge>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
-
-                                {salesActiveSection === 'relationships' && (
-                                    <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                        <CardHeader className="border-b border-slate-100 p-4 bg-violet-50/30">
-                                            <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                                                <div className="p-1 rounded bg-violet-50">
-                                                    <Users className="w-4 h-4 text-violet-600" />
-                                                </div>
-                                                Relationships
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="grid grid-cols-2 gap-x-6 gap-y-5 p-6">
-                                            <div className="space-y-1"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Client Partner</span><p className="text-sm font-semibold text-slate-900">{account.client_partner || '-'}</p></div>
-                                            <div className="space-y-1"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Champion</span><p className="text-sm font-semibold text-slate-900">{account.champion_customer_side || '-'}</p></div>
-                                            <div className="space-y-1"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Champion Profile</span><p className="text-sm font-semibold text-slate-900">{account.champion_profile || '-'}</p></div>
-                                            <div className="space-y-1"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Exec Connect Frequency</span><p className="text-sm font-semibold text-slate-900">{account.nitor_executive_connect_frequency || '-'}</p></div>
-                                            <div className="space-y-1"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">NPS</span><p className="text-sm font-semibold text-slate-900">{account.current_nps || '-'}</p></div>
-                                            <div className="space-y-1"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Active Connects</span><p className="text-sm font-semibold text-slate-900">{account.total_active_connects || '-'}</p></div>
-                                            <div className="space-y-1"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Connect with Decision Maker</span><p className="text-sm font-semibold text-slate-900">{account.connect_with_decision_maker ? 'Yes' : 'No'}</p></div>
-                                        </CardContent>
-                                    </Card>
-                                )}
-
-                                {salesActiveSection === 'cadence' && (
-                                    <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                        <CardHeader className="border-b border-slate-100 p-4 bg-emerald-50/30">
-                                            <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                                                <div className="p-1 rounded bg-emerald-50">
-                                                    <Award className="w-4 h-4 text-emerald-600" />
-                                                </div>
-                                                Readiness & Cadence
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="grid grid-cols-2 gap-x-6 gap-y-5 p-6">
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Review Cadence</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.account_review_cadence_frequency || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Technical Audit</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.technical_audit_frequency || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">QBR Happening?</span>
-                                                <Badge variant={account.qbr_happening ? "default" : "secondary"}>
-                                                    {account.qbr_happening ? "Yes" : "No"}
-                                                </Badge>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
-
-                                {salesActiveSection === 'competition' && (
-                                    <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                        <CardHeader className="border-b border-slate-100 p-4 bg-rose-50/30">
-                                            <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                                                <div className="p-1 rounded bg-rose-50">
-                                                    <Swords className="w-4 h-4 text-rose-600" />
-                                                </div>
-                                                Competitive Analysis
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="grid grid-cols-2 gap-x-6 gap-y-5 p-6">
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Key Competitors</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.key_competitors || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Incumbency Strength</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.incumbency_strength || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1 col-span-2">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Our Positioning</span>
-                                                <p className="text-sm leading-relaxed font-semibold text-slate-900">{account.our_positioning_vs_competition || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Areas Competition Stronger</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.areas_competition_stronger || '-'}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">White Spaces We Own</span>
-                                                <p className="text-sm font-semibold text-slate-900">{account.white_spaces_we_own || '-'}</p>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
-
-                                {salesActiveSection === 'stakeholders' && (
-                                    <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                        <CardHeader className="border-b border-slate-100 p-4 bg-indigo-50/30">
-                                            <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-                                                <div className="p-1 rounded bg-indigo-50">
-                                                    <Users className="w-4 h-4 text-indigo-600" />
-                                                </div>
-                                                Strategic Stakeholders
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="pt-6 overflow-x-auto">
-                                            {!stakeholders || stakeholders.length === 0 ? (
-                                                <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                                                    <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                                    <p>No stakeholders defined.</p>
-                                                </div>
-                                            ) : (
-                                                <div className="border rounded-md min-w-[800px]">
-                                                    <Table>
-                                                        <TableHeader className="bg-slate-50">
-                                                            <TableRow>
-                                                                <TableHead>Executive Sponsor</TableHead>
-                                                                <TableHead>Technical Decision Maker</TableHead>
-                                                                <TableHead>Influencers</TableHead>
-                                                                <TableHead>Neutral Stakeholders</TableHead>
-                                                                <TableHead>Negative Stakeholder</TableHead>
-                                                                <TableHead>Succession Risk</TableHead>
-                                                            </TableRow>
-                                                        </TableHeader>
-                                                        <TableBody>
-                                                            {paginatedStakeholders.map((person, idx) => (
-                                                                <TableRow key={person.id || idx}>
-                                                                    <TableCell className="font-medium">{person.executive_sponsor || '-'}</TableCell>
-                                                                    <TableCell>{person.technical_decision_maker || '-'}</TableCell>
-                                                                    <TableCell>{person.influencer || '-'}</TableCell>
-                                                                    <TableCell>{person.neutral_stakeholders || '-'}</TableCell>
-                                                                    <TableCell>{person.negative_stakeholder || '-'}</TableCell>
-                                                                    <TableCell className={person.succession_risk ? 'text-amber-700 font-medium' : ''}>{person.succession_risk || '-'}</TableCell>
-                                                                </TableRow>
-                                                            ))}
-                                                        </TableBody>
-                                                    </Table>
-                                                </div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-                                )}
-                            </div>
-                        </div>
+                    <TabsContent value="ai insights" className="mt-0 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <AccountAIInsights accountId={financeData?.id || id} />
                     </TabsContent>
 
-                    <TabsContent value="ai recommendations" className="space-y-6">
-                        <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
-                            <CardHeader className="bg-gradient-to-r from-purple-50/50 to-transparent border-b border-purple-100">
-                                <CardTitle className="flex items-center gap-2 text-purple-950">
-                                    <Brain className="w-5 h-5 text-purple-600" />
+                    <TabsContent value="sales & account details" className="mt-0">
+                        {/* Nested Secondary Tabs */}
+                        <Tabs defaultValue="ai recommendations" className="w-full">
+                            <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full gap-2 h-auto mb-6">
+                                <TabsTrigger value="ai recommendations" className="tab-purple h-auto py-2 whitespace-normal text-xs px-2 md:text-sm leading-tight flex items-center gap-2">
+                                    <Brain className="w-4 h-4" />
                                     AI Recommendations
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="pt-6">
-                                <div className="bg-slate-50 p-6 rounded-lg border border-slate-100 min-h-[200px] text-slate-700 leading-relaxed">
-                                    {financeData?.ai_recommendations || "No AI recommendations available for this account."}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    <TabsContent value="customer overview" className="space-y-6">
-                        <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
-                            <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-transparent border-b border-indigo-100">
-                                <CardTitle className="flex items-center gap-2 text-indigo-950">
-                                    <Activity className="w-5 h-5 text-indigo-600" />
+                                </TabsTrigger>
+                                <TabsTrigger value="customer overview" className="tab-indigo h-auto py-2 whitespace-normal text-xs px-2 md:text-sm leading-tight flex items-center gap-2">
+                                    <Activity className="w-4 h-4" />
                                     Customer Overview
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="pt-6">
-                                <div className="bg-slate-50 p-6 rounded-lg border border-slate-100 min-h-[200px] text-slate-700 leading-relaxed">
-                                    {financeData?.customer_overview || "No customer overview available for this account."}
+                                </TabsTrigger>
+                                <TabsTrigger value="roadmaps" className="tab-emerald h-auto py-2 whitespace-normal text-xs px-2 md:text-sm leading-tight flex items-center gap-2">
+                                    <Map className="w-4 h-4" />
+                                    Roadmaps
+                                </TabsTrigger>
+                                <TabsTrigger value="sales details" className="tab-blue h-auto py-2 whitespace-normal text-xs px-2 md:text-sm leading-tight flex items-center gap-2">
+                                    <Building2 className="w-4 h-4" />
+                                    Sales Details
+                                </TabsTrigger>
+                                <TabsTrigger value="account documents" className="tab-amber h-auto py-2 whitespace-normal text-xs px-2 md:text-sm leading-tight flex items-center gap-2">
+                                    <FileText className="w-4 h-4" />
+                                    Account Documents
+                                </TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="sales details" className="mt-0 animate-in fade-in slide-in-from-right-4 duration-500">
+                                <div className="flex flex-col md:flex-row gap-8 items-start">
+                                    {/* Vertical Sidebar Navigation */}
+                                    <div className="w-full md:w-[260px] shrink-0 flex flex-col sticky top-6">
+                                        <div className="px-3 pb-4">
+                                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                                <List className="w-4 h-4" />
+                                                Categories
+                                            </h3>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            {SALES_SECTIONS.map((section) => (
+                                                <button
+                                                    key={section.id}
+                                                    type="button"
+                                                    onClick={() => setSalesActiveSection(section.id)}
+                                                    className={cn(
+                                                        "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all text-left",
+                                                        salesActiveSection === section.id
+                                                            ? "bg-white text-blue-700 shadow-sm border border-slate-200/60"
+                                                            : "text-slate-500 hover:bg-slate-200/50 hover:text-slate-900"
+                                                    )}
+                                                >
+                                                    <section.icon className={cn(
+                                                        "w-4 h-4",
+                                                        salesActiveSection === section.id ? "text-blue-600" : "text-slate-400"
+                                                    )} />
+                                                    {section.label}
+                                                    {salesActiveSection === section.id && (
+                                                        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Section Content Area */}
+                                    <div className="flex-1 w-full flex flex-col">
+                                        {salesActiveSection === 'sales_info' && (
+                                            <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                                <CardHeader className="border-b border-slate-100 p-4 bg-indigo-50/30">
+                                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
+                                                        <div className="p-1 rounded bg-indigo-50">
+                                                            <Users className="w-4 h-4 text-indigo-600" />
+                                                        </div>
+                                                        Account Information
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-5 p-6">
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Domain</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.domain || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Account Focus</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.account_focus || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Engagement Age</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.engagement_age || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1 md:col-span-3">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Account Research</span>
+                                                        <div>
+                                                            <a href={account.account_research_link} target="_blank" rel="noreferrer" className="text-blue-600 hover:text-blue-700 hover:underline truncate block text-sm font-semibold">
+                                                                View Market Report ↗
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+
+                                        {salesActiveSection === 'delivery_ops' && (
+                                            <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                                <CardHeader className="border-b border-slate-100 p-4 bg-blue-50/30">
+                                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
+                                                        <div className="p-1 rounded bg-blue-50">
+                                                            <Activity className="w-4 h-4 text-blue-600" />
+                                                        </div>
+                                                        Delivery & Operations
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="grid grid-cols-2 gap-x-6 gap-y-5 p-6">
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Delivery Owner</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.delivery_owner || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Team Size</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.team_size || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Active Projects</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.number_of_active_projects || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Overall Health</span>
+                                                        <div className="mt-0.5">
+                                                            <Badge variant="outline" className={cn(
+                                                                "border-none px-2 py-0.5 text-xs font-semibold",
+                                                                account.overall_delivery_health === 'Green' ? "bg-green-50 text-green-700" :
+                                                                    account.overall_delivery_health === 'Red' ? "bg-red-50 text-red-700" :
+                                                                        account.overall_delivery_health === 'Amber' ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-700"
+                                                            )}>
+                                                                {account.overall_delivery_health || '-'}
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Rate Card Health</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.current_rate_card_health || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Engagement Models</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.engagement_models || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1 col-span-2">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Current Engagement Areas</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.current_engagement_areas || '-'}</p>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+
+                                        {salesActiveSection === 'financials' && (
+                                            <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                                <CardHeader className="border-b border-slate-100 p-4 bg-emerald-50/30">
+                                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
+                                                        <div className="p-1 rounded bg-emerald-50">
+                                                            <Target className="w-4 h-4 text-emerald-600" />
+                                                        </div>
+                                                        Sales Financials
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="grid grid-cols-2 gap-x-6 gap-y-5 p-6">
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Company Revenue</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.company_revenue || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Last Year Business</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.last_year_business_done || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Target 2026 (Accounts)</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.target_projection_2026_accounts || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Target 2026 (Delivery)</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.target_projection_2026_delivery || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Current Pipeline</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.current_pipeline_value || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Attrition / Leakage Risk</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.revenue_attrition_possibility || '-'}</p>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+
+                                        {salesActiveSection === 'strategy' && (
+                                            <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                                <CardHeader className="border-b border-slate-100 p-4 bg-indigo-50/30">
+                                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
+                                                        <div className="p-1 rounded bg-indigo-50">
+                                                            <Target className="w-4 h-4 text-indigo-600" />
+                                                        </div>
+                                                        Strategy & Growth
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="grid grid-cols-2 gap-x-6 gap-y-5 p-6">
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Value Chain Known?</span>
+                                                        <div className="mt-0.5">
+                                                            <Badge variant={account.know_customer_value_chain ? 'default' : 'secondary'} className="bg-indigo-600">
+                                                                {account.know_customer_value_chain ? 'Yes' : 'No'}
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Value Chain Fit</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.where_we_fit_in_value_chain || 'Not detailed.'}</p>
+                                                    </div>
+                                                    <div className="space-y-1 col-span-2">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cross-Sell Areas</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.identified_areas_cross_up_selling || 'None identified.'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Roadmap Visibility (2026)</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.visibility_client_roadmap_2026 || 'No visibility.'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">30 Days Growth Action Plan Ready?</span>
+                                                        <div className="mt-0.5">
+                                                            <Badge variant={account.growth_action_plan_30days_ready ? 'default' : 'secondary'} className="bg-indigo-600">
+                                                                {account.growth_action_plan_30days_ready ? 'Yes' : 'No'}
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+
+                                        {salesActiveSection === 'relationships' && (
+                                            <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                                <CardHeader className="border-b border-slate-100 p-4 bg-violet-50/30">
+                                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
+                                                        <div className="p-1 rounded bg-violet-50">
+                                                            <Users className="w-4 h-4 text-violet-600" />
+                                                        </div>
+                                                        Relationships
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="grid grid-cols-2 gap-x-6 gap-y-5 p-6">
+                                                    <div className="space-y-1"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Client Partner</span><p className="text-sm font-semibold text-slate-900">{account.client_partner || '-'}</p></div>
+                                                    <div className="space-y-1"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Champion</span><p className="text-sm font-semibold text-slate-900">{account.champion_customer_side || '-'}</p></div>
+                                                    <div className="space-y-1"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Champion Profile</span><p className="text-sm font-semibold text-slate-900">{account.champion_profile || '-'}</p></div>
+                                                    <div className="space-y-1"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Exec Connect Frequency</span><p className="text-sm font-semibold text-slate-900">{account.nitor_executive_connect_frequency || '-'}</p></div>
+                                                    <div className="space-y-1"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">NPS</span><p className="text-sm font-semibold text-slate-900">{account.current_nps || '-'}</p></div>
+                                                    <div className="space-y-1"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Active Connects</span><p className="text-sm font-semibold text-slate-900">{account.total_active_connects || '-'}</p></div>
+                                                    <div className="space-y-1"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Connect with Decision Maker</span><p className="text-sm font-semibold text-slate-900">{account.connect_with_decision_maker ? 'Yes' : 'No'}</p></div>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+
+                                        {salesActiveSection === 'cadence' && (
+                                            <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                                <CardHeader className="border-b border-slate-100 p-4 bg-emerald-50/30">
+                                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
+                                                        <div className="p-1 rounded bg-emerald-50">
+                                                            <Award className="w-4 h-4 text-emerald-600" />
+                                                        </div>
+                                                        Readiness & Cadence
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="grid grid-cols-2 gap-x-6 gap-y-5 p-6">
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Review Cadence</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.account_review_cadence_frequency || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Technical Audit</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.technical_audit_frequency || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">QBR Happening?</span>
+                                                        <Badge variant={account.qbr_happening ? "default" : "secondary"}>
+                                                            {account.qbr_happening ? "Yes" : "No"}
+                                                        </Badge>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+
+                                        {salesActiveSection === 'competition' && (
+                                            <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                                <CardHeader className="border-b border-slate-100 p-4 bg-rose-50/30">
+                                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
+                                                        <div className="p-1 rounded bg-rose-50">
+                                                            <Swords className="w-4 h-4 text-rose-600" />
+                                                        </div>
+                                                        Competitive Analysis
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="grid grid-cols-2 gap-x-6 gap-y-5 p-6">
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Key Competitors</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.key_competitors || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Incumbency Strength</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.incumbency_strength || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1 col-span-2">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Our Positioning</span>
+                                                        <p className="text-sm leading-relaxed font-semibold text-slate-900">{account.our_positioning_vs_competition || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Areas Competition Stronger</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.areas_competition_stronger || '-'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">White Spaces We Own</span>
+                                                        <p className="text-sm font-semibold text-slate-900">{account.white_spaces_we_own || '-'}</p>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+
+                                        {salesActiveSection === 'stakeholders' && (
+                                            <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                                <CardHeader className="border-b border-slate-100 p-4 bg-indigo-50/30">
+                                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
+                                                        <div className="p-1 rounded bg-indigo-50">
+                                                            <Users className="w-4 h-4 text-indigo-600" />
+                                                        </div>
+                                                        Strategic Stakeholders
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="pt-6 overflow-x-auto">
+                                                    {!stakeholders || stakeholders.length === 0 ? (
+                                                        <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                                                            <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                                            <p>No stakeholders defined.</p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="border rounded-md min-w-[800px]">
+                                                            <Table>
+                                                                <TableHeader className="bg-slate-50">
+                                                                    <TableRow>
+                                                                        <TableHead>Executive Sponsor</TableHead>
+                                                                        <TableHead>Technical Decision Maker</TableHead>
+                                                                        <TableHead>Influencers</TableHead>
+                                                                        <TableHead>Neutral Stakeholders</TableHead>
+                                                                        <TableHead>Negative Stakeholder</TableHead>
+                                                                        <TableHead>Succession Risk</TableHead>
+                                                                    </TableRow>
+                                                                </TableHeader>
+                                                                <TableBody>
+                                                                    {paginatedStakeholders.map((person, idx) => (
+                                                                        <TableRow key={person.id || idx}>
+                                                                            <TableCell className="font-medium">{person.executive_sponsor || '-'}</TableCell>
+                                                                            <TableCell>{person.technical_decision_maker || '-'}</TableCell>
+                                                                            <TableCell>{person.influencer || '-'}</TableCell>
+                                                                            <TableCell>{person.neutral_stakeholders || '-'}</TableCell>
+                                                                            <TableCell>{person.negative_stakeholder || '-'}</TableCell>
+                                                                            <TableCell className={person.succession_risk ? 'text-amber-700 font-medium' : ''}>{person.succession_risk || '-'}</TableCell>
+                                                                        </TableRow>
+                                                                    ))}
+                                                                </TableBody>
+                                                            </Table>
+                                                        </div>
+                                                    )}
+                                                </CardContent>
+                                            </Card>
+                                        )}
+                                    </div>
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
+                            </TabsContent>
 
-                    <TabsContent value="roadmaps" className="space-y-6">
-                        <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
-                            <CardHeader className="bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-emerald-100">
-                                <CardTitle className="flex items-center gap-2 text-emerald-950">
-                                    <Map className="w-5 h-5 text-emerald-600" />
-                                    Account Roadmaps
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
-                                <RoadmapViewer title="Technical Roadmap" content={account.technical_roadmap} icon={Map} />
-                                <RoadmapViewer title="Product Roadmap" content={account.product_roadmap} icon={Map} />
-                                <RoadmapViewer title="AI Roadmap" content={account.ai_roadmap} icon={Map} />
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
+                            <TabsContent value="ai recommendations" className="space-y-6">
+                                <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
+                                    <CardHeader className="bg-gradient-to-r from-purple-50/50 to-transparent border-b border-purple-100">
+                                        <CardTitle className="flex items-center gap-2 text-purple-950">
+                                            <Brain className="w-5 h-5 text-purple-600" />
+                                            AI Recommendations
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="pt-6">
+                                        <div className="bg-slate-50 p-6 rounded-lg border border-slate-100 min-h-[200px] text-slate-700 leading-relaxed">
+                                            {financeData?.ai_recommendations || "No AI recommendations available for this account."}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
 
-                    <TabsContent value="account documents" className="mt-6">
-                        <AccountDocuments accountId={id} readOnly={true} />
+                            <TabsContent value="customer overview" className="space-y-6">
+                                <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
+                                    <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-transparent border-b border-indigo-100">
+                                        <CardTitle className="flex items-center gap-2 text-indigo-950">
+                                            <Activity className="w-5 h-5 text-indigo-600" />
+                                            Customer Overview
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="pt-6">
+                                        <div className="bg-slate-50 p-6 rounded-lg border border-slate-100 min-h-[200px] text-slate-700 leading-relaxed">
+                                            {financeData?.customer_overview || "No customer overview available for this account."}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+
+                            <TabsContent value="roadmaps" className="space-y-6">
+                                <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
+                                    <CardHeader className="bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-emerald-100">
+                                        <CardTitle className="flex items-center gap-2 text-emerald-950">
+                                            <Map className="w-5 h-5 text-emerald-600" />
+                                            Roadmaps
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
+                                        <RoadmapViewer title="Technical Roadmap" content={account.technical_roadmap} icon={Map} />
+                                        <RoadmapViewer title="Product Roadmap" content={account.product_roadmap} icon={Map} />
+                                        <RoadmapViewer title="AI Roadmap" content={account.ai_roadmap} icon={Map} />
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+
+                            <TabsContent value="account documents" className="mt-6">
+                                <AccountDocuments accountId={id} readOnly={true} />
+                            </TabsContent>
+                        </Tabs>
                     </TabsContent>
                 </Tabs>
 

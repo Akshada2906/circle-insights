@@ -13,8 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Briefcase, Loader2, Map, Menu, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Briefcase, Loader2, Map, Menu, ChevronRight, FileText } from 'lucide-react';
 import { RoadmapEditor } from '@/components/accounts/RoadmapEditor';
+import { AccountDocuments } from '@/components/accounts/AccountDocuments';
 import { useToast } from '@/hooks/use-toast';
 import { 
   getFinanceProjectById, 
@@ -67,7 +68,7 @@ const FinancialProjectForm = () => {
 
   useEffect(() => {
     if (!accountId) {
-      navigate('/financials');
+      navigate(backUrl);
       return;
     }
 
@@ -151,11 +152,12 @@ const FinancialProjectForm = () => {
       if (isEditing) {
         await updateFinanceProject(projectId!, payload);
         toast({ title: "Project Updated", description: "The project has been updated successfully." });
+        navigate(`/financials/${accountId}/projects/${projectId}`, { state: { backUrl } });
       } else {
         await createFinanceProject(payload);
         toast({ title: "Project Created", description: "New project added to the account." });
+        navigate(`/financials/${accountId}`, { state: { backUrl } });
       }
-      navigate(`/financials/${accountId}`, { state: { backUrl } });
     } catch (error: any) {
       toast({ title: "Error saving project", description: error.message || "Something went wrong.", variant: "destructive" });
     } finally {
@@ -179,13 +181,13 @@ const FinancialProjectForm = () => {
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 text-[15px] text-slate-500 mb-2 border-b border-gray-200 pb-2">
           <div 
-             onClick={() => navigate(isFromPE ? backUrl : '/financials')}
+             onClick={() => navigate(backUrl)}
              className="p-1.5 bg-blue-600 rounded-full text-white cursor-pointer hover:bg-blue-700 transition-colors mr-1 shadow-sm"
           >
             <Menu className="w-4 h-4" />
           </div>
           <a 
-            onClick={() => navigate(isFromPE ? backUrl : '/financials')} 
+            onClick={() => navigate(backUrl === '/financials' ? '/accounts' : backUrl)} 
             className="text-blue-600 hover:underline cursor-pointer font-medium"
           >
             {isFromPE ? 'Private Equity' : 'Accounts'}
@@ -200,6 +202,14 @@ const FinancialProjectForm = () => {
           <a onClick={() => navigate(`/financials/${accountId}`, { state: { backUrl } })} className="text-blue-600 hover:underline cursor-pointer font-medium">
             Account Details
           </a>
+          {isEditing && (
+            <>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+              <a onClick={() => navigate(`/financials/${accountId}/projects/${projectId}`, { state: { backUrl } })} className="text-blue-600 hover:underline cursor-pointer font-medium">
+                Project Details
+              </a>
+            </>
+          )}
           <ChevronRight className="w-4 h-4 text-slate-400" />
           <span className="text-slate-600 font-semibold">{isEditing ? 'Edit Project' : 'Create Project'}</span>
         </div>
@@ -368,8 +378,22 @@ const FinancialProjectForm = () => {
             </CardContent>
           </Card>
 
+          {isEditing && (
+            <Card className="shadow-sm border-gray-100 card-enterprise bg-white animate-in fade-in duration-500">
+              <CardHeader className="pb-4 border-b">
+                <CardTitle className="text-xl flex items-center gap-2 text-gray-800">
+                  <FileText className="w-5 h-5 text-gray-500" />
+                  Project Documents
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <AccountDocuments ownerType="project" accountId={projectId} />
+              </CardContent>
+            </Card>
+          )}
+
           <div className="flex justify-end gap-4 pb-12">
-            <Button type="button" variant="outline" onClick={() => navigate(`/financials/${accountId}`, { state: { backUrl } })} className="bg-white" disabled={submitting}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => navigate(isEditing ? `/financials/${accountId}/projects/${projectId}` : `/financials/${accountId}`, { state: { backUrl } })} className="bg-white" disabled={submitting}>Cancel</Button>
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white min-w-[150px]" disabled={submitting}>
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEditing ? 'Update Project' : 'Create Project')}
             </Button>

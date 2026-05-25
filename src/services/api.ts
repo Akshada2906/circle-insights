@@ -213,7 +213,8 @@ export const api = {
       'sow-documents': 'sow',
       'best-practices': 'best_practices',
       'code-quality': 'code_quality',
-      'tech-reviews': 'tech_review'
+      'tech-reviews': 'tech_review',
+      'other-docs': 'other_docs'
     };
 
     const backendType = typeMap[type] || type;
@@ -230,7 +231,8 @@ export const api = {
       'sow-documents': 'sow',
       'best-practices': 'best_practices',
       'code-quality': 'code_quality',
-      'tech-reviews': 'tech_review'
+      'tech-reviews': 'tech_review',
+      'other-docs': 'other_docs'
     };
 
     const backendType = typeMap[type] || type;
@@ -244,7 +246,8 @@ export const api = {
       'sow-documents': 'sow',
       'best-practices': 'best_practices',
       'code-quality': 'code_quality',
-      'tech-reviews': 'tech_review'
+      'tech-reviews': 'tech_review',
+      'other-docs': 'other_docs'
     };
 
     const backendType = typeMap[type] || type;
@@ -264,7 +267,8 @@ export const api = {
       'sow-documents': 'sow',
       'best-practices': 'best_practices',
       'code-quality': 'code_quality',
-      'tech-reviews': 'tech_review'
+      'tech-reviews': 'tech_review',
+      'other-docs': 'other_docs'
     };
 
     const backendType = typeMap[type] || type;
@@ -281,7 +285,8 @@ export const api = {
       'sow-documents': 'sow',
       'best-practices': 'best_practices',
       'code-quality': 'code_quality',
-      'tech-reviews': 'tech_review'
+      'tech-reviews': 'tech_review',
+      'other-docs': 'other_docs'
     };
 
     const backendType = typeMap[type] || type;
@@ -295,7 +300,8 @@ export const api = {
       'sow-documents': 'sow',
       'best-practices': 'best_practices',
       'code-quality': 'code_quality',
-      'tech-reviews': 'tech_review'
+      'tech-reviews': 'tech_review',
+      'other-docs': 'other_docs'
     };
 
     const backendType = typeMap[type] || type;
@@ -347,6 +353,29 @@ export const api = {
       method: "POST",
     });
     return handleResponse<any>(response);
+  },
+
+  importOtherDocument: async (entityId: string, entityType: 'account' | 'project' | 'pe', file: File, contextHint?: string): Promise<any> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const query = contextHint ? `?context_hint=${encodeURIComponent(contextHint)}` : '';
+    const response = await fetch(`${BASE_API_PATH}/insights/document/${entityType}/${entityId}${query}`, {
+      method: "POST",
+      body: formData,
+    });
+    return handleResponse<any>(response);
+  },
+
+  getOtherDocuments: async (entityId: string, entityType: 'account' | 'project' | 'pe'): Promise<any> => {
+    const response = await fetch(`${BASE_API_PATH}/insights/document/${entityType}/${entityId}`);
+    return handleResponse<any>(response);
+  },
+
+  deleteOtherDocument: async (documentInsightId: string): Promise<void> => {
+    const response = await fetch(`${BASE_API_PATH}/insights/document/${documentInsightId}`, {
+      method: "DELETE",
+    });
+    return handleResponse<void>(response);
   }
 };
 
@@ -458,6 +487,17 @@ export const updateFinanceAccount = async (id: string, accountData: any) => {
   if (!response.ok) throw new Error("Failed to update account");
   return response.json();
 };
+
+// export const toggleIsSalesAccount = async (id: string, isSales: boolean) => {
+//   const response = await fetch(`${BASE_API_PATH}/accounts/${id}/toggle-is-sales`, {
+//     method: "PATCH",
+//     headers: { "Content-Type": "application/json" },
+//     body: JSON.stringify({ is_sales: isSales }),
+//   });
+//   if (!response.ok) throw new Error("Failed to toggle is_sales status");
+//   return response.json();
+// };
+
 
 export const getFinanceDeliveryUnits = async () => {
   const response = await fetch(`${BASE_API_PATH}/delivery_units/`);

@@ -43,6 +43,7 @@ export interface AccountDashboardResponse {
 }
 
 export interface AccountDashboardCreate {
+    account_id?: string;
     account_name: string;
     // Removed: account_leader, industry
     domain?: string;

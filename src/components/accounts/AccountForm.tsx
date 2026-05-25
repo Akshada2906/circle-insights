@@ -184,7 +184,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
         };
 
         if (!account) {
-            submissionData.account_id = `acc-${Date.now()}`;
+            submissionData.account_id = crypto.randomUUID();
             submissionData.created_at = new Date().toISOString();
         }
 
@@ -195,7 +195,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
     const [activeTab, setActiveTab] = useState('sales_details');
 
     const SALES_SECTIONS = [
-        { id: 'sales_info', label: 'Sales & Account Information', icon: Building2 },
+        { id: 'sales_info', label: 'Account Information', icon: Building2 },
         { id: 'delivery_ops', label: 'Delivery & Operations', icon: Activity },
         { id: 'financials', label: 'Sales Financials', icon: Target },
         { id: 'strategy', label: 'Strategy & Growth', icon: Target },
@@ -242,7 +242,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
                 <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between hover:border-blue-200 transition-colors">
                     <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Current Revenue</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">Current Revenue</span>
                         {financeData ? (
                             <p className="text-xl font-bold text-slate-900">
                                 {formatCurrency(financeData.current_revenue || financeData.total_revenue || 0)}
@@ -262,7 +262,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                 </Card>
                 <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between hover:border-blue-200 transition-colors">
                     <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Target Revenue</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">Target Revenue</span>
                         {financeData ? (
                             <p className="text-xl font-bold text-slate-900">
                                 {formatCurrency(financeData.target_revenue || 0)}
@@ -282,7 +282,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                 </Card>
                 <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between hover:border-blue-200 transition-colors">
                     <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Forecast Revenue</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">Forecast Revenue</span>
                         {financeData ? (
                             <p className="text-xl font-bold text-slate-900">
                                 {formatCurrency(financeData.forecast_revenue || 0)}
@@ -302,7 +302,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                 </Card>
                 <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between bg-red-50/30">
                     <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Shortfall</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">Shortfall</span>
                         <p className="text-xl font-bold text-red-600">
                             {financeData
                                 ? formatCurrency(financeData.shortfall ?? ((financeData.target_revenue || 0) - (financeData.current_revenue || financeData.total_revenue || 0) - (financeData.forecast_revenue || 0)))
@@ -313,7 +313,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                 </Card>
                 <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between">
                     <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">AI Revenue</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">AI Revenue</span>
                         <p className="text-xl font-bold text-blue-600">
                             {financeData ? formatCurrency(financeData.ai_revenue) : "$0"}
                         </p>
@@ -322,7 +322,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                 </Card>
                 <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between">
                     <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">AI Penetration</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">AI Penetration</span>
                         <p className="text-xl font-bold text-blue-600">
                             {financeData ? `${(financeData.ai_penetration_pct || 0).toFixed(1)}%` : "0.0%"}
                         </p>
@@ -331,7 +331,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                 </Card>
                 <Card className="bg-white border border-slate-100 shadow-sm rounded-xl p-4 flex flex-col justify-between hover:border-blue-200 transition-colors">
                     <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Projects</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block min-h-[2rem]">Projects</span>
                         {financeData ? (
                             <p className="text-xl font-bold text-slate-900">
                                 {financeData.active_project_count + financeData.inactive_project_count}
@@ -425,7 +425,7 @@ export function AccountForm({ account, onSubmit, onCancel, isLoading = false }: 
                                                 <div className="p-1 rounded bg-indigo-50">
                                                     <Users className="w-4 h-4 text-indigo-600" />
                                                 </div>
-                                                Sales & Account Information
+                                                Account Information
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
