@@ -41,7 +41,6 @@ import {
 } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { Account } from '@/types/finance-database';
-import { getAccountHealthScore } from '@/lib/health-score';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -215,14 +214,12 @@ const PrivateEquityInsights = () => {
   const getAccountOverviewMetrics = (acc: Account, index: number) => {
     const vertical = (acc as any).domain || "-";
     const manager = acc.account_manager?.trim() || "Unassigned";
-
-    const score = getAccountHealthScore(acc);
     
     const totalRev = acc.current_revenue || acc.total_revenue || 0;
     const targetRev = acc.target_revenue || 0;
     const val = targetRev > 0 ? targetRev * 10 : totalRev > 0 ? totalRev * 10 : 0;
 
-    return { vertical, manager, score, val };
+    return { vertical, manager, val };
   };
 
 
@@ -236,7 +233,7 @@ const PrivateEquityInsights = () => {
     return acc + val;
   }, 0) || 1420000000;
 
-  const healthScore = parsedInsights?.overall_health_score ?? parsedInsights?.portfolio_health_score ?? parsedInsights?.overall_health ?? 84.2;
+
 
   if (loading) {
     return (
@@ -742,7 +739,7 @@ const PrivateEquityInsights = () => {
                       </TableRow>
                     ) : (
                       filteredAccountsTable.map((acc, index) => {
-                        const { vertical, manager, score, val } = getAccountOverviewMetrics(acc, index);
+                        const { vertical, manager, val } = getAccountOverviewMetrics(acc, index);
                         return (
                           <TableRow
                             key={acc.id}
