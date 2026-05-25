@@ -328,7 +328,7 @@ const FinancialAccountDetails = () => {
           </TabsList>
 
           <TabsContent value="ai insights" className="mt-0 animate-in fade-in slide-in-from-right-4 duration-500">
-            <AccountAIInsights accountId={id} />
+            <AccountAIInsights accountId={id} accountData={data} />
           </TabsContent>
 
           <TabsContent value="sales & account details" className="mt-0">

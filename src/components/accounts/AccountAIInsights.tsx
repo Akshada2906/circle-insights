@@ -58,9 +58,10 @@ const cleanJsonString = (str: string) => {
 
 interface AccountAIInsightsProps {
   accountId: string;
+  accountData?: any;
 }
 
-export function AccountAIInsights({ accountId }: AccountAIInsightsProps) {
+export function AccountAIInsights({ accountId, accountData }: AccountAIInsightsProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -105,7 +106,10 @@ export function AccountAIInsights({ accountId }: AccountAIInsightsProps) {
       const fetchFinanceData = async () => {
         setLoading(true);
         try {
-          const responseData = await getFinanceAccountById(accountId);
+          let responseData = accountData;
+          if (!responseData) {
+            responseData = await getFinanceAccountById(accountId);
+          }
           setData(responseData);
           try {
             const res = await api.getAccountInsights(accountId);
@@ -145,7 +149,7 @@ export function AccountAIInsights({ accountId }: AccountAIInsightsProps) {
       };
       fetchFinanceData();
     }
-  }, [accountId]);
+  }, [accountId, accountData]);
 
   const handleGenerateInsights = async () => {
     if (!accountId) return;
