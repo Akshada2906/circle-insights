@@ -421,10 +421,10 @@ const FinancialAccountInsights = () => {
                       const priStr = (opt?.impact || opt?.priority || "medium").toLowerCase();
                       const msgStr = opt?.message || opt?.text || opt?.description || JSON.stringify(opt);
                       const badgeColor = priStr === 'high'
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        ? "bg-rose-50 text-rose-600 border-rose-200"
                         : priStr === 'medium'
                           ? "bg-amber-50 text-amber-600 border-amber-200"
-                          : "bg-slate-50 text-slate-600 border-slate-200";
+                          : "bg-emerald-50 text-emerald-600 border-emerald-200";
                       return (
                         <div key={idx} className="p-4 rounded-xl border border-emerald-100/60 bg-emerald-50/20 space-y-1.5">
                           <div className="flex items-center justify-between gap-2">

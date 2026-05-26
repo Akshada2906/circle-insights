@@ -24,8 +24,7 @@ import {
   Briefcase,
   PieChart,
   Globe,
-  Eye,
-  Filter
+  Eye
 } from 'lucide-react';
 import {
   getFinanceAccounts,
@@ -326,18 +325,19 @@ export function PEAIInsights({ firmId }: PEAIInsightsProps) {
               <CardContent className="p-5 space-y-4">
                 {Array.isArray(parsedInsights?.risks) && parsedInsights.risks.length > 0 ? (
                   parsedInsights.risks.map((risk: any, idx: number) => {
-                    const typeStr = risk?.category || "CRITICAL RISK";
-                    const impStr = (risk?.severity || risk?.level || "High").toLowerCase();
+                    const sevStr = risk?.severity || risk?.level || "High";
+                    const capitalizedSev = sevStr.charAt(0).toUpperCase() + sevStr.slice(1).toLowerCase();
                     const descStr = risk?.description || risk?.message || risk?.text || JSON.stringify(risk);
+                    const colorClass = sevStr.toLowerCase() === 'high'
+                      ? "text-rose-600 font-bold"
+                      : sevStr.toLowerCase() === 'medium'
+                        ? "text-amber-600 font-bold"
+                        : "text-emerald-600 font-bold";
                     return (
-                      <div key={idx} className="p-3.5 rounded-xl border border-rose-100/60 bg-rose-50/20 space-y-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{typeStr}</span>
-                          <Badge variant="outline" className="text-[8px] font-black border-rose-200 text-rose-700 bg-white px-1.5 py-0 rounded-full">
-                            {impStr}
-                          </Badge>
-                        </div>
-                        <p className="text-xs font-semibold text-slate-700 leading-relaxed">{descStr}</p>
+                      <div key={idx} className="p-3.5 rounded-xl border border-rose-100/60 bg-rose-50/20">
+                        <p className="text-xs font-semibold text-slate-700 leading-relaxed">
+                          {descStr} - <span className={colorClass}>{capitalizedSev}</span>
+                        </p>
                       </div>
                     );
                   })
@@ -359,18 +359,19 @@ export function PEAIInsights({ firmId }: PEAIInsightsProps) {
               <CardContent className="p-5 space-y-4">
                 {Array.isArray(parsedInsights?.opportunities) && parsedInsights.opportunities.length > 0 ? (
                   parsedInsights.opportunities.map((opt: any, idx: number) => {
-                    const typeStr = opt?.category || "OPPORTUNITY";
-                    const impStr = (opt?.impact || opt?.level || "High").toLowerCase();
+                    const impStr = opt?.impact || opt?.level || "High";
+                    const capitalizedImp = impStr.charAt(0).toUpperCase() + impStr.slice(1).toLowerCase();
                     const descStr = opt?.description || opt?.message || opt?.text || JSON.stringify(opt);
+                    const colorClass = impStr.toLowerCase() === 'high'
+                      ? "text-rose-600 font-bold"
+                      : impStr.toLowerCase() === 'medium'
+                        ? "text-amber-600 font-bold"
+                        : "text-emerald-600 font-bold";
                     return (
-                      <div key={idx} className="p-3.5 rounded-xl border border-emerald-100/60 bg-emerald-50/20 space-y-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{typeStr}</span>
-                          <Badge variant="outline" className="text-[8px] font-black border-emerald-200 text-emerald-700 bg-white px-1.5 py-0 rounded-full">
-                            {impStr}
-                          </Badge>
-                        </div>
-                        <p className="text-xs font-semibold text-slate-700 leading-relaxed">{descStr}</p>
+                      <div key={idx} className="p-3.5 rounded-xl border border-emerald-100/60 bg-emerald-50/20">
+                        <p className="text-xs font-semibold text-slate-700 leading-relaxed">
+                          {descStr} - <span className={colorClass}>{capitalizedImp}</span>
+                        </p>
                       </div>
                     );
                   })
@@ -418,46 +419,41 @@ export function PEAIInsights({ firmId }: PEAIInsightsProps) {
                       <Target className="w-3.5 h-3.5 text-blue-600" /> Capability Alignment
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      {Array.isArray(parsedInsights.capability_alignment) ? (
-                        parsedInsights.capability_alignment.map((cap: any, idx: number) => (
-                          <div key={idx} className="p-3.5 bg-blue-50/20 border border-blue-100/60 rounded-xl space-y-2">
-                            {cap.gap || cap.identified_gap || cap.gap_type || cap.domain || cap.category || cap.title ? (
-                              <div className="space-y-1">
-                                <span className="text-[9px] font-black text-blue-800 uppercase tracking-wider bg-blue-100/60 px-1.5 py-0.5 rounded-md">Identified Gap</span>
-                                <p className="text-xs font-bold text-slate-900 leading-relaxed mt-0.5">
-                                  {cap.gap || cap.identified_gap || cap.gap_type || cap.domain || cap.category || cap.title}
-                                </p>
-                              </div>
-                            ) : null}
-
-                            {(cap.relevant_capability || cap.capability || cap.solution_approach || cap.solution) && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-blue-100/50 mt-2">
-                                {(cap.relevant_capability || cap.capability) && (
-                                  <div>
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Relevant Capability</span>
-                                    <span className="text-xs font-bold text-slate-700">{cap.relevant_capability || cap.capability}</span>
-                                  </div>
-                                )}
-                                {(cap.solution_approach || cap.solution) && (
-                                  <div>
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Solution Approach</span>
-                                    <span className="text-xs font-semibold text-slate-700 leading-relaxed block">{cap.solution_approach || cap.solution}</span>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            {!(cap.gap || cap.identified_gap || cap.gap_type || cap.domain || cap.category || cap.title || cap.relevant_capability || cap.capability || cap.solution_approach || cap.solution) && (
-                              <p className="text-xs font-semibold text-slate-600 leading-relaxed">{JSON.stringify(cap)}</p>
-                            )}
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-xs font-semibold text-slate-500">{JSON.stringify(parsedInsights.capability_alignment)}</p>
-                      )}
-                    </div>
+                  <CardContent className="p-0 overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-slate-50/40">
+                        <TableRow>
+                          <TableHead className="font-black text-[10px] text-slate-500 uppercase tracking-wider h-9 pl-5">Identified Gap</TableHead>
+                          <TableHead className="font-black text-[10px] text-slate-500 uppercase tracking-wider h-9">Relevant Capability</TableHead>
+                          <TableHead className="font-black text-[10px] text-slate-500 uppercase tracking-wider h-9">Solution Approach</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Array.isArray(parsedInsights.capability_alignment) && parsedInsights.capability_alignment.length > 0 ? (
+                          parsedInsights.capability_alignment.map((cap: any, idx: number) => (
+                            <TableRow key={idx} className="border-b border-slate-100/60 hover:bg-slate-50/40">
+                              <TableCell className="pl-5 py-3.5 font-bold text-xs text-slate-900 min-w-[150px]">
+                                {cap.gap || cap.identified_gap || cap.gap_type || cap.domain || cap.category || cap.title || "—"}
+                              </TableCell>
+                              <TableCell className="py-3">
+                                <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-bold text-[9px] border-none whitespace-nowrap">
+                                  {cap.relevant_capability || cap.capability || "—"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="font-semibold text-xs text-slate-600 py-3">
+                                {cap.solution_approach || cap.solution || "—"}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center py-4 text-xs font-semibold text-slate-400 italic">
+                              No capability alignment models triggered.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
                   </CardContent>
                 </Card>
               )}
@@ -557,12 +553,6 @@ export function PEAIInsights({ firmId }: PEAIInsightsProps) {
                     className="pl-9 h-9 bg-white border-slate-200/80 rounded-xl text-xs font-semibold focus-visible:ring-2 focus-visible:ring-blue-600 shadow-2xs"
                   />
                 </div>
-                <Button variant="outline" size="sm" className="h-9 px-3 rounded-xl border-slate-200 gap-1.5 font-bold text-xs text-slate-600 shadow-2xs bg-white">
-                  <Filter className="w-3.5 h-3.5" /> Filters
-                </Button>
-                <Button size="sm" className="h-9 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white gap-1.5 font-bold text-xs shadow-2xs">
-                  <Download className="w-3.5 h-3.5" /> Export Report
-                </Button>
               </div>
             </div>
 
