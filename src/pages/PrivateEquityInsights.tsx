@@ -110,6 +110,23 @@ const PrivateEquityInsights = () => {
     return cleaned;
   };
 
+  const formatSummary = (val: any): string => {
+    if (!val) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object') {
+      return Object.entries(val)
+        .map(([key, value]) => {
+          const formattedKey = key
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase());
+          const formattedValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+          return `${formattedKey}: ${formattedValue}`;
+        })
+        .join('\n\n');
+    }
+    return String(val);
+  };
+
   const parsedInsights: PeInsight | null = useMemo(() => {
     if (!insights) return null;
     let parsed = insights;
@@ -121,9 +138,10 @@ const PrivateEquityInsights = () => {
         console.error("Failed to parse raw_output", e);
       }
     }
+    const rawSummary = parsed.executive_summary || parsed.summary || parsed.portfolio_summary;
     return {
       ...parsed,
-      executive_summary: parsed.executive_summary || parsed.summary || parsed.portfolio_summary,
+      executive_summary: formatSummary(rawSummary),
       recommended_actions: parsed.recommended_actions || parsed.strategic_recommendations,
       evidence_summary: parsed.evidence_summary,
       confidence_score: parsed.confidence_score !== undefined ? parsed.confidence_score : 0.85,
@@ -534,16 +552,45 @@ const PrivateEquityInsights = () => {
             <CardContent className="p-6 space-y-5">
               {Array.isArray(parsedInsights?.strategic_recommendations || parsedInsights?.recommended_actions || parsedInsights?.recommendations) && (parsedInsights?.strategic_recommendations || parsedInsights?.recommended_actions || parsedInsights?.recommendations).length > 0 ? (
                 (parsedInsights?.strategic_recommendations || parsedInsights?.recommended_actions || parsedInsights?.recommendations).map((rec: any, idx: number) => {
-                  const titStr = rec?.title || rec?.action || `Strategic Initiative #${idx + 1}`;
-                  const descStr = typeof rec === 'string' ? rec : rec?.text || rec?.description || rec?.message || JSON.stringify(rec);
+                  const recommendationText = typeof rec === 'string'
+                    ? rec
+                    : rec?.recommendation || rec?.text || rec?.description || rec?.message || JSON.stringify(rec);
+                  const priority = rec?.priority;
+                  const rationale = rec?.rationale;
+                  const outcome = rec?.expected_business_outcome || rec?.expected_outcome;
+
                   return (
                     <div key={idx} className="flex gap-4 items-start">
                       <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 font-black text-xs flex items-center justify-center shrink-0 mt-0.5 border border-purple-200">
                         {idx + 1}
                       </div>
-                      <div>
-                        {typeof rec !== 'string' && rec?.title && <h4 className="text-xs font-black text-slate-900 mb-1">{titStr}</h4>}
-                        <p className="text-xs font-semibold text-slate-500 leading-relaxed">{descStr}</p>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-xs font-semibold text-slate-700 leading-relaxed flex-1">
+                            {recommendationText}
+                          </p>
+                          {priority && (
+                            <Badge variant="outline" className={`text-[9px] font-black uppercase border-none px-2 py-0.5 rounded-full shrink-0 ${
+                              priority.toLowerCase() === 'high'
+                                ? "bg-rose-50 text-rose-700"
+                                : priority.toLowerCase() === 'medium'
+                                  ? "bg-amber-50 text-amber-700"
+                                  : "bg-emerald-50 text-emerald-700"
+                            }`}>
+                              {priority} Priority
+                            </Badge>
+                          )}
+                        </div>
+                        {rationale && (
+                          <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                            <span className="font-bold text-slate-600">Rationale:</span> {rationale}
+                          </p>
+                        )}
+                        {outcome && (
+                          <p className="text-[11px] text-purple-700 font-medium leading-relaxed">
+                            <span className="font-bold text-purple-900">Expected Outcome:</span> {outcome}
+                          </p>
+                        )}
                       </div>
                     </div>
                   );
