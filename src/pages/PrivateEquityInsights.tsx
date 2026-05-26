@@ -24,7 +24,6 @@ import {
   ArrowUpRight,
   Search,
   Download,
-  Filter,
   Briefcase,
   PieChart,
   Globe,
@@ -393,20 +392,22 @@ const PrivateEquityInsights = () => {
               <CardContent className="p-5 space-y-4">
                 {Array.isArray(parsedInsights?.risks) && parsedInsights.risks.length > 0 ? (
                   parsedInsights.risks.map((risk: any, idx: number) => {
-                    const typeStr = risk?.category || "CRITICAL RISK";
-                    const impStr = (risk?.severity || risk?.level || "High").toLowerCase();
-                    const titStr = risk?.type || risk?.title || risk?.name || "Portfolio Exposure";
+                    const sevStr = risk?.severity || risk?.level || "High";
+                    const capitalizedSev = sevStr.charAt(0).toUpperCase() + sevStr.slice(1).toLowerCase();
+                    const hasTitle = !!(risk?.type || risk?.title || risk?.name);
+                    const titStr = risk?.type || risk?.title || risk?.name || "";
                     const descStr = risk?.description || risk?.message || risk?.text || JSON.stringify(risk);
+                    const colorClass = sevStr.toLowerCase() === 'high'
+                      ? "text-rose-600 font-bold"
+                      : sevStr.toLowerCase() === 'medium'
+                        ? "text-amber-600 font-bold"
+                        : "text-emerald-600 font-bold";
                     return (
                       <div key={idx} className="p-4 rounded-xl border border-rose-100/60 bg-rose-50/20 space-y-1.5" title={descStr}>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{typeStr}</span>
-                          <Badge variant="outline" className="text-[9px] font-black border-rose-200 text-rose-700 bg-white">
-                            {impStr}
-                          </Badge>
-                        </div>
-                        <h4 className="text-xs font-black text-slate-900 truncate">{titStr}</h4>
-                        <p className="text-xs font-semibold text-slate-600 leading-relaxed line-clamp-2">{descStr}</p>
+                        {hasTitle && <h4 className="text-xs font-black text-slate-900 truncate">{titStr}</h4>}
+                        <p className="text-xs font-semibold text-slate-600 leading-relaxed line-clamp-2">
+                          {descStr} - <span className={colorClass}>{capitalizedSev}</span>
+                        </p>
                       </div>
                     );
                   })
@@ -428,20 +429,22 @@ const PrivateEquityInsights = () => {
               <CardContent className="p-5 space-y-4">
                 {Array.isArray(parsedInsights?.opportunities) && parsedInsights.opportunities.length > 0 ? (
                   parsedInsights.opportunities.map((opt: any, idx: number) => {
-                    const typeStr = opt?.category || "OPPORTUNITY";
-                    const impStr = (opt?.impact || opt?.level || "High").toLowerCase();
-                    const titStr = opt?.type || opt?.title || opt?.name || "Value Creation Potential";
+                    const impStr = opt?.impact || opt?.level || "High";
+                    const capitalizedImp = impStr.charAt(0).toUpperCase() + impStr.slice(1).toLowerCase();
+                    const hasTitle = !!(opt?.type || opt?.title || opt?.name);
+                    const titStr = opt?.type || opt?.title || opt?.name || "";
                     const descStr = opt?.description || opt?.message || opt?.text || JSON.stringify(opt);
+                    const colorClass = impStr.toLowerCase() === 'high'
+                      ? "text-rose-600 font-bold"
+                      : impStr.toLowerCase() === 'medium'
+                        ? "text-amber-600 font-bold"
+                        : "text-emerald-600 font-bold";
                     return (
                       <div key={idx} className="p-4 rounded-xl border border-emerald-100/60 bg-emerald-50/20 space-y-1.5" title={descStr}>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{typeStr}</span>
-                          <Badge variant="outline" className="text-[9px] font-black border-emerald-200 text-emerald-700 bg-white">
-                            {impStr}
-                          </Badge>
-                        </div>
-                        <h4 className="text-xs font-black text-slate-900 truncate">{titStr}</h4>
-                        <p className="text-xs font-semibold text-slate-600 leading-relaxed line-clamp-2">{descStr}</p>
+                        {hasTitle && <h4 className="text-xs font-black text-slate-900 truncate">{titStr}</h4>}
+                        <p className="text-xs font-semibold text-slate-600 leading-relaxed line-clamp-2">
+                          {descStr} - <span className={colorClass}>{capitalizedImp}</span>
+                        </p>
                       </div>
                     );
                   })
@@ -709,12 +712,6 @@ const PrivateEquityInsights = () => {
                     className="pl-9 h-10 bg-white border-slate-200/80 rounded-xl text-xs font-semibold focus-visible:ring-2 focus-visible:ring-blue-600 shadow-2xs"
                   />
                 </div>
-                <Button variant="outline" size="sm" className="h-10 px-3.5 rounded-xl border-slate-200 gap-1.5 font-bold text-xs text-slate-600 shadow-2xs bg-white">
-                  <Filter className="w-3.5 h-3.5" /> Filters
-                </Button>
-                <Button size="sm" className="h-10 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white gap-1.5 font-bold text-xs shadow-2xs">
-                  <Download className="w-3.5 h-3.5" /> Export Report
-                </Button>
               </div>
             </div>
 

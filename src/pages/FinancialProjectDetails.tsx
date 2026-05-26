@@ -906,21 +906,19 @@ const FinancialProjectDetails = () => {
                         <CardContent className="p-5 space-y-3">
                           {Array.isArray(parsedInsights?.risks) && parsedInsights.risks.length > 0 ? (
                             parsedInsights.risks.map((r: any, idx: number) => {
-                              const typeStr = r?.type || r?.category || "RISK FACTOR";
-                              const sevStr = (r?.severity || r?.level || "high").toLowerCase();
+                              const sevStr = r?.severity || r?.level || "high";
+                              const capitalizedSev = sevStr.charAt(0).toUpperCase() + sevStr.slice(1).toLowerCase();
                               const msgStr = r?.message || r?.text || r?.description || JSON.stringify(r);
-                              const badgeClass = sevStr === 'high'
-                                ? "bg-rose-50 text-rose-700 border-rose-200 font-black text-[9px] px-2.5 py-0.5 shadow-none"
-                                : "bg-amber-50 text-amber-700 border-amber-200 font-black text-[9px] px-2.5 py-0.5 shadow-none";
+                              const colorClass = sevStr.toLowerCase() === 'high'
+                                ? "text-rose-600 font-bold"
+                                : sevStr.toLowerCase() === 'medium'
+                                  ? "text-amber-600 font-bold"
+                                  : "text-emerald-600 font-bold";
                               return (
-                                <div key={idx} className="p-3.5 rounded-xl border border-rose-100/60 bg-rose-50/20 space-y-1" title={msgStr}>
-                                  <div className="flex items-center justify-between gap-2">
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{typeStr}</span>
-                                    <Badge variant="outline" className={badgeClass}>
-                                      {sevStr.charAt(0).toUpperCase() + sevStr.slice(1)}
-                                    </Badge>
-                                  </div>
-                                  <p className="text-xs font-bold text-slate-800 leading-relaxed">{msgStr}</p>
+                                <div key={idx} className="p-3.5 rounded-xl border border-rose-100/60 bg-rose-50/20" title={msgStr}>
+                                  <p className="text-xs font-bold text-slate-800 leading-relaxed">
+                                    {msgStr} - <span className={colorClass}>{capitalizedSev}</span>
+                                  </p>
                                 </div>
                               );
                             })
@@ -942,21 +940,19 @@ const FinancialProjectDetails = () => {
                         <CardContent className="p-5 space-y-3">
                           {Array.isArray(parsedInsights?.opportunities) && parsedInsights.opportunities.length > 0 ? (
                             parsedInsights.opportunities.map((opt: any, idx: number) => {
-                              const typeStr = opt?.type || opt?.category || "GROWTH PATH";
-                              const impStr = (opt?.impact || opt?.level || "high").toLowerCase();
+                              const impStr = opt?.impact || opt?.level || "high";
+                              const capitalizedImp = impStr.charAt(0).toUpperCase() + impStr.slice(1).toLowerCase();
                               const msgStr = opt?.message || opt?.text || opt?.description || JSON.stringify(opt);
-                              const badgeClass = impStr === 'high'
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 font-black text-[9px] px-2.5 py-0.5 shadow-none"
-                                : "bg-slate-50 text-slate-600 border-slate-200 font-black text-[9px] px-2.5 py-0.5 shadow-none";
+                              const colorClass = impStr.toLowerCase() === 'high'
+                                ? "text-emerald-600 font-bold"
+                                : impStr.toLowerCase() === 'medium'
+                                  ? "text-amber-600 font-bold"
+                                  : "text-slate-500 font-bold";
                               return (
-                                <div key={idx} className="p-3.5 rounded-xl border border-emerald-100/60 bg-emerald-50/20 space-y-1" title={msgStr}>
-                                  <div className="flex items-center justify-between gap-2">
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{typeStr}</span>
-                                    <Badge variant="outline" className={badgeClass}>
-                                      {impStr.charAt(0).toUpperCase() + impStr.slice(1)} Impact
-                                    </Badge>
-                                  </div>
-                                  <p className="text-xs font-bold text-slate-800 leading-relaxed">{msgStr}</p>
+                                <div key={idx} className="p-3.5 rounded-xl border border-emerald-100/60 bg-emerald-50/20" title={msgStr}>
+                                  <p className="text-xs font-bold text-slate-800 leading-relaxed">
+                                    {msgStr} - <span className={colorClass}>{capitalizedImp}</span>
+                                  </p>
                                 </div>
                               );
                             })

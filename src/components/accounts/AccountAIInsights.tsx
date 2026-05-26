@@ -364,23 +364,19 @@ export function AccountAIInsights({ accountId, accountData }: AccountAIInsightsP
               <CardContent className="p-4 space-y-3 flex-1">
                 {Array.isArray(parsedInsights.risks) && parsedInsights.risks.length > 0 ? (
                   parsedInsights.risks.map((risk: any, idx: number) => {
-                    const catStr = risk?.type || risk?.category || "CRITICAL RISK";
-                    const sevStr = (risk?.severity || risk?.level || "medium").toLowerCase();
+                    const sevStr = risk?.severity || risk?.level || "medium";
+                    const capitalizedSev = sevStr.charAt(0).toUpperCase() + sevStr.slice(1).toLowerCase();
                     const msgStr = risk?.message || risk?.text || risk?.description || JSON.stringify(risk);
-                    const badgeColor = sevStr === 'high'
-                      ? "bg-rose-50 text-rose-600 border-rose-200"
-                      : sevStr === 'medium'
-                        ? "bg-amber-50 text-amber-600 border-amber-200"
-                        : "bg-emerald-50 text-emerald-600 border-emerald-200";
+                    const colorClass = sevStr.toLowerCase() === 'high'
+                      ? "text-rose-600 font-bold"
+                      : sevStr.toLowerCase() === 'medium'
+                        ? "text-amber-600 font-bold"
+                        : "text-emerald-600 font-bold";
                     return (
-                      <div key={idx} className="p-3.5 rounded-xl border border-rose-100/60 bg-rose-50/20 space-y-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{catStr}</span>
-                          <Badge variant="outline" className={`text-[8px] font-black border uppercase px-1.5 py-0 rounded-full ${badgeColor}`}>
-                            {sevStr}
-                          </Badge>
-                        </div>
-                        <p className="text-xs font-semibold text-slate-700 leading-relaxed">{msgStr}</p>
+                      <div key={idx} className="p-3.5 rounded-xl border border-rose-100/60 bg-rose-50/20">
+                        <p className="text-xs font-semibold text-slate-700 leading-relaxed">
+                          {msgStr} - <span className={colorClass}>{capitalizedSev}</span>
+                        </p>
                       </div>
                     );
                   })
@@ -402,23 +398,19 @@ export function AccountAIInsights({ accountId, accountData }: AccountAIInsightsP
               <CardContent className="p-4 space-y-3 flex-1">
                 {Array.isArray(parsedInsights.opportunities) && parsedInsights.opportunities.length > 0 ? (
                   parsedInsights.opportunities.map((opt: any, idx: number) => {
-                    const catStr = opt?.type || opt?.category || "OPPORTUNITY";
-                    const priStr = (opt?.impact || opt?.priority || "medium").toLowerCase();
+                    const priStr = opt?.impact || opt?.priority || "medium";
+                    const capitalizedPri = priStr.charAt(0).toUpperCase() + priStr.slice(1).toLowerCase();
                     const msgStr = opt?.message || opt?.text || opt?.description || JSON.stringify(opt);
-                    const badgeColor = priStr === 'high'
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : priStr === 'medium'
-                        ? "bg-amber-50 text-amber-600 border-amber-200"
-                        : "bg-slate-50 text-slate-600 border-slate-200";
+                    const colorClass = priStr.toLowerCase() === 'high'
+                      ? "text-rose-600 font-bold"
+                      : priStr.toLowerCase() === 'medium'
+                        ? "text-amber-600 font-bold"
+                        : "text-emerald-600 font-bold";
                     return (
-                      <div key={idx} className="p-3.5 rounded-xl border border-emerald-100/60 bg-emerald-50/20 space-y-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{catStr}</span>
-                          <Badge variant="outline" className={`text-[8px] font-black border uppercase px-1.5 py-0 rounded-full ${badgeColor}`}>
-                            {priStr}
-                          </Badge>
-                        </div>
-                        <p className="text-xs font-semibold text-slate-700 leading-relaxed">{msgStr}</p>
+                      <div key={idx} className="p-3.5 rounded-xl border border-emerald-100/60 bg-emerald-50/20">
+                        <p className="text-xs font-semibold text-slate-700 leading-relaxed">
+                          {msgStr} - <span className={colorClass}>{capitalizedPri}</span>
+                        </p>
                       </div>
                     );
                   })
