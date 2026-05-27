@@ -32,6 +32,7 @@ import {
   getFinanceAccountById,
   api
 } from '@/services/api';
+import { exportInsightsToPDF, getInsightItemText } from '@/lib/exportUtils';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -54,6 +55,28 @@ const cleanJsonString = (str: string) => {
     cleaned = cleaned.substring(start, end + 1);
   }
   return cleaned;
+};
+
+const formatSummary = (val: any): string => {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    return Object.entries(val)
+      .map(([key, value]) => {
+        const formattedKey = key
+          .replace(/_/g, ' ')
+          .replace(/\b\w/g, c => c.toUpperCase());
+        const valStr = String(value);
+        const formattedValue = typeof value === 'object'
+          ? JSON.stringify(value)
+          : (valStr.includes('_') || (!valStr.includes(' ') && valStr.toLowerCase() === valStr && valStr.length < 30))
+            ? valStr.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+            : valStr;
+        return `${formattedKey}: ${formattedValue}`;
+      })
+      .join('\n\n');
+  }
+  return String(val);
 };
 
 interface AccountAIInsightsProps {
@@ -98,7 +121,80 @@ export function AccountAIInsights({ accountId, accountData }: AccountAIInsightsP
         parsed = { ...insights, summary: "Raw AI Output:\n" + insights.raw_output };
       }
     }
-    return parsed;
+    const rawSummary = parsed.overall_health?.summary || parsed.summary || parsed.portfolio_summary;
+    return {
+      ...parsed,
+      executive_summary: formatSummary(rawSummary),
+      summary: formatSummary(rawSummary),
+      risks: (parsed.risks || []).concat(
+        (parsed.financial_analysis?.financial_risks || []).map((r: any) => ({
+          message: r.risk || r.message,
+          severity: "high",
+          description: r.impact,
+          project: r.project || r.source_project || r.affected_projects
+        })),
+        (parsed.portfolio_operational_analysis?.delivery_patterns || []).map((p: any) => ({
+          message: p.pattern,
+          severity: p.severity || "medium",
+          description: p.business_impact,
+          project: p.project || p.source_project || p.affected_projects
+        })),
+        (parsed.cross_project_failure_patterns || []).map((f: any) => ({
+          message: f.pattern,
+          severity: "high",
+          description: f.business_impact,
+          project: f.project || f.source_project || f.affected_projects
+        }))
+      ),
+      opportunities: (parsed.opportunities || []).concat(
+        (parsed.transformation_opportunities || []).map((o: any) => ({
+          message: o.opportunity,
+          impact: o.priority || "high",
+          description: o.business_outcome,
+          project: o.project || o.source_project || o.target_project
+        })),
+        (parsed.commercial_growth_opportunities || []).map((o: any) => ({
+          message: o.opportunity,
+          impact: o.priority || "medium",
+          description: o.expected_business_outcome,
+          project: o.project || o.source_project || o.target_project
+        }))
+      ),
+      portfolio_insights: parsed.portfolio_insights || 
+        (parsed.account_capability_profile || []).map((c: any) => 
+          `Capability: ${c.capability} (Maturity: ${c.maturity}) - Value: ${c.business_value}`
+        ).concat(
+          (parsed.strategic_positioning_signals || []).map((s: any) => 
+            `${s.theme}: ${s.message}`
+          )
+        ),
+      financial_insights: parsed.financial_insights || [
+        parsed.financial_analysis?.revenue_health && `Revenue Health: ${parsed.financial_analysis.revenue_health}`,
+        parsed.financial_analysis?.revenue_concentration_risk && `Revenue Concentration Risk: ${parsed.financial_analysis.revenue_concentration_risk}`,
+        parsed.financial_analysis?.forecast_accuracy && `Forecast Accuracy: ${parsed.financial_analysis.forecast_accuracy}`
+      ].filter(Boolean),
+      delivery_insights: parsed.delivery_insights || [
+        parsed.portfolio_operational_analysis?.delivery_maturity && `Delivery Maturity: ${parsed.portfolio_operational_analysis.delivery_maturity}`,
+        parsed.portfolio_operational_analysis?.governance_maturity && `Governance Maturity: ${parsed.portfolio_operational_analysis.governance_maturity}`
+      ].filter(Boolean),
+      ai_insights: parsed.ai_insights || [
+        parsed.ai_maturity_analysis?.account_ai_maturity && `Account AI Maturity: ${parsed.ai_maturity_analysis.account_ai_maturity}`,
+        ...(parsed.ai_maturity_analysis?.ai_success_patterns || []).map((s: any) => `Success: ${s.pattern} (Project: ${s.source_project})`)
+      ].filter(Boolean),
+      governance_insights: parsed.governance_insights || 
+        (parsed.portfolio_operational_analysis?.cross_project_contradictions || []).map((c: any) => 
+          `Contradiction: ${c.contradiction} - Impact: ${c.impact}`
+        ),
+      recommended_actions: parsed.recommended_actions || 
+        (parsed.executive_recommendations || []).map((r: any) => ({
+          recommendation: r.recommendation,
+          priority: r.priority,
+          rationale: r.rationale,
+          expected_outcome: r.expected_outcome
+        })),
+      confidence_score: parsed.confidence_score !== undefined ? parsed.confidence_score : 0.85,
+      generated_at: parsed.generated_at || insights.generated_at || Date.now()
+    };
   }, [insights]);
 
   useEffect(() => {
@@ -169,6 +265,18 @@ export function AccountAIInsights({ accountId, accountData }: AccountAIInsightsP
       setIsGeneratingInsights(false);
     }
   };
+
+  const pitchText = useMemo(() => {
+    if (!parsedInsights) return '';
+    if (parsedInsights.leadership_pitch) {
+      return Array.isArray(parsedInsights.leadership_pitch) ? parsedInsights.leadership_pitch[0] : parsedInsights.leadership_pitch;
+    }
+    if (Array.isArray(parsedInsights.opportunities) && parsedInsights.opportunities.length > 0) {
+      const firstOpt = parsedInsights.opportunities[0];
+      return firstOpt.message || firstOpt.text || firstOpt.description || '';
+    }
+    return parsedInsights.executive_summary || '';
+  }, [parsedInsights]);
 
   // const formatLastUpdated = (timestamp?: string | number) => {
   //   if (!timestamp) return "Oct 24, 2023, 10:45 AM";
@@ -265,13 +373,43 @@ export function AccountAIInsights({ accountId, accountData }: AccountAIInsightsP
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 bg-white p-2.5 px-4 rounded-xl border border-slate-200/80 shadow-2xs shrink-0">
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (parsedInsights) {
+                    exportInsightsToPDF('account', accountData?.name || 'Account', parsedInsights);
+                    toast({ title: "Report Downloaded", description: "Strategic synthesis report PDF generated successfully." });
+                  } else {
+                    toast({ title: "Error", description: "No insights data available to export.", variant: "destructive" });
+                  }
+                }}
+                className="h-8 px-3 rounded-lg border border-slate-200 bg-white shadow-2xs text-[11px] font-bold text-slate-700 hover:text-blue-600 hover:bg-blue-50 gap-1.5"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-400" /> Download PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const blob = new Blob([JSON.stringify(parsedInsights, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${data?.name || 'account'}_insights.json`;
+                  a.click();
+                }}
+                className="h-8 px-3 rounded-lg border border-slate-200 bg-white shadow-2xs text-[11px] font-bold text-slate-700 hover:text-purple-600 hover:bg-purple-50 gap-1.5"
+              >
+                <FileCode className="w-3.5 h-3.5 text-slate-400" /> Download JSON
+              </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     size="sm"
                     disabled={isGeneratingInsights}
-                    className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold gap-1 shadow-2xs"
+                    className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold gap-1 shadow-md shadow-blue-100"
                   >
                     {isGeneratingInsights ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5 fill-current" />}
                     Regenerate Insights
@@ -295,61 +433,44 @@ export function AccountAIInsights({ accountId, accountData }: AccountAIInsightsP
             </div>
           </div>
 
-          {/* Executive Summary + Quick Actions side-by-side */}
-          <div className="flex flex-col lg:flex-row gap-4 items-stretch">
-            {/* Executive Summary */}
-            <Card className="bg-white border border-blue-100 shadow-sm rounded-2xl overflow-hidden flex-1">
-              <CardHeader className="bg-gradient-to-r from-blue-50/60 via-indigo-50/20 to-transparent border-b border-blue-50 p-4">
-                <div className="flex items-center justify-between gap-2">
+          {/* Executive Summary & Leadership Pitch Section Side-by-Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            {/* Left: Executive Summary (takes 2 cols) */}
+            <Card className="lg:col-span-2 bg-white border border-blue-100 shadow-sm rounded-2xl overflow-hidden flex flex-col justify-between">
+              <div>
+                <CardHeader className="bg-gradient-to-r from-blue-50/60 via-indigo-50/20 to-transparent border-b border-blue-50 p-4">
                   <CardTitle className="text-xs font-black text-blue-950 uppercase tracking-wider flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Executive Summary
+                    <Brain className="w-3.5 h-3.5 text-blue-600" /> Account Executive Summary
                   </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 pt-4">
-                <p className="text-xs font-semibold text-slate-700 leading-relaxed whitespace-pre-wrap">
-                  {parsedInsights.executive_summary || parsedInsights.summary ||
-                    "No executive summary compiled yet. Trigger deep account analysis above."}
-                </p>
-              </CardContent>
+                </CardHeader>
+                <CardContent className="p-4 pt-4">
+                  <p className="text-xs font-semibold text-slate-700 leading-relaxed whitespace-pre-wrap">
+                    {parsedInsights.executive_summary || parsedInsights.summary ||
+                      "No executive summary compiled yet. Trigger deep account analysis above."}
+                  </p>
+                </CardContent>
+              </div>
             </Card>
 
-            {/* Right Panels */}
-            <div className="flex flex-col gap-3 lg:w-64 shrink-0">
-              {/* Quick Actions Panel */}
-              <Card className="bg-white border border-slate-200/80 shadow-sm rounded-2xl overflow-hidden h-full flex flex-col justify-between">
-                <div>
-                  <CardHeader className="bg-slate-50/60 border-b border-slate-100 p-4">
-                    <CardTitle className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                      <Zap className="w-3.5 h-3.5 text-blue-600" /> Quick Actions
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 flex flex-col gap-2">
-                    <Button
-                      variant="ghost"
-                      onClick={() => toast({ title: "Downloading Report", description: "Exporting fully structured strategic synthesis report..." })}
-                      className="w-full justify-start gap-2 text-xs font-bold text-slate-700 hover:text-blue-600 hover:bg-blue-50 h-9 rounded-lg px-2"
-                    >
-                      <Download className="w-3.5 h-3.5 text-slate-400" /> Download Report
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        const blob = new Blob([JSON.stringify(parsedInsights, null, 2)], { type: 'application/json' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `${data?.name || 'account'}_insights.json`;
-                        a.click();
-                      }}
-                      className="w-full justify-start gap-2 text-xs font-bold text-slate-700 hover:text-purple-600 hover:bg-purple-50 h-9 rounded-lg px-2"
-                    >
-                      <FileCode className="w-3.5 h-3.5 text-slate-400" /> Export JSON
-                    </Button>
-                  </CardContent>
-                </div>
-              </Card>
-            </div>
+            {/* Right: Leadership Pitch (takes 1 col) */}
+            <Card className="lg:col-span-1 bg-white border border-slate-200/80 shadow-sm rounded-2xl overflow-hidden flex flex-col justify-between">
+              <div>
+                <CardHeader className="bg-slate-50/60 border-b border-slate-100 p-4">
+                  <CardTitle className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Leadership Pitch
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  {pitchText ? (
+                    <div className="p-3.5 rounded-xl border border-blue-100 bg-blue-50/20 text-xs font-semibold text-slate-700 leading-relaxed italic">
+                      "{pitchText}"
+                    </div>
+                  ) : (
+                    <p className="text-xs font-semibold text-slate-400 italic">No leadership pitch compiled yet.</p>
+                  )}
+                </CardContent>
+              </div>
+            </Card>
           </div>
 
           {/* Side-by-Side: Risks vs Opportunities Blocks precisely mimicking PE Insights styling */}
@@ -365,18 +486,33 @@ export function AccountAIInsights({ accountId, accountData }: AccountAIInsightsP
                 {Array.isArray(parsedInsights.risks) && parsedInsights.risks.length > 0 ? (
                   parsedInsights.risks.map((risk: any, idx: number) => {
                     const sevStr = risk?.severity || risk?.level || "medium";
-                    const capitalizedSev = sevStr.charAt(0).toUpperCase() + sevStr.slice(1).toLowerCase();
-                    const msgStr = risk?.message || risk?.text || risk?.description || JSON.stringify(risk);
-                    const colorClass = sevStr.toLowerCase() === 'high'
-                      ? "text-rose-600 font-bold"
-                      : sevStr.toLowerCase() === 'medium'
-                        ? "text-amber-600 font-bold"
-                        : "text-emerald-600 font-bold";
+                    const msgStr = risk?.message || risk?.text || JSON.stringify(risk);
+                    const descStr = risk?.description;
+                    const projStr = risk?.project || risk?.source_project || risk?.affected_projects;
+                    const badgeColor = sevStr === 'high'
+                      ? "bg-rose-50 text-rose-600 border-rose-200"
+                      : sevStr === 'medium'
+                        ? "bg-amber-50 text-amber-600 border-amber-200"
+                        : "bg-emerald-50 text-emerald-600 border-emerald-200";
                     return (
-                      <div key={idx} className="p-3.5 rounded-xl border border-rose-100/60 bg-rose-50/20">
-                        <p className="text-xs font-semibold text-slate-700 leading-relaxed">
-                          {msgStr} - <span className={colorClass}>{capitalizedSev}</span>
-                        </p>
+                      <div key={idx} className="p-3.5 rounded-xl border border-rose-100/60 bg-rose-50/20 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">CRITICAL RISK</span>
+                          <Badge variant="outline" className={`text-[9px] font-black border uppercase px-2 py-0 rounded-full ${badgeColor}`}>
+                            {sevStr}
+                          </Badge>
+                        </div>
+                        <p className="text-xs font-bold text-slate-800 leading-relaxed">{msgStr}</p>
+                        {descStr && (
+                          <p className="text-[11px] text-slate-500 font-semibold leading-relaxed">
+                            <span className="font-bold text-slate-600">Impact:</span> {descStr}
+                          </p>
+                        )}
+                        {projStr && (
+                          <p className="text-[10px] text-rose-700 font-semibold pt-1 border-t border-rose-100/30">
+                            Affected Project: <span className="font-bold text-rose-900">{projStr}</span>
+                          </p>
+                        )}
                       </div>
                     );
                   })
@@ -399,18 +535,33 @@ export function AccountAIInsights({ accountId, accountData }: AccountAIInsightsP
                 {Array.isArray(parsedInsights.opportunities) && parsedInsights.opportunities.length > 0 ? (
                   parsedInsights.opportunities.map((opt: any, idx: number) => {
                     const priStr = opt?.impact || opt?.priority || "medium";
-                    const capitalizedPri = priStr.charAt(0).toUpperCase() + priStr.slice(1).toLowerCase();
-                    const msgStr = opt?.message || opt?.text || opt?.description || JSON.stringify(opt);
-                    const colorClass = priStr.toLowerCase() === 'high'
-                      ? "text-rose-600 font-bold"
-                      : priStr.toLowerCase() === 'medium'
-                        ? "text-amber-600 font-bold"
-                        : "text-emerald-600 font-bold";
+                    const msgStr = opt?.message || opt?.text || JSON.stringify(opt);
+                    const descStr = opt?.description;
+                    const projStr = opt?.project || opt?.source_project;
+                    const badgeColor = priStr === 'high'
+                      ? "bg-rose-50 text-rose-600 border-rose-200"
+                      : priStr === 'medium'
+                        ? "bg-amber-50 text-amber-600 border-amber-200"
+                        : "bg-emerald-50 text-emerald-600 border-emerald-200";
                     return (
-                      <div key={idx} className="p-3.5 rounded-xl border border-emerald-100/60 bg-emerald-50/20">
-                        <p className="text-xs font-semibold text-slate-700 leading-relaxed">
-                          {msgStr} - <span className={colorClass}>{capitalizedPri}</span>
-                        </p>
+                      <div key={idx} className="p-3.5 rounded-xl border border-emerald-100/60 bg-emerald-50/20 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">OPPORTUNITY</span>
+                          <Badge variant="outline" className={`text-[9px] font-black border uppercase px-2 py-0 rounded-full ${badgeColor}`}>
+                            {priStr}
+                          </Badge>
+                        </div>
+                        <p className="text-xs font-bold text-slate-700 leading-relaxed">{msgStr}</p>
+                        {descStr && (
+                          <p className="text-[11px] text-slate-500 font-semibold leading-relaxed">
+                            <span className="font-bold text-slate-600">Expected Outcome:</span> {descStr}
+                          </p>
+                        )}
+                        {projStr && (
+                          <p className="text-[10px] text-emerald-700 font-semibold pt-1 border-t border-emerald-100/30">
+                            Target Project: <span className="font-bold text-emerald-900">{projStr}</span>
+                          </p>
+                        )}
                       </div>
                     );
                   })
@@ -455,7 +606,7 @@ export function AccountAIInsights({ accountId, accountData }: AccountAIInsightsP
                             {section.items.map((item: any, i: number) => (
                               <li key={i} className="flex gap-2 items-start text-xs font-semibold text-slate-600 leading-relaxed">
                                 <span className="text-slate-400 text-[10px] select-none">•</span>
-                                <span className="flex-1">{typeof item === 'string' ? item : item?.message || item?.text || item?.description || JSON.stringify(item)}</span>
+                                <span className="flex-1">{getInsightItemText(item)}</span>
                               </li>
                             ))}
                           </ul>
@@ -492,16 +643,57 @@ export function AccountAIInsights({ accountId, accountData }: AccountAIInsightsP
                 <Bot className="w-3.5 h-3.5 text-blue-600" /> Recommendations Execution Path
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 space-y-3">
+            <CardContent className="p-4 space-y-4">
               {Array.isArray(parsedInsights.recommended_actions || parsedInsights.recommendations) && (parsedInsights.recommended_actions || parsedInsights.recommendations).length > 0 ? (
                 (parsedInsights.recommended_actions || parsedInsights.recommendations).map((rec: any, idx: number) => {
-                  const recStr = typeof rec === 'string' ? rec : rec?.text || rec?.description || JSON.stringify(rec);
+                  let parsedRec = rec;
+                  if (typeof rec === 'string') {
+                    try {
+                      parsedRec = JSON.parse(rec);
+                    } catch (e) {
+                      // Keep as string
+                    }
+                  }
+                  const recommendationText = typeof parsedRec === 'string'
+                    ? parsedRec
+                    : parsedRec?.recommendation || parsedRec?.text || parsedRec?.description || parsedRec?.message || JSON.stringify(parsedRec);
+                  const priority = typeof parsedRec === 'object' && parsedRec !== null ? parsedRec.priority : undefined;
+                  const rationale = typeof parsedRec === 'object' && parsedRec !== null ? parsedRec.rationale : undefined;
+                  const outcome = typeof parsedRec === 'object' && parsedRec !== null ? (parsedRec.expected_business_outcome || parsedRec.expected_outcome) : undefined;
+
                   return (
                     <div key={idx} className="flex gap-3 items-start">
-                      <span className="text-xs font-black text-slate-400 select-none">{idx + 1}.</span>
-                      <p className="text-xs font-semibold text-slate-700 leading-relaxed flex-1">
-                        {recStr}
-                      </p>
+                      <div className="w-5 h-5 rounded-full bg-blue-50 text-blue-700 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5 border border-blue-200">
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-xs font-semibold text-slate-700 leading-relaxed flex-1">
+                            {recommendationText}
+                          </p>
+                          {priority && (
+                            <Badge variant="outline" className={`text-[9px] font-black uppercase border-none px-2 py-0.5 rounded-full shrink-0 ${
+                              priority.toLowerCase() === 'high'
+                                ? "bg-rose-50 text-rose-700"
+                                : priority.toLowerCase() === 'medium'
+                                  ? "bg-amber-50 text-amber-700"
+                                  : "bg-emerald-50 text-emerald-700"
+                            }`}>
+                              {priority} Priority
+                            </Badge>
+                          )}
+                        </div>
+                        {rationale && (
+                          <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                            <span className="font-bold text-slate-600">Rationale:</span> {rationale}
+                          </p>
+                        )}
+                        {outcome && (
+                          <p className="text-[11px] text-blue-700 font-medium leading-relaxed">
+                            <span className="font-bold text-blue-900">Expected Outcome:</span> {outcome}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   );
                 })
@@ -570,7 +762,7 @@ export function AccountAIInsights({ accountId, accountData }: AccountAIInsightsP
                           <TableRow
                             key={proj.id}
                             className="border-b border-slate-100/60 hover:bg-blue-50/20 cursor-pointer transition-colors group"
-                            onClick={() => navigate(`/financials/${accountId}/projects/${proj.id}`)}
+                            onClick={() => navigate(`/financials/${accountId}/projects/${proj.id}`, { state: { backUrl: `/financials/${accountId}`, accountBackUrl: location.state?.backUrl } })}
                           >
                             <TableCell className="pl-4 py-3 font-black text-xs text-slate-900 group-hover:text-blue-600 transition-colors">
                               {proj.name}
@@ -593,7 +785,7 @@ export function AccountAIInsights({ accountId, accountData }: AccountAIInsightsP
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={(e) => { e.stopPropagation(); navigate(`/financials/${accountId}/projects/${proj.id}`); }}
+                                onClick={(e) => { e.stopPropagation(); navigate(`/financials/${accountId}/projects/${proj.id}`, { state: { backUrl: `/financials/${accountId}`, accountBackUrl: location.state?.backUrl } }); }}
                                 className="text-[11px] font-black text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1 rounded-lg h-7 px-2"
                               >
                                 <Eye className="w-3.5 h-3.5" /> View Project
