@@ -45,9 +45,10 @@ const FinancialAccountDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const backUrl = location.state?.backUrl || '/accounts';
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<FinanceAccount | null>(null);
+  const peId = data?.private_equity_id;
+  const backUrl = location.state?.backUrl || (peId ? `/private-equity/${peId}` : '/accounts');
   const [search, setSearch] = useState('');
   const [showAllProjects, setShowAllProjects] = useState(false);
 
@@ -224,17 +225,40 @@ const FinancialAccountDetails = () => {
           >
             <Menu className="w-4 h-4" />
           </div>
-          <a
-            onClick={() => navigate(backUrl === '/financials' ? '/accounts' : backUrl)}
-            className="text-blue-600 hover:underline cursor-pointer font-medium"
-          >
-            {backUrl.includes('private-equity') ? 'Private Equity' : 'Accounts'}
-          </a>
-          {backUrl.includes('private-equity') && (
+          {backUrl.includes('private-equity') ? (
             <>
+              <a
+                onClick={() => navigate('/accounts/private-equity')}
+                className="text-blue-600 hover:underline cursor-pointer font-medium"
+              >
+                Private Equity
+              </a>
               <ChevronRight className="w-4 h-4 text-slate-400" />
-              <a onClick={() => navigate(backUrl.replace('/insights', ''))} className="text-blue-600 hover:underline cursor-pointer font-medium">Portfolio</a>
+              <a
+                onClick={() => navigate(backUrl.replace('/insights', ''))}
+                className="text-blue-600 hover:underline cursor-pointer font-medium"
+              >
+                Portfolio
+              </a>
+              {backUrl.includes('/insights') && (
+                <>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                  <a
+                    onClick={() => navigate(backUrl)}
+                    className="text-blue-600 hover:underline cursor-pointer font-medium"
+                  >
+                    Insights
+                  </a>
+                </>
+              )}
             </>
+          ) : (
+            <a
+              onClick={() => navigate('/accounts')}
+              className="text-blue-600 hover:underline cursor-pointer font-medium"
+            >
+              Accounts
+            </a>
           )}
           <ChevronRight className="w-4 h-4 text-slate-400" />
           <span className="text-slate-600">{data?.name || 'Account Details'}</span>
@@ -627,7 +651,7 @@ const FinancialAccountDetails = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pt-2">
                 {displayedProjects.map((project: FinanceProject) => (
-                  <Card key={project.id} className="group hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer border-blue-100 hover:border-blue-300 border-t-4 border-t-blue-600 bg-gradient-to-br from-white to-blue-50/30" onClick={() => navigate(`/financials/${data.id}/projects/${project.id}`, { state: { backUrl } })}>
+                  <Card key={project.id} className="group hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer border-blue-100 hover:border-blue-300 border-t-4 border-t-blue-600 bg-gradient-to-br from-white to-blue-50/30" onClick={() => navigate(`/financials/${data.id}/projects/${project.id}`, { state: { backUrl: `/financials/${data.id}`, accountBackUrl: backUrl } })}>
                     <CardHeader className="p-4 pb-3 border-b border-blue-100/50 bg-gradient-to-r from-blue-50/50 to-transparent">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -644,7 +668,7 @@ const FinancialAccountDetails = () => {
                             <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 hover:bg-blue-100/50 text-blue-900/40 hover:text-blue-900"><MoreVertical className="h-4 w-4" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => navigate(`/financials/${data.id}/projects/${project.id}/edit`, { state: { backUrl } })}>Edit Project</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/financials/${data.id}/projects/${project.id}/edit`, { state: { backUrl: `/financials/${data.id}`, accountBackUrl: backUrl } })}>Edit Project</DropdownMenuItem>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-500">Delete Project</DropdownMenuItem>

@@ -30,7 +30,8 @@ import {
   BellRing,
   FileText,
   ExternalLink,
-  Eye
+  Eye,
+  Sparkles
 } from 'lucide-react';
 import {
   getFinanceAccounts,
@@ -38,6 +39,7 @@ import {
   getPrivateEquityById,
   api
 } from '@/services/api';
+import { exportInsightsToPDF, getInsightItemText } from '@/lib/exportUtils';
 import { useToast } from '@/hooks/use-toast';
 import { Account } from '@/types/finance-database';
 import {
@@ -119,7 +121,12 @@ const PrivateEquityInsights = () => {
           const formattedKey = key
             .replace(/_/g, ' ')
             .replace(/\b\w/g, c => c.toUpperCase());
-          const formattedValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+          const valStr = String(value);
+          const formattedValue = typeof value === 'object'
+            ? JSON.stringify(value)
+            : (valStr.includes('_') || (!valStr.includes(' ') && valStr.toLowerCase() === valStr && valStr.length < 30))
+              ? valStr.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+              : valStr;
           return `${formattedKey}: ${formattedValue}`;
         })
         .join('\n\n');
@@ -142,7 +149,51 @@ const PrivateEquityInsights = () => {
     return {
       ...parsed,
       executive_summary: formatSummary(rawSummary),
+      portfolio_summary: formatSummary(rawSummary),
       recommended_actions: parsed.recommended_actions || parsed.strategic_recommendations,
+      risks: (parsed.risks || parsed.investment_risk_signals || []).map((r: any) => ({
+        type: r.risk || r.type || r.title || r.name || "",
+        severity: r.risk_level || r.severity || r.level || "High",
+        description: r.business_impact || r.description || r.message || r.text || JSON.stringify(r),
+        affected_accounts: r.affected_accounts || []
+      })),
+      opportunities: (parsed.opportunities || parsed.portfolio_standardisation_opportunities || []).map((o: any) => ({
+        type: o.opportunity || o.type || o.title || o.name || o.standardization_area || "",
+        level: o.priority || o.impact || o.level || "High",
+        description: o.expected_business_outcome || o.description || o.message || o.text || JSON.stringify(o),
+        affected_accounts: o.affected_accounts || []
+      })),
+      portfolio_insights: parsed.portfolio_insights || [
+        ...(parsed.portfolio_operational_analysis?.portfolio_patterns || []).map((p: any) => ({
+          type: 'pattern',
+          pattern: p.pattern,
+          severity: p.severity,
+          impact: p.business_impact,
+          affected_accounts: p.affected_accounts || []
+        })),
+        ...(parsed.pe_strategy_alignment?.misaligned_areas || []).map((m: any) => ({
+          type: 'misalignment',
+          pattern: `Gap in ${m.strategy_goal}: ${m.portfolio_gap}`,
+          severity: 'medium',
+          impact: '',
+          affected_accounts: m.affected_accounts || []
+        }))
+      ],
+      strategic_gaps: (parsed.strategic_gaps || parsed.portfolio_gap_analysis || []).map((g: any) => ({
+        gap_type: g.gap || g.gap_type || g.title || g.name || "Strategic Gap",
+        description: g.business_impact || g.description || g.desc || g.text || "—",
+        severity: g.severity || g.impact || "medium",
+        affected_accounts: g.affected_accounts || []
+      })),
+      capability_alignment: (parsed.capability_alignment || parsed.capability_to_opportunity_mapping || []).map((c: any) => ({
+        gap: c.gap || c.identified_gap || c.gap_type || "",
+        relevant_capability: c.company_capability || c.relevant_capability || c.capability || "",
+        solution_approach: c.transformation_approach || c.solution_approach || c.solution || "",
+        roi: c.expected_business_outcome || c.roi || c.estimated_roi || c.impact || ""
+      })),
+      leadership_pitch: parsed.leadership_pitch || (parsed.leadership_pitches || []).map((l: any) =>
+        `Pitch: ${l.pitch} - Proof Point: ${l.proof_point} (Outcome: ${l.expected_business_outcome})`
+      ),
       evidence_summary: parsed.evidence_summary,
       confidence_score: parsed.confidence_score !== undefined ? parsed.confidence_score : 0.85,
       generated_at: parsed.generated_at || insights.generated_at || Date.now()
@@ -175,16 +226,17 @@ const PrivateEquityInsights = () => {
         setAccounts(fullAccounts);
 
         setFirm(firmData);
-        if (firmData.pe_insights) {
-          setInsights(firmData.pe_insights);
-        } else {
-          try {
-            const peIns = await api.getPeInsights(id);
-            if (peIns && peIns.status === 'success' && peIns.insights) {
-              setInsights(peIns.insights);
-            }
-          } catch (e) {
-            console.error("Failed to fetch dedicated PE insights:", e);
+        try {
+          const peIns = await api.getPeInsights(id);
+          if (peIns && peIns.status === 'success' && peIns.insights) {
+            setInsights(peIns.insights);
+          } else if (firmData.pe_insights) {
+            setInsights(firmData.pe_insights);
+          }
+        } catch (e) {
+          console.error("Failed to fetch dedicated PE insights:", e);
+          if (firmData.pe_insights) {
+            setInsights(firmData.pe_insights);
           }
         }
 
@@ -225,13 +277,21 @@ const PrivateEquityInsights = () => {
     }).format(amount || 0);
   };
 
+  const pitchText = useMemo(() => {
+    if (!parsedInsights) return '';
+    if (Array.isArray(parsedInsights.leadership_pitch)) {
+      return parsedInsights.leadership_pitch.length > 0 ? parsedInsights.leadership_pitch[0] : '';
+    }
+    return parsedInsights.leadership_pitch || '';
+  }, [parsedInsights]);
+
 
 
   // Helper to retrieve actual dynamic metrics per account, avoiding hardcoded fallback values
   const getAccountOverviewMetrics = (acc: Account, index: number) => {
     const vertical = (acc as any).domain || "-";
     const manager = acc.account_manager?.trim() || "Unassigned";
-    
+
     const totalRev = acc.current_revenue || acc.total_revenue || 0;
     const targetRev = acc.target_revenue || 0;
     const val = targetRev > 0 ? targetRev * 10 : totalRev > 0 ? totalRev * 10 : 0;
@@ -296,13 +356,43 @@ const PrivateEquityInsights = () => {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 bg-white p-2.5 px-4 rounded-xl border border-slate-200/80 shadow-2xs shrink-0">
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (parsedInsights) {
+                    exportInsightsToPDF('pe', firm?.name || 'Private Equity', parsedInsights);
+                    toast({ title: "Report Downloaded", description: "Strategic synthesis report PDF generated successfully." });
+                  } else {
+                    toast({ title: "Error", description: "No insights data available to export.", variant: "destructive" });
+                  }
+                }}
+                className="h-8 px-3 rounded-lg border border-slate-200 bg-white shadow-2xs text-[11px] font-bold text-slate-700 hover:text-blue-600 hover:bg-blue-50 gap-1.5"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-400" /> Download PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const blob = new Blob([JSON.stringify(parsedInsights, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${firm?.name || 'portfolio'}_insights.json`;
+                  a.click();
+                }}
+                className="h-8 px-3 rounded-lg border border-slate-200 bg-white shadow-2xs text-[11px] font-bold text-slate-700 hover:text-purple-600 hover:bg-purple-50 gap-1.5"
+              >
+                <FileText className="w-3.5 h-3.5 text-slate-400" /> Download JSON
+              </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     size="sm"
                     disabled={isGeneratingInsights}
-                    className="h-8 px-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-[11px] font-bold gap-1 shadow-2xs"
+                    className="h-8 px-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-[11px] font-bold gap-1 shadow-md shadow-purple-100"
                   >
                     {isGeneratingInsights ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5 fill-current" />}
                     Regenerate Insights
@@ -385,18 +475,43 @@ const PrivateEquityInsights = () => {
 
         {/* PE Insights Synthesis Dashboard Layout */}
         <div className="space-y-8 animate-in fade-in duration-500 mt-4">
-          {/* Executive Overview Synthesis Block */}
-          <Card className="bg-white border border-purple-100 shadow-sm rounded-2xl overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-purple-50/60 via-indigo-50/30 to-transparent border-b border-purple-100/60 p-5">
-              <CardTitle className="text-base font-black text-purple-950 flex items-center gap-2">
-                <Brain className="w-5 h-5 text-purple-600" /> Executive Strategic Synthesis
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <Markdown content={parsedInsights?.portfolio_summary || parsedInsights?.executive_summary ||
-                "No strategic synthesis generated yet. Click 'Regenerate Insights' above to trigger deep agentic synthesis."} />
-            </CardContent>
-          </Card>
+          {/* Executive Overview Synthesis Block & Leadership Pitch Side-by-Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            {/* Left: Executive Strategic Synthesis (takes 2 cols) */}
+            <Card className="lg:col-span-2 bg-white border border-purple-100 shadow-sm rounded-2xl overflow-hidden flex flex-col justify-between">
+              <div>
+                <CardHeader className="bg-gradient-to-r from-purple-50/60 via-indigo-50/20 to-transparent border-b border-purple-100/60 p-5">
+                  <CardTitle className="text-base font-black text-purple-950 flex items-center gap-2">
+                    <Brain className="w-5 h-5 text-purple-600" /> Executive Strategic Synthesis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <Markdown content={parsedInsights?.portfolio_summary || parsedInsights?.executive_summary ||
+                    "No strategic synthesis generated yet. Click 'Regenerate Insights' above to trigger deep agentic synthesis."} />
+                </CardContent>
+              </div>
+            </Card>
+
+            {/* Right: Leadership Pitch (takes 1 col) */}
+            <Card className="lg:col-span-1 bg-white border border-slate-200/80 shadow-sm rounded-2xl overflow-hidden flex flex-col justify-between">
+              <div>
+                <CardHeader className="bg-slate-50/60 border-b border-slate-100 p-5">
+                  <CardTitle className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-600" /> Leadership Pitch
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-5">
+                  {pitchText ? (
+                    <div className="p-3.5 rounded-xl border border-purple-100 bg-purple-50/20 text-xs font-semibold text-slate-700 leading-relaxed italic">
+                      "{pitchText}"
+                    </div>
+                  ) : (
+                    <p className="text-xs font-semibold text-slate-400 italic">No leadership pitch compiled yet.</p>
+                  )}
+                </CardContent>
+              </div>
+            </Card>
+          </div>
 
           {/* Strategic Opportunities & Critical Risks Section Side-by-Side */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
@@ -421,11 +536,19 @@ const PrivateEquityInsights = () => {
                         ? "text-amber-600 font-bold"
                         : "text-emerald-600 font-bold";
                     return (
-                      <div key={idx} className="p-4 rounded-xl border border-rose-100/60 bg-rose-50/20 space-y-1.5" title={descStr}>
-                        {hasTitle && <h4 className="text-xs font-black text-slate-900 truncate">{titStr}</h4>}
-                        <p className="text-xs font-semibold text-slate-600 leading-relaxed line-clamp-2">
-                          {descStr} - <span className={colorClass}>{capitalizedSev}</span>
+                      <div key={idx} className="p-4 rounded-xl border border-rose-100/60 bg-rose-50/20 space-y-2">
+                        {hasTitle && <h4 className="text-xs font-black text-slate-900">{titStr}</h4>}
+                        <p className="text-xs font-semibold text-slate-600 leading-relaxed">
+                          {descStr}
                         </p>
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-rose-100/40 text-[10px]">
+                          <span className={`${colorClass} uppercase font-black`}>{capitalizedSev} Risk</span>
+                          {Array.isArray(risk?.affected_accounts) && risk.affected_accounts.length > 0 && (
+                            <span className="text-slate-500 font-medium">
+                              Affected: <span className="font-bold text-slate-700">{risk.affected_accounts.join(', ')}</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                     );
                   })
@@ -458,11 +581,19 @@ const PrivateEquityInsights = () => {
                         ? "text-amber-600 font-bold"
                         : "text-emerald-600 font-bold";
                     return (
-                      <div key={idx} className="p-4 rounded-xl border border-emerald-100/60 bg-emerald-50/20 space-y-1.5" title={descStr}>
-                        {hasTitle && <h4 className="text-xs font-black text-slate-900 truncate">{titStr}</h4>}
-                        <p className="text-xs font-semibold text-slate-600 leading-relaxed line-clamp-2">
-                          {descStr} - <span className={colorClass}>{capitalizedImp}</span>
+                      <div key={idx} className="p-4 rounded-xl border border-emerald-100/60 bg-emerald-50/20 space-y-2">
+                        {hasTitle && <h4 className="text-xs font-black text-slate-900">{titStr}</h4>}
+                        <p className="text-xs font-semibold text-slate-600 leading-relaxed">
+                          {descStr}
                         </p>
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-emerald-100/40 text-[10px]">
+                          <span className={`${colorClass} uppercase font-black`}>{capitalizedImp} Priority</span>
+                          {Array.isArray(opt?.affected_accounts) && opt.affected_accounts.length > 0 && (
+                            <span className="text-slate-500 font-medium">
+                              Affected: <span className="font-bold text-slate-700">{opt.affected_accounts.join(', ')}</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                     );
                   })
@@ -475,71 +606,85 @@ const PrivateEquityInsights = () => {
             </Card>
           </div>
 
-          {/* Main Layout Grid: Left Content (Sections) vs Right Sidebar (Quick Actions & Leadership Pitch) */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-            {/* Main Content Area: 3 Columns Wide */}
-            <div className="lg:col-span-3 space-y-6">
-              {/* Portfolio Insights Block */}
-              <Card className="bg-white border border-slate-200/80 shadow-sm rounded-2xl overflow-hidden">
-                <CardHeader className="border-b border-slate-100 p-5 bg-slate-50/50">
-                  <CardTitle className="text-sm font-black text-slate-900 flex items-center gap-2 uppercase tracking-wider">
-                    <Activity className="w-4 h-4 text-blue-600" /> Portfolio Insights
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-5">
-                  <ul className="space-y-4">
-                    {Array.isArray(parsedInsights?.portfolio_insights) && parsedInsights.portfolio_insights.length > 0 ? (
-                      parsedInsights.portfolio_insights.map((pi: any, idx: number) => (
-                        <li key={idx} className="flex gap-3 items-start">
-                          <div className="p-1 rounded-full bg-purple-50 text-purple-600 font-bold text-xs shrink-0 mt-0.5">✓</div>
-                          <p className="text-xs font-bold text-slate-700 leading-relaxed">
-                            {typeof pi === 'string' ? pi : pi?.message || pi?.text || pi?.description || JSON.stringify(pi)}
-                          </p>
-                        </li>
-                      ))
-                    ) : (
-                      <li className="text-xs font-semibold text-slate-400 italic text-center py-4">
-                        No portfolio insights compiled. Trigger analysis to view dynamic metrics.
-                      </li>
-                    )}
-                  </ul>
-                </CardContent>
-              </Card>
-            </div>
+          {/* Main Layout Content */}
+          <div className="space-y-6">
+            {/* Portfolio Insights Block */}
+            <Card className="bg-white border border-slate-200/80 shadow-sm rounded-2xl overflow-hidden">
+              <CardHeader className="border-b border-slate-100 p-5 bg-slate-50/50">
+                <CardTitle className="text-sm font-black text-slate-900 flex items-center gap-2 uppercase tracking-wider">
+                  <Activity className="w-4 h-4 text-blue-600" /> Portfolio Insights
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-5">
+                <ul className="space-y-4">
+                  {Array.isArray(parsedInsights?.portfolio_insights) && parsedInsights.portfolio_insights.length > 0 ? (
+                    parsedInsights.portfolio_insights.map((pi: any, idx: number) => {
+                      const isStr = typeof pi === 'string';
+                      let text = '';
+                      let severity = undefined;
+                      let impact = undefined;
+                      let affected = undefined;
 
-            {/* Right Sidebar Area: 1 Column Wide */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* Quick Actions Panel */}
-              <Card className="bg-white border border-slate-200/80 shadow-xs rounded-2xl overflow-hidden">
-                <CardHeader className="border-b border-slate-100 p-4 bg-slate-50/50 flex flex-row items-center justify-between">
-                  <CardTitle className="text-xs font-black text-slate-900 uppercase tracking-wider">Quick Actions</CardTitle>
-                  <span className="text-[10px] font-bold text-slate-400">Portfolio Level</span>
-                </CardHeader>
-                <CardContent className="p-4 space-y-2.5">
-                  <Button
-                    variant="ghost"
-                    onClick={() => toast({ title: "Downloading Report", description: "Exporting full strategic synthesis report..." })}
-                    className="w-full justify-start gap-2.5 text-xs font-bold text-slate-700 hover:text-blue-600 hover:bg-blue-50 h-10 rounded-xl"
-                  >
-                    <Download className="w-4 h-4 text-slate-400" /> Download Report
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      const blob = new Blob([JSON.stringify(parsedInsights, null, 2)], { type: 'application/json' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `${firm?.name || 'portfolio'}_insights.json`;
-                      a.click();
-                    }}
-                    className="w-full justify-start gap-2.5 text-xs font-bold text-slate-700 hover:text-purple-600 hover:bg-purple-50 h-10 rounded-xl"
-                  >
-                    <FileText className="w-4 h-4 text-slate-400" /> Export JSON
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+                      if (isStr) {
+                        text = pi;
+                      } else if (typeof pi === 'object' && pi !== null) {
+                        const keys = Object.keys(pi);
+                        const textKey = keys.find(k => ['pattern', 'opportunity', 'pitch', 'gap', 'message', 'text', 'description', 'title'].includes(k.toLowerCase()));
+                        const severityKey = keys.find(k => k.toLowerCase() === 'severity');
+                        const impactKey = keys.find(k => ['impact', 'business_impact'].includes(k.toLowerCase()));
+                        const affectedKey = keys.find(k => ['affected_accounts', 'affected accounts', 'affected'].includes(k.toLowerCase()));
+
+                        text = textKey ? String(pi[textKey]) : '';
+                        if (severityKey) severity = String(pi[severityKey]);
+                        if (impactKey) impact = String(pi[impactKey]);
+                        if (affectedKey) {
+                          affected = Array.isArray(pi[affectedKey]) ? pi[affectedKey] : [String(pi[affectedKey])];
+                        }
+
+                        if (!text) {
+                          text = getInsightItemText(pi);
+                        }
+                      }
+
+                      return (
+                        <li key={idx} className="flex gap-3 items-start p-3 rounded-xl border border-slate-100 bg-slate-50/40">
+                          <div className="p-1 rounded-full bg-purple-50 text-purple-600 font-bold text-xs shrink-0 mt-0.5">✓</div>
+                          <div className="flex-1 space-y-1">
+                            <p className="text-xs font-bold text-slate-800 leading-relaxed">
+                              {text}
+                            </p>
+                            {impact && (
+                              <p className="text-[11px] text-slate-500 font-semibold leading-relaxed">
+                                <span className="font-bold text-slate-700">Business Impact:</span> {impact}
+                              </p>
+                            )}
+                            {((severity) || (Array.isArray(affected) && affected.length > 0)) && (
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1.5 border-t border-slate-100/60 text-[10px]">
+                                {severity && (
+                                  <span className={`uppercase font-black ${severity.toLowerCase() === 'high'
+                                      ? "text-rose-600"
+                                      : "text-amber-600"
+                                    }`}>{severity} Severity</span>
+                                )}
+                                {Array.isArray(affected) && affected.length > 0 && (
+                                  <span className="text-slate-500 font-semibold">
+                                    Affected: <span className="font-bold text-slate-700">{affected.join(', ')}</span>
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })
+                  ) : (
+                    <li className="text-xs font-semibold text-slate-400 italic text-center py-4">
+                      No portfolio insights compiled. Trigger analysis to view dynamic metrics.
+                    </li>
+                  )}
+                </ul>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Strategic Recommendations Block */}
@@ -552,12 +697,20 @@ const PrivateEquityInsights = () => {
             <CardContent className="p-6 space-y-5">
               {Array.isArray(parsedInsights?.strategic_recommendations || parsedInsights?.recommended_actions || parsedInsights?.recommendations) && (parsedInsights?.strategic_recommendations || parsedInsights?.recommended_actions || parsedInsights?.recommendations).length > 0 ? (
                 (parsedInsights?.strategic_recommendations || parsedInsights?.recommended_actions || parsedInsights?.recommendations).map((rec: any, idx: number) => {
-                  const recommendationText = typeof rec === 'string'
-                    ? rec
-                    : rec?.recommendation || rec?.text || rec?.description || rec?.message || JSON.stringify(rec);
-                  const priority = rec?.priority;
-                  const rationale = rec?.rationale;
-                  const outcome = rec?.expected_business_outcome || rec?.expected_outcome;
+                  let parsedRec = rec;
+                  if (typeof rec === 'string') {
+                    try {
+                      parsedRec = JSON.parse(rec);
+                    } catch (e) {
+                      // Keep as string
+                    }
+                  }
+                  const recommendationText = typeof parsedRec === 'string'
+                    ? parsedRec
+                    : parsedRec?.recommendation || parsedRec?.text || parsedRec?.description || parsedRec?.message || JSON.stringify(parsedRec);
+                  const priority = typeof parsedRec === 'object' && parsedRec !== null ? parsedRec.priority : undefined;
+                  const rationale = typeof parsedRec === 'object' && parsedRec !== null ? parsedRec.rationale : undefined;
+                  const outcome = typeof parsedRec === 'object' && parsedRec !== null ? (parsedRec.expected_business_outcome || parsedRec.expected_outcome) : undefined;
 
                   return (
                     <div key={idx} className="flex gap-4 items-start">
@@ -570,13 +723,12 @@ const PrivateEquityInsights = () => {
                             {recommendationText}
                           </p>
                           {priority && (
-                            <Badge variant="outline" className={`text-[9px] font-black uppercase border-none px-2 py-0.5 rounded-full shrink-0 ${
-                              priority.toLowerCase() === 'high'
+                            <Badge variant="outline" className={`text-[9px] font-black uppercase border-none px-2 py-0.5 rounded-full shrink-0 ${priority.toLowerCase() === 'high'
                                 ? "bg-rose-50 text-rose-700"
                                 : priority.toLowerCase() === 'medium'
                                   ? "bg-amber-50 text-amber-700"
                                   : "bg-emerald-50 text-emerald-700"
-                            }`}>
+                              }`}>
                               {priority} Priority
                             </Badge>
                           )}
@@ -620,6 +772,7 @@ const PrivateEquityInsights = () => {
                     <TableRow>
                       <TableHead className="font-black text-[11px] text-slate-500 uppercase tracking-wider h-10 pl-6">Identified Gap</TableHead>
                       <TableHead className="font-black text-[11px] text-slate-500 uppercase tracking-wider h-10">Description</TableHead>
+                      <TableHead className="font-black text-[11px] text-slate-500 uppercase tracking-wider h-10">Affected Accounts</TableHead>
                       <TableHead className="font-black text-[11px] text-slate-500 uppercase tracking-wider h-10 text-right pr-6">Severity</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -628,6 +781,9 @@ const PrivateEquityInsights = () => {
                       parsedInsights.strategic_gaps.map((gap: any, i: number) => {
                         const titStr = gap?.gap_type || gap?.title || gap?.name || "Strategic Gap";
                         const descStr = gap?.description || gap?.desc || gap?.text || "—";
+                        const affectedAccountsStr = Array.isArray(gap?.affected_accounts) && gap.affected_accounts.length > 0
+                          ? gap.affected_accounts.join(', ')
+                          : "—";
                         const impStr = (gap?.impact || gap?.severity || "medium").toLowerCase();
                         const impColor = impStr === 'critical' || impStr === 'high'
                           ? "text-rose-700 font-black"
@@ -638,13 +794,14 @@ const PrivateEquityInsights = () => {
                           <TableRow key={i} className="border-b border-slate-100/60 hover:bg-slate-50/40">
                             <TableCell className="pl-6 py-4 font-black text-sm text-slate-900 min-w-[180px]">{titStr}</TableCell>
                             <TableCell className="py-4 text-xs font-semibold text-slate-600 max-w-2xl">{descStr}</TableCell>
+                            <TableCell className="py-4 text-xs font-semibold text-slate-500 min-w-[150px]">{affectedAccountsStr}</TableCell>
                             <TableCell className={`py-4 text-right pr-6 text-xs uppercase tracking-wider ${impColor}`}>{impStr}</TableCell>
                           </TableRow>
                         );
                       })
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={3} className="text-center py-8 text-xs font-semibold text-slate-400 italic">
+                        <TableCell colSpan={4} className="text-center py-8 text-xs font-semibold text-slate-400 italic">
                           No strategic gaps identified. Generate live insights to hydrate breakdown.
                         </TableCell>
                       </TableRow>
@@ -791,7 +948,7 @@ const PrivateEquityInsights = () => {
                             onClick={() => navigate(`/financials/${acc.id}`, { state: { backUrl: location.pathname } })}
                           >
                             <TableCell className="pl-6 py-4">
-                              <div 
+                              <div
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   navigate(`/financials/${acc.id}`, { state: { backUrl: location.pathname } });
@@ -819,7 +976,7 @@ const PrivateEquityInsights = () => {
                                 const displayName = manager;
                                 const isUnassigned = displayName === 'Unassigned';
                                 return (
-                                  <div 
+                                  <div
                                     className="flex items-center gap-2.5 cursor-pointer hover:bg-slate-100/50 p-1 rounded-lg transition-colors"
                                     onClick={(e) => {
                                       e.stopPropagation();

@@ -104,8 +104,9 @@ const FinancialProjectDetails = () => {
   const { accountId, projectId } = useParams<{ accountId: string, projectId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const backUrl = location.state?.backUrl || '/accounts';
-  const isFromPE = backUrl.includes('private-equity');
+  const backUrl = location.state?.backUrl || `/financials/${accountId}`;
+  const accountBackUrl = location.state?.accountBackUrl;
+  const isFromPE = (accountBackUrl || backUrl).includes('private-equity');
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -246,7 +247,11 @@ const FinancialProjectDetails = () => {
             .filter(val => val.length > 2 && !/^\d+$/.test(val.replace(/[.\s]/g, '')));
           return values.join('. ');
         }
-        return String(v);
+        const valStr = String(v);
+        if (valStr.includes('_') || (!valStr.includes(' ') && valStr.toLowerCase() === valStr && valStr.length < 30)) {
+          return valStr.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        }
+        return valStr;
       };
 
       const filteredInsights = Object.entries(content)
@@ -635,13 +640,13 @@ const FinancialProjectDetails = () => {
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 text-[15px] text-slate-500 mb-2 border-b border-gray-200 pb-2">
           <div
-            onClick={() => navigate(backUrl)}
+            onClick={() => navigate(backUrl, { state: { backUrl: accountBackUrl } })}
             className="p-1.5 bg-blue-600 rounded-full text-white cursor-pointer hover:bg-blue-700 transition-colors mr-1 shadow-sm"
           >
             <Menu className="w-4 h-4" />
           </div>
           <a
-            onClick={() => navigate(backUrl === '/financials' ? '/accounts' : backUrl)}
+            onClick={() => isFromPE ? navigate(accountBackUrl || backUrl) : navigate('/accounts')}
             className="text-blue-600 hover:underline cursor-pointer font-medium"
           >
             {isFromPE ? 'Private Equity' : 'Accounts'}
@@ -649,11 +654,11 @@ const FinancialProjectDetails = () => {
           {isFromPE && (
             <>
               <ChevronRight className="w-4 h-4 text-slate-400" />
-              <a onClick={() => navigate(backUrl.replace('/insights', ''))} className="text-blue-600 hover:underline cursor-pointer font-medium">Portfolio</a>
+              <a onClick={() => navigate(accountBackUrl || backUrl)} className="text-blue-600 hover:underline cursor-pointer font-medium">Portfolio</a>
             </>
           )}
           <ChevronRight className="w-4 h-4 text-slate-400" />
-          <a onClick={() => navigate(`/financials/${accountId}`, { state: { backUrl } })} className="text-blue-600 hover:underline cursor-pointer font-medium">
+          <a onClick={() => navigate(backUrl, { state: { backUrl: accountBackUrl } })} className="text-blue-600 hover:underline cursor-pointer font-medium">
             {account?.name || 'Account Details'}
           </a>
           <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -965,86 +970,109 @@ const FinancialProjectDetails = () => {
                       </Card>
                     </div>
 
-                    {/* ROW 3: FINANCIAL SIGNALS & AI RECOMMENDATIONS (Perfectly paired multi-line insight cards) */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                      {/* Financial Signals Block */}
-                      <Card className="bg-white border border-slate-200/80 shadow-sm rounded-2xl overflow-hidden flex flex-col justify-between h-full">
-                        <CardHeader className="border-b border-slate-100 p-5 bg-slate-50/50">
-                          <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                            <DollarSign className="w-4 h-4 text-emerald-600" /> Financial Signals
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-5 space-y-4 flex-1 flex flex-col justify-between bg-white">
-                          <div className="divide-y divide-slate-100/80">
-                            {Array.isArray(parsedInsights?.financial_insights) && parsedInsights.financial_insights.length > 0 ? (
-                              parsedInsights.financial_insights.map((fin: any, idx: number) => {
-                                const textStr = typeof fin === 'string' ? fin : fin?.message || fin?.text || fin?.description || JSON.stringify(fin);
-                                const parts = textStr.split(':');
-                                const title = parts.length > 1 ? parts[0].trim() : `Metric #${idx + 1}`;
-                                const desc = parts.length > 1 ? parts.slice(1).join(':').trim() : textStr;
-                                return (
-                                  <div key={idx} className="py-3 flex items-start justify-between gap-3 group">
-                                    <div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-xs font-black text-slate-900">{title}</span>
-                                        <span className="text-[8px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">
-                                          {96 - (idx % 5)}% Conf
-                                        </span>
+                    {/* ROW 3: FINANCIAL SIGNALS & AI RECOMMENDATIONS */}
+                    {(() => {
+                      const hasFinancialData = Array.isArray(parsedInsights?.financial_insights) && parsedInsights.financial_insights.length > 0;
+                      return (
+                        <div className={`grid grid-cols-1 ${hasFinancialData ? 'md:grid-cols-2' : ''} gap-6 items-start`}>
+                          {/* Financial Signals Block — only shown when data exists */}
+                          {hasFinancialData && (
+                            <Card className="bg-white border border-slate-200/80 shadow-sm rounded-2xl overflow-hidden flex flex-col justify-between h-full">
+                              <CardHeader className="border-b border-slate-100 p-5 bg-slate-50/50">
+                                <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                                  <DollarSign className="w-4 h-4 text-emerald-600" /> Financial Signals
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-5 space-y-4 flex-1 flex flex-col justify-between bg-white">
+                                <div className="divide-y divide-slate-100/80">
+                                  {parsedInsights.financial_insights.map((fin: any, idx: number) => {
+                                    const textStr = typeof fin === 'string' ? fin
+                                      : fin?.message || fin?.text || fin?.description || fin?.metric || fin?.insight
+                                        || (typeof fin === 'object' ? Object.entries(fin).filter(([, v]) => typeof v === 'string' || typeof v === 'number').map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`).join(' | ') : String(fin));
+                                    const parts = textStr.split(':');
+                                    const title = parts.length > 1 ? parts[0].trim() : `Metric #${idx + 1}`;
+                                    const desc = parts.length > 1 ? parts.slice(1).join(':').trim() : textStr;
+                                    return (
+                                      <div key={idx} className="py-3 flex items-start justify-between gap-3 group">
+                                        <div>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-xs font-black text-slate-900">{title}</span>
+                                            <span className="text-[8px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">{96 - (idx % 5)}% Conf</span>
+                                          </div>
+                                          <p className="text-xs font-semibold text-slate-500 mt-1 leading-relaxed">{desc}</p>
+                                        </div>
                                       </div>
-                                      <p className="text-xs font-semibold text-slate-500 mt-1 leading-relaxed">{desc}</p>
-                                    </div>
-                                  </div>
-                                );
-                              })
-                            ) : (
-                              <div className="text-xs font-semibold text-slate-400 italic text-center py-4">
-                                No financial anomalies mapped.
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-2 mt-auto">
-                            <span className="text-xs font-bold text-slate-700">Total Budget Burn</span>
-                            <div className="flex items-center gap-2.5 w-40 sm:w-48">
-                              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                                <div className="w-[64.2%] h-full bg-[#0EA5E9] rounded-full" />
-                              </div>
-                              <span className="text-xs font-black text-slate-900 shrink-0">64.2%</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* AI Recommendations Block */}
-                      <Card className="bg-white border border-slate-200/80 shadow-sm rounded-2xl overflow-hidden h-full">
-                        <CardHeader className="border-b border-slate-100 p-5 bg-slate-50/50">
-                          <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4 text-blue-500" /> AI Action Items
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-5 space-y-3 bg-white">
-                          {Array.isArray(parsedInsights?.recommendations || parsedInsights?.recommended_actions) && (parsedInsights?.recommendations || parsedInsights?.recommended_actions).length > 0 ? (
-                            (parsedInsights?.recommendations || parsedInsights?.recommended_actions).map((rec: any, idx: number) => {
-                              const textStr = typeof rec === 'string' ? rec : rec?.message || rec?.text || rec?.description || JSON.stringify(rec);
-                              return (
-                                <div key={idx} className="flex gap-3 items-start p-3 rounded-xl bg-slate-50/60 border border-slate-100">
-                                  <div className="w-5 h-5 rounded-full bg-[#0EA5E9] text-white font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">
-                                    {idx + 1}
-                                  </div>
-                                  <p className="text-xs font-bold text-slate-700 leading-relaxed">
-                                    {textStr}
-                                  </p>
+                                    );
+                                  })}
                                 </div>
-                              );
-                            })
-                          ) : (
-                            <div className="text-xs font-semibold text-slate-400 italic text-center py-4">
-                              No automated action paths assigned.
-                            </div>
+                              </CardContent>
+                            </Card>
                           )}
-                        </CardContent>
-                      </Card>
-                    </div>
+
+                          {/* AI Recommendations Block */}
+                          <Card className="bg-white border border-slate-200/80 shadow-sm rounded-2xl overflow-hidden h-full">
+                            <CardHeader className="border-b border-slate-100 p-5 bg-slate-50/50">
+                              <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                                <TrendingUp className="w-4 h-4 text-blue-500" /> AI Action Items
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-5 space-y-3 bg-white">
+                              {Array.isArray(parsedInsights?.recommendations || parsedInsights?.recommended_actions) && (parsedInsights?.recommendations || parsedInsights?.recommended_actions).length > 0 ? (
+                                (parsedInsights?.recommendations || parsedInsights?.recommended_actions).map((rec: any, idx: number) => {
+                                  let parsedRec = rec;
+                                  if (typeof rec === 'string') {
+                                    try { parsedRec = JSON.parse(rec); } catch (e) { /* keep as string */ }
+                                  }
+                                  const recommendationText = typeof parsedRec === 'string'
+                                    ? parsedRec
+                                    : parsedRec?.recommendation || parsedRec?.text || parsedRec?.description || parsedRec?.message
+                                      || (typeof parsedRec === 'object' ? Object.entries(parsedRec).filter(([k, v]) => !['priority','rationale','expected_outcome','expected_business_outcome'].includes(k) && typeof v === 'string').map(([, v]) => v).join(' ') : String(parsedRec));
+                                  const priority = typeof parsedRec === 'object' && parsedRec !== null ? parsedRec.priority : undefined;
+                                  const rationale = typeof parsedRec === 'object' && parsedRec !== null ? parsedRec.rationale : undefined;
+                                  const outcome = typeof parsedRec === 'object' && parsedRec !== null ? (parsedRec.expected_business_outcome || parsedRec.expected_outcome) : undefined;
+                                  return (
+                                    <div key={idx} className="flex gap-3 items-start p-3 rounded-xl bg-slate-50/60 border border-slate-100">
+                                      <div className="w-5 h-5 rounded-full bg-[#0EA5E9] text-white font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                                        {idx + 1}
+                                      </div>
+                                      <div className="flex-1 space-y-1">
+                                        <div className="flex items-start justify-between gap-2">
+                                          <p className="text-xs font-bold text-slate-700 leading-relaxed flex-1">{recommendationText}</p>
+                                          {priority && (
+                                            <Badge variant="outline" className={`text-[9px] font-black uppercase border-none px-2 py-0.5 rounded-full shrink-0 ${
+                                              priority.toLowerCase() === 'high' ? "bg-rose-50 text-rose-700"
+                                                : priority.toLowerCase() === 'medium' ? "bg-amber-50 text-amber-700"
+                                                  : "bg-emerald-50 text-emerald-700"
+                                            }`}>
+                                              {priority}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        {rationale && (
+                                          <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                                            <span className="font-bold text-slate-600">Rationale:</span> {rationale}
+                                          </p>
+                                        )}
+                                        {outcome && (
+                                          <p className="text-[11px] text-blue-700 font-medium leading-relaxed">
+                                            <span className="font-bold text-blue-900">Expected Outcome:</span> {outcome}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                <div className="text-xs font-semibold text-slate-400 italic text-center py-4">
+                                  No automated action paths assigned.
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </div>
+                      );
+                    })()}
+
                   </div>
                 </div>
               </DialogContent>

@@ -233,7 +233,11 @@ export function AccountDocuments({
 
           return values.join('. ');
         }
-        return String(v);
+        const valStr = String(v);
+        if (valStr.includes('_') || (!valStr.includes(' ') && valStr.toLowerCase() === valStr && valStr.length < 30)) {
+          return valStr.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        }
+        return valStr;
       };
 
       const formattedSummary = formatValue(summary);
